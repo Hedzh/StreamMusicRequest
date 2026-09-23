@@ -4,12 +4,21 @@ namespace Stream.MusicRequest.Twitch.Services;
 
 public class TwitchRewardService
 {
+    public const string OrderMusicFeatureKey =
+        "order_music";
+
+    public const string SkipTrackFeatureKey =
+        "skip_track";
+
     private readonly TwitchApiClient _apiClient;
 
     public TwitchRewardService(
         TwitchApiClient apiClient)
     {
-        _apiClient = apiClient;
+        _apiClient =
+            apiClient
+            ?? throw new ArgumentNullException(
+                nameof(apiClient));
     }
 
     public async Task<TwitchRewardBinding> EnsureRewardAsync(
@@ -59,6 +68,96 @@ public class TwitchRewardService
             cancellationToken);
     }
 
+    public static TwitchRewardBinding CreateDefaultOrderMusicBinding()
+    {
+        return new TwitchRewardBinding
+        {
+            FeatureKey =
+                OrderMusicFeatureKey,
+
+            Action =
+                TwitchRewardAction.OrderMusic,
+
+            CreateAutomatically =
+                true,
+
+            Title =
+                "Заказ музыки",
+
+            Prompt =
+                "Вставьте ссылку на трек Yandex Music.",
+
+            Cost =
+                100,
+
+            IsUserInputRequired =
+                true,
+
+            IsEnabled =
+                true
+        };
+    }
+
+    public static TwitchRewardBinding CreateDefaultSkipTrackBinding()
+    {
+        return new TwitchRewardBinding
+        {
+            FeatureKey =
+                SkipTrackFeatureKey,
+
+            Action =
+                TwitchRewardAction.SkipTrack,
+
+            CreateAutomatically =
+                true,
+
+            Title =
+                "Пропустить трек",
+
+            Prompt =
+                string.Empty,
+
+            Cost =
+                50,
+
+            IsUserInputRequired =
+                false,
+
+            IsEnabled =
+                true
+        };
+    }
+
+    public static TwitchRewardAction ResolveAction(
+        TwitchRewardBinding binding)
+    {
+        if (binding == null)
+        {
+            throw new ArgumentNullException(
+                nameof(binding));
+        }
+
+        if (binding.Action !=
+            TwitchRewardAction.Unknown)
+        {
+            return binding.Action;
+        }
+
+        return binding.FeatureKey
+            .Trim()
+            .ToLowerInvariant() switch
+        {
+            OrderMusicFeatureKey =>
+                TwitchRewardAction.OrderMusic,
+
+            SkipTrackFeatureKey =>
+                TwitchRewardAction.SkipTrack,
+
+            _ =>
+                TwitchRewardAction.Unknown
+        };
+    }
+
     private async Task<TwitchRewardBinding> CreateRewardAsync(
         string accessToken,
         string broadcasterId,
@@ -97,11 +196,12 @@ public class TwitchRewardService
         return binding;
     }
 
-    private async Task<TwitchRewardBinding> ValidateExistingRewardAsync(
-        string accessToken,
-        string broadcasterId,
-        TwitchRewardBinding binding,
-        CancellationToken cancellationToken)
+    private async Task<TwitchRewardBinding>
+        ValidateExistingRewardAsync(
+            string accessToken,
+            string broadcasterId,
+            TwitchRewardBinding binding,
+            CancellationToken cancellationToken)
     {
         var reward =
             await _apiClient.GetCustomRewardAsync(
@@ -126,6 +226,17 @@ public class TwitchRewardService
     private static void ValidateBinding(
         TwitchRewardBinding binding)
     {
+        var action =
+            ResolveAction(binding);
+
+        if (action ==
+            TwitchRewardAction.Unknown)
+        {
+            throw new ArgumentException(
+                "Не удалось определить действие Twitch-награды.",
+                nameof(binding));
+        }
+
         if (string.IsNullOrWhiteSpace(
                 binding.FeatureKey))
         {
@@ -144,6 +255,14 @@ public class TwitchRewardService
                     nameof(binding));
             }
 
+            if (binding.Title.Length > 45)
+            {
+                throw new ArgumentException(
+                    "Название Twitch-награды не может " +
+                    "быть длиннее 45 символов.",
+                    nameof(binding));
+            }
+
             if (binding.Cost < 1)
             {
                 throw new ArgumentException(
@@ -155,8 +274,28 @@ public class TwitchRewardService
             if (binding.Prompt.Length > 200)
             {
                 throw new ArgumentException(
-                    "Описание Twitch-награды не может быть " +
-                    "длиннее 200 символов.",
+                    "Описание Twitch-награды не может " +
+                    "быть длиннее 200 символов.",
+                    nameof(binding));
+            }
+
+            if (action ==
+                    TwitchRewardAction.OrderMusic &&
+                !binding.IsUserInputRequired)
+            {
+                throw new ArgumentException(
+                    "Для награды «Заказ музыки» необходимо " +
+                    "включить ввод текста пользователем.",
+                    nameof(binding));
+            }
+
+            if (action ==
+                    TwitchRewardAction.SkipTrack &&
+                binding.IsUserInputRequired)
+            {
+                throw new ArgumentException(
+                    "Для награды «Пропустить трек» ввод " +
+                    "текста пользователем не требуется.",
                     nameof(binding));
             }
 

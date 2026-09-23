@@ -1,6 +1,3 @@
-using MusicRequestModel =
-    Stream.MusicRequest.Core.Requests.MusicRequest;
-
 using Stream.MusicRequest.Twitch.EventSub;
 using Stream.MusicRequest.Twitch.Models;
 
@@ -9,30 +6,52 @@ namespace Stream.MusicRequest.Twitch.Services;
 public class TwitchService : ITwitchService
 {
     private readonly TwitchAuthService _authService;
+
     private readonly TwitchApiClient _apiClient;
+
     private readonly TwitchEventSubClient _eventSubClient;
+
+    private readonly IReadOnlyList<TwitchRewardBinding>
+        _rewardBindings;
 
     private TwitchUser? _currentUser;
 
-    private CancellationTokenSource? _connectionCancellation;
+    private CancellationTokenSource?
+        _connectionCancellation;
 
     private bool _isConnected;
 
-    public event EventHandler<MusicRequestModel>? MusicRequestReceived;
+    private bool _connectionInProgress;
+
+    public event EventHandler<
+        TwitchRewardActionReceivedEventArgs>?
+        RewardActionReceived;
 
     public TwitchService(
         TwitchAuthService authService,
         TwitchApiClient apiClient,
-        TwitchEventSubClient eventSubClient)
+        TwitchEventSubClient eventSubClient,
+        IEnumerable<TwitchRewardBinding> rewardBindings)
     {
         _authService =
-            authService;
+            authService
+            ?? throw new ArgumentNullException(
+                nameof(authService));
 
         _apiClient =
-            apiClient;
+            apiClient
+            ?? throw new ArgumentNullException(
+                nameof(apiClient));
 
         _eventSubClient =
-            eventSubClient;
+            eventSubClient
+            ?? throw new ArgumentNullException(
+                nameof(eventSubClient));
+
+        _rewardBindings =
+            rewardBindings?.ToList()
+            ?? throw new ArgumentNullException(
+                nameof(rewardBindings));
 
         _eventSubClient.Connected +=
             EventSubClient_Connected;
@@ -44,31 +63,44 @@ public class TwitchService : ITwitchService
     public async Task ConnectAsync(
         CancellationToken cancellationToken = default)
     {
-        if (_isConnected)
+        if (_isConnected ||
+            _connectionInProgress)
         {
             return;
         }
 
-        var token =
-            await _authService.TryRestoreAsync();
+        _connectionInProgress =
+            true;
 
-        if (token == null)
+        try
         {
-            throw new InvalidOperationException(
-                "Twitch не авторизован.");
+            var token =
+                await _authService.TryRestoreAsync();
+
+            if (token == null ||
+                string.IsNullOrWhiteSpace(
+                    token.AccessToken))
+            {
+                return;
+            }
+
+            _currentUser =
+                await _apiClient.GetCurrentUserAsync(
+                    token.AccessToken,
+                    cancellationToken);
+
+            _connectionCancellation =
+                CancellationTokenSource.CreateLinkedTokenSource(
+                    cancellationToken);
+
+            await _eventSubClient.ConnectAsync(
+                _connectionCancellation.Token);
         }
-
-        _currentUser =
-            await _apiClient.GetCurrentUserAsync(
-                token.AccessToken,
-                cancellationToken);
-
-        _connectionCancellation =
-            CancellationTokenSource.CreateLinkedTokenSource(
-                cancellationToken);
-
-        await _eventSubClient.ConnectAsync(
-            _connectionCancellation.Token);
+        finally
+        {
+            _connectionInProgress =
+                false;
+        }
     }
 
     public async Task DisconnectAsync()
@@ -113,7 +145,9 @@ public class TwitchService : ITwitchService
             var token =
                 await _authService.TryRestoreAsync();
 
-            if (token == null)
+            if (token == null ||
+                string.IsNullOrWhiteSpace(
+                    token.AccessToken))
             {
                 return;
             }
@@ -148,24 +182,63 @@ public class TwitchService : ITwitchService
             return;
         }
 
-        var request =
-            new MusicRequestModel
-            {
-                Id =
-                    redemption.Id,
+        var binding =
+            FindBinding(
+                redemption.Reward.Id);
 
-                ViewerName =
-                    redemption.UserName,
+        if (binding == null)
+        {
+            return;
+        }
 
-                SourceUrl =
-                    redemption.UserInput,
+        if (!binding.IsEnabled)
+        {
+            return;
+        }
 
-                CreatedAt =
-                    redemption.RedeemedAt
-            };
+        var action =
+            TwitchRewardService.ResolveAction(
+                binding);
 
-        MusicRequestReceived?.Invoke(
+        if (action ==
+            TwitchRewardAction.Unknown)
+        {
+            return;
+        }
+
+        RewardActionReceived?.Invoke(
             this,
-            request);
+            new TwitchRewardActionReceivedEventArgs(
+                action,
+                redemption));
+    }
+
+    private TwitchRewardBinding? FindBinding(
+        string rewardId)
+    {
+        if (string.IsNullOrWhiteSpace(
+                rewardId))
+        {
+            return null;
+        }
+
+        foreach (var binding in _rewardBindings)
+        {
+            if (binding == null)
+            {
+                continue;
+            }
+
+            if (!binding.RewardId.Equals(
+                    rewardId,
+                    StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            return binding;
+        }
+
+        return null;
     }
 }

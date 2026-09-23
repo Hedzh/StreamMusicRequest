@@ -5,6 +5,9 @@ public class TwitchRewardBinding
     public string FeatureKey { get; set; } =
         string.Empty;
 
+    public TwitchRewardAction Action { get; set; } =
+        TwitchRewardAction.Unknown;
+
     public string RewardId { get; set; } =
         string.Empty;
 
