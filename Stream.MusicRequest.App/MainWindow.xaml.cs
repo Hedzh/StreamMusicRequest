@@ -138,11 +138,23 @@ public partial class MainWindow : Window
         _twitchAuthService.AuthenticationStateChanged +=
             TwitchAuthService_AuthenticationStateChanged;
 
+        var twitchRewardSettingsDirectory =
+            Path.Combine(
+                Environment.GetFolderPath(
+                    Environment.SpecialFolder.LocalApplicationData),
+                "StreamMusicRequest",
+                "Settings");
+
+        var twitchRewardSettingsStorage =
+            new TwitchRewardSettingsStorage(
+                twitchRewardSettingsDirectory);
+
         _appServices =
             new AppServices(
                 _yandexAuthService,
                 _twitchAuthService,
-                _twitchApiClient);
+                _twitchApiClient,
+                twitchRewardSettingsStorage);
 
         _appServices.TwitchService.RewardActionReceived +=
             TwitchService_RewardActionReceived;
@@ -674,6 +686,9 @@ public partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        await _appServices
+            .LoadTwitchRewardSettingsAsync();
+
         await RestoreYandexAuthenticationAsync();
 
         await RestoreTwitchAuthenticationAsync();
