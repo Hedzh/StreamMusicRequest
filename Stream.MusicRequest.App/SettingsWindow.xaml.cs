@@ -1,7 +1,5 @@
-using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
-using Stream.MusicRequest.Yandex.Services;
 
 namespace Stream.MusicRequest.App;
 
@@ -10,6 +8,8 @@ public partial class SettingsWindow : Window
     private readonly AppServices _appServices;
 
     private readonly StackPanel[] _pages;
+
+    private YandexAuthorizationWindow? _yandexAuthorizationWindow;
 
     private bool _isInitialized;
 
@@ -42,6 +42,9 @@ public partial class SettingsWindow : Window
                 : 0);
 
         UpdateYandexUi();
+
+        Closed +=
+            SettingsWindow_Closed;
     }
 
     private void NavigationList_SelectionChanged(
@@ -139,6 +142,9 @@ public partial class SettingsWindow : Window
             YandexAuthorizeButton.IsEnabled =
                 false;
 
+            YandexLogoutButton.IsEnabled =
+                false;
+
             YandexStatusText.Text =
                 "Ожидание авторизации...";
 
@@ -154,16 +160,20 @@ public partial class SettingsWindow : Window
                         Dispatcher.Invoke(
                             () =>
                             {
-                                OpenYandexAuthorization(
+                                ShowYandexAuthorizationWindow(
                                     verificationUrl,
                                     userCode);
                             });
                     });
 
+            CloseYandexAuthorizationWindow();
+
             UpdateYandexUi();
         }
         catch (Exception ex)
         {
+            CloseYandexAuthorizationWindow();
+
             MessageBox.Show(
                 this,
                 $"Не удалось авторизоваться в Yandex Music.\n\n{ex.Message}",
@@ -175,44 +185,60 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private void OpenYandexAuthorization(
+    private void ShowYandexAuthorizationWindow(
         string verificationUrl,
         string userCode)
     {
-        try
-        {
-            if (!string.IsNullOrWhiteSpace(
-                    verificationUrl))
+        CloseYandexAuthorizationWindow();
+
+        _yandexAuthorizationWindow =
+            new YandexAuthorizationWindow(
+                verificationUrl,
+                userCode)
             {
-                Process.Start(
-                    new ProcessStartInfo
-                    {
-                        FileName = verificationUrl,
-                        UseShellExecute = true
-                    });
-            }
-        }
-        catch (Exception ex)
+                Owner = this
+            };
+
+        _yandexAuthorizationWindow.Closed +=
+            YandexAuthorizationWindow_Closed;
+
+        _yandexAuthorizationWindow.Show();
+
+        _yandexAuthorizationWindow.Activate();
+    }
+
+    private void YandexAuthorizationWindow_Closed(
+        object? sender,
+        EventArgs e)
+    {
+        if (ReferenceEquals(
+                sender,
+                _yandexAuthorizationWindow))
         {
-            MessageBox.Show(
-                this,
-                $"Не удалось автоматически открыть страницу авторизации.\n\n" +
-                $"Открой ссылку вручную:\n\n{verificationUrl}\n\n" +
-                $"Ошибка: {ex.Message}",
-                "Yandex Music",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
+            _yandexAuthorizationWindow = null;
+        }
+    }
+
+    private void CloseYandexAuthorizationWindow()
+    {
+        var window =
+            _yandexAuthorizationWindow;
+
+        _yandexAuthorizationWindow =
+            null;
+
+        if (window == null)
+        {
+            return;
         }
 
-        MessageBox.Show(
-            this,
-            $"Открыл страницу авторизации Yandex Music в браузере.\n\n" +
-            $"Введите код:\n\n" +
-            $"{userCode}\n\n" +
-            $"После подтверждения авторизации дождитесь завершения процесса.",
-            "Yandex Music — авторизация",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
+        window.Closed -=
+            YandexAuthorizationWindow_Closed;
+
+        if (window.IsVisible)
+        {
+            window.Close();
+        }
     }
 
     private async void YandexLogoutButton_Click(
@@ -236,5 +262,15 @@ public partial class SettingsWindow : Window
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
+    }
+
+    private void SettingsWindow_Closed(
+        object? sender,
+        EventArgs e)
+    {
+        CloseYandexAuthorizationWindow();
+
+        Closed -=
+            SettingsWindow_Closed;
     }
 }

@@ -75,6 +75,10 @@ public partial class MainWindow : Window
             new YandexAuthService(
                 _yandexClient,
                 authStorage);
+
+        _yandexAuthService.AuthenticationStateChanged +=
+            YandexAuthService_AuthenticationStateChanged;
+
         _appServices =
             new AppServices(
                 _yandexAuthService);
@@ -758,6 +762,31 @@ public partial class MainWindow : Window
         }
     }
 
+    private void YandexAuthService_AuthenticationStateChanged(
+        object? sender,
+        bool isAuthenticated)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(
+                new Action(
+                    () =>
+                        YandexAuthService_AuthenticationStateChanged(
+                            sender,
+                            isAuthenticated)));
+
+            return;
+        }
+
+        YandexStatusText.Text =
+            isAuthenticated
+                ? "Подключено"
+                : "Не подключено";
+
+        SetYandexStatusVisual(
+            isAuthenticated);
+    }
+
     private void UpdateConnectionStatus(
         bool yandexAuthenticated,
         bool twitchAuthenticated)
@@ -1267,6 +1296,9 @@ public partial class MainWindow : Window
         EventArgs e)
     {
         _playbackUiTimer.Stop();
+
+        _yandexAuthService.AuthenticationStateChanged -=
+            YandexAuthService_AuthenticationStateChanged;
 
         CloseTwitchAuthorizationWindow();
 
