@@ -757,29 +757,35 @@
 
                                         <StackPanel Orientation="Horizontal">
 
-                                            <Ellipse Width="9"
+                                            <Ellipse x:Name="TwitchStatusIndicator"
+                                                     Width="9"
                                                      Height="9"
-                                                     Fill="{StaticResource SuccessBrush}"
+                                                     Fill="{StaticResource TextMuted}"
                                                      VerticalAlignment="Center"/>
 
-                                            <TextBlock Text="Авторизован"
-                                                       Foreground="{StaticResource SuccessBrush}"
+                                            <TextBlock x:Name="TwitchStatusText"
+                                                       Text="Не авторизован"
+                                                       Foreground="{StaticResource TextMuted}"
                                                        FontWeight="SemiBold"
                                                        Margin="8,0,0,0"/>
 
                                         </StackPanel>
 
-                                        <TextBlock Text="Канал: HEDZH"
+                                        <TextBlock x:Name="TwitchChannelText"
+                                                   Text="Канал: —"
                                                    Foreground="{StaticResource TextSecondary}"
                                                    Margin="17,7,0,0"/>
 
                                     </StackPanel>
 
-                                    <Button Grid.Column="1"
+                                    <Button x:Name="TwitchLogoutButton"
+                                            Grid.Column="1"
                                             Content="Выйти"
                                             Style="{StaticResource ActionButton}"
                                             Width="90"
-                                            VerticalAlignment="Center"/>
+                                            VerticalAlignment="Center"
+                                            IsEnabled="False"
+                                            Click="TwitchLogoutButton_Click"/>
 
                                 </Grid>
 
@@ -798,10 +804,12 @@
                                            Style="{StaticResource FieldDescription}"
                                            Margin="0,0,0,14"/>
 
-                                <Button Content="Авторизоваться в Twitch"
+                                <Button x:Name="TwitchAuthorizeButton"
+                                        Content="Авторизоваться в Twitch"
                                         Style="{StaticResource AccentButton}"
                                         Width="190"
-                                        HorizontalAlignment="Left"/>
+                                        HorizontalAlignment="Left"
+                                        Click="TwitchAuthorizeButton_Click"/>
 
                             </StackPanel>
 

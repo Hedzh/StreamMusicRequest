@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using Stream.MusicRequest.Twitch.Models;
 
 namespace Stream.MusicRequest.App;
 
@@ -10,6 +12,8 @@ public partial class SettingsWindow : Window
     private readonly StackPanel[] _pages;
 
     private YandexAuthorizationWindow? _yandexAuthorizationWindow;
+
+    private DeviceAuthorizationWindow? _twitchAuthorizationWindow;
 
     private bool _isInitialized;
 
@@ -34,6 +38,16 @@ public partial class SettingsWindow : Window
             ObsPage
         ];
 
+        _appServices
+            .TwitchAuthService
+            .AuthenticationStateChanged +=
+                TwitchAuthService_AuthenticationStateChanged;
+
+        _appServices
+            .YandexAuthService
+            .AuthenticationStateChanged +=
+                YandexAuthService_AuthenticationStateChanged;
+
         _isInitialized = true;
 
         ShowPage(
@@ -42,6 +56,8 @@ public partial class SettingsWindow : Window
                 : 0);
 
         UpdateYandexUi();
+
+        _ = UpdateTwitchUiAsync();
 
         Closed +=
             SettingsWindow_Closed;
@@ -86,6 +102,18 @@ public partial class SettingsWindow : Window
         }
     }
 
+    // ============================================================
+    // YANDEX
+    // ============================================================
+
+    private void YandexAuthService_AuthenticationStateChanged(
+        object? sender,
+        bool isAuthenticated)
+    {
+        Dispatcher.Invoke(
+            UpdateYandexUi);
+    }
+
     private void UpdateYandexUi()
     {
         var isAuthenticated =
@@ -97,14 +125,14 @@ public partial class SettingsWindow : Window
         {
             YandexStatusIndicator.Fill =
                 FindResource("SuccessBrush")
-                as System.Windows.Media.Brush;
+                as Brush;
 
             YandexStatusText.Text =
                 "Авторизован";
 
             YandexStatusText.Foreground =
                 FindResource("SuccessBrush")
-                as System.Windows.Media.Brush;
+                as Brush;
 
             YandexAuthorizeButton.IsEnabled =
                 false;
@@ -116,14 +144,14 @@ public partial class SettingsWindow : Window
         {
             YandexStatusIndicator.Fill =
                 FindResource("TextMuted")
-                as System.Windows.Media.Brush;
+                as Brush;
 
             YandexStatusText.Text =
                 "Не авторизован";
 
             YandexStatusText.Foreground =
                 FindResource("TextMuted")
-                as System.Windows.Media.Brush;
+                as Brush;
 
             YandexAuthorizeButton.IsEnabled =
                 true;
@@ -150,7 +178,7 @@ public partial class SettingsWindow : Window
 
             YandexStatusText.Foreground =
                 FindResource("TextMuted")
-                as System.Windows.Media.Brush;
+                as Brush;
 
             await _appServices
                 .YandexAuthService
@@ -264,11 +292,263 @@ public partial class SettingsWindow : Window
         }
     }
 
+    // ============================================================
+    // TWITCH
+    // ============================================================
+
+    private void TwitchAuthService_AuthenticationStateChanged(
+        object? sender,
+        bool isAuthenticated)
+    {
+        Dispatcher.Invoke(
+            async () =>
+            {
+                await UpdateTwitchUiAsync();
+            });
+    }
+
+    private async Task UpdateTwitchUiAsync()
+    {
+        var token =
+            await _appServices
+                .TwitchAuthService
+                .TryRestoreAsync();
+
+        if (token == null ||
+            string.IsNullOrWhiteSpace(
+                token.AccessToken))
+        {
+            SetTwitchDisconnectedUi();
+            return;
+        }
+
+        try
+        {
+            TwitchStatusIndicator.Fill =
+                FindResource("SuccessBrush")
+                as Brush;
+
+            TwitchStatusText.Text =
+                "Подключен";
+
+            TwitchStatusText.Foreground =
+                FindResource("SuccessBrush")
+                as Brush;
+
+            TwitchChannelText.Text =
+                "Получение информации о канале...";
+
+            TwitchAuthorizeButton.IsEnabled =
+                false;
+
+            TwitchLogoutButton.IsEnabled =
+                true;
+
+            var user =
+                await _appServices
+                    .TwitchApiClient
+                    .GetCurrentUserAsync(
+                        token.AccessToken);
+
+            TwitchChannelText.Text =
+                string.IsNullOrWhiteSpace(
+                    user.DisplayName)
+                    ? $"Канал: {user.Login}"
+                    : $"Канал: {user.DisplayName}";
+        }
+        catch
+        {
+            SetTwitchDisconnectedUi();
+        }
+    }
+
+    private void SetTwitchDisconnectedUi()
+    {
+        TwitchStatusIndicator.Fill =
+            FindResource("TextMuted")
+            as Brush;
+
+        TwitchStatusText.Text =
+            "Не авторизован";
+
+        TwitchStatusText.Foreground =
+            FindResource("TextMuted")
+            as Brush;
+
+        TwitchChannelText.Text =
+            "Канал: —";
+
+        TwitchAuthorizeButton.IsEnabled =
+            true;
+
+        TwitchLogoutButton.IsEnabled =
+            false;
+    }
+
+    private async void TwitchAuthorizeButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        try
+        {
+            TwitchAuthorizeButton.IsEnabled =
+                false;
+
+            TwitchLogoutButton.IsEnabled =
+                false;
+
+            TwitchStatusIndicator.Fill =
+                FindResource("TextMuted")
+                as Brush;
+
+            TwitchStatusText.Text =
+                "Ожидание авторизации...";
+
+            TwitchStatusText.Foreground =
+                FindResource("TextMuted")
+                as Brush;
+
+            TwitchChannelText.Text =
+                "Следуйте инструкции авторизации.";
+
+            await _appServices
+                .TwitchAuthService
+                .AuthorizeAsync(
+                    (verificationUrl, userCode) =>
+                    {
+                        Dispatcher.Invoke(
+                            () =>
+                            {
+                                ShowTwitchAuthorizationWindow(
+                                    verificationUrl,
+                                    userCode);
+                            });
+                    });
+
+            CloseTwitchAuthorizationWindow();
+
+            await UpdateTwitchUiAsync();
+        }
+        catch (Exception ex)
+        {
+            CloseTwitchAuthorizationWindow();
+
+            MessageBox.Show(
+                this,
+                $"Не удалось авторизоваться в Twitch.\n\n{ex.Message}",
+                "Twitch",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+
+            await UpdateTwitchUiAsync();
+        }
+    }
+
+    private void ShowTwitchAuthorizationWindow(
+        string verificationUrl,
+        string userCode)
+    {
+        CloseTwitchAuthorizationWindow();
+
+        _twitchAuthorizationWindow =
+            new DeviceAuthorizationWindow(
+                "Авторизация Twitch",
+                verificationUrl,
+                userCode)
+            {
+                Owner = this
+            };
+
+        _twitchAuthorizationWindow.Closed +=
+            TwitchAuthorizationWindow_Closed;
+
+        _twitchAuthorizationWindow.Show();
+
+        _twitchAuthorizationWindow.Activate();
+    }
+
+    private void TwitchAuthorizationWindow_Closed(
+        object? sender,
+        EventArgs e)
+    {
+        if (ReferenceEquals(
+                sender,
+                _twitchAuthorizationWindow))
+        {
+            _twitchAuthorizationWindow = null;
+        }
+    }
+
+    private void CloseTwitchAuthorizationWindow()
+    {
+        var window =
+            _twitchAuthorizationWindow;
+
+        _twitchAuthorizationWindow =
+            null;
+
+        if (window == null)
+        {
+            return;
+        }
+
+        window.Closed -=
+            TwitchAuthorizationWindow_Closed;
+
+        if (window.IsVisible)
+        {
+            window.Close();
+        }
+    }
+
+    private async void TwitchLogoutButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        try
+        {
+            TwitchLogoutButton.IsEnabled =
+                false;
+
+            await _appServices
+                .TwitchAuthService
+                .SignOutAsync();
+
+            SetTwitchDisconnectedUi();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                this,
+                $"Не удалось выйти из Twitch.\n\n{ex.Message}",
+                "Twitch",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+
+            await UpdateTwitchUiAsync();
+        }
+    }
+
+    // ============================================================
+    // WINDOW
+    // ============================================================
+
     private void SettingsWindow_Closed(
         object? sender,
         EventArgs e)
     {
         CloseYandexAuthorizationWindow();
+        CloseTwitchAuthorizationWindow();
+
+        _appServices
+            .YandexAuthService
+            .AuthenticationStateChanged -=
+                YandexAuthService_AuthenticationStateChanged;
+
+        _appServices
+            .TwitchAuthService
+            .AuthenticationStateChanged -=
+                TwitchAuthService_AuthenticationStateChanged;
 
         Closed -=
             SettingsWindow_Closed;

@@ -79,10 +79,6 @@ public partial class MainWindow : Window
         _yandexAuthService.AuthenticationStateChanged +=
             YandexAuthService_AuthenticationStateChanged;
 
-        _appServices =
-            new AppServices(
-                _yandexAuthService);
-
         _yandexMusicSource =
             new YandexMusicSource(
                 _yandexClient);
@@ -137,6 +133,12 @@ public partial class MainWindow : Window
             new TwitchApiClient(
                 twitchHttpClient,
                 twitchSettings.ClientId);
+
+        _appServices =
+            new AppServices(
+                _yandexAuthService,
+                _twitchAuthService,
+                _twitchApiClient);
 
         _playbackUiTimer =
             new DispatcherTimer
