@@ -25,6 +25,8 @@ public class TwitchAuthService
     private readonly TwitchSettings _settings;
     private readonly TwitchAuthStorage _storage;
 
+    public event EventHandler<bool>? AuthenticationStateChanged;
+
     public TwitchAuthService(
         HttpClient httpClient,
         TwitchSettings settings,
@@ -125,6 +127,10 @@ public class TwitchAuthService
                 await SaveTokenAsync(
                     result.Token);
 
+                AuthenticationStateChanged?.Invoke(
+                    this,
+                    true);
+
                 return result.Token;
             }
 
@@ -185,15 +191,37 @@ public class TwitchAuthService
         var snapshot =
             await _storage.LoadAsync();
 
+        Exception? revokeException = null;
+
         if (snapshot != null &&
             !string.IsNullOrWhiteSpace(
                 snapshot.AccessToken))
         {
-            await RevokeTokenAsync(
-                snapshot.AccessToken);
+            try
+            {
+                await RevokeTokenAsync(
+                    snapshot.AccessToken);
+            }
+            catch (Exception ex)
+            {
+                revokeException = ex;
+            }
         }
 
+        // Локальная авторизация должна быть удалена
+        // независимо от результата отзыва токена Twitch.
         await _storage.DeleteAsync();
+
+        AuthenticationStateChanged?.Invoke(
+            this,
+            false);
+
+        // Ошибка отзыва не должна оставлять пользователя
+        // авторизованным локально.
+        if (revokeException != null)
+        {
+            return;
+        }
     }
 
     private async Task SaveTokenAsync(
