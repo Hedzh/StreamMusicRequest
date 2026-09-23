@@ -1,3 +1,5 @@
+using Stream.MusicRequest.Twitch.EventSub;
+using Stream.MusicRequest.Twitch.Models;
 using Stream.MusicRequest.Twitch.Services;
 using Stream.MusicRequest.Yandex.Services;
 
@@ -10,6 +12,8 @@ public class AppServices
     public TwitchAuthService TwitchAuthService { get; }
 
     public TwitchApiClient TwitchApiClient { get; }
+
+    public TwitchService TwitchService { get; }
 
     public AppServices(
         YandexAuthService yandexAuthService,
@@ -30,5 +34,25 @@ public class AppServices
             twitchApiClient
             ?? throw new ArgumentNullException(
                 nameof(twitchApiClient));
+
+        var twitchEventSubClient =
+            new TwitchEventSubClient();
+
+        var rewardBindings =
+            new List<TwitchRewardBinding>
+            {
+                TwitchRewardService
+                    .CreateDefaultOrderMusicBinding(),
+
+                TwitchRewardService
+                    .CreateDefaultSkipTrackBinding()
+            };
+
+        TwitchService =
+            new TwitchService(
+                TwitchAuthService,
+                TwitchApiClient,
+                twitchEventSubClient,
+                rewardBindings);
     }
 }

@@ -1,11 +1,11 @@
-using MusicRequestModel =
-    Stream.MusicRequest.Core.Requests.MusicRequest;
+using Stream.MusicRequest.Twitch.Models;
 
 namespace Stream.MusicRequest.Twitch.Services;
 
 public interface ITwitchService
 {
-    event EventHandler<MusicRequestModel>? MusicRequestReceived;
+    event EventHandler<TwitchRewardActionReceivedEventArgs>?
+        RewardActionReceived;
 
     Task ConnectAsync(
         CancellationToken cancellationToken = default);
