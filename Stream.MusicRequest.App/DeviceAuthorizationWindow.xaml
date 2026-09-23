@@ -1,0 +1,133 @@
+<Window x:Class="Stream.MusicRequest.App.DeviceAuthorizationWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Авторизация"
+        Width="650"
+        Height="350"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+
+    <Grid Margin="20">
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock
+            x:Name="TitleTextBlock"
+            Grid.Row="0"
+            Text="Авторизация"
+            FontSize="24"
+            FontWeight="Bold"
+            Margin="0,0,0,20" />
+
+        <TextBlock
+            Grid.Row="1"
+            Text="Откройте страницу авторизации:"
+            FontSize="15"
+            Margin="0,0,0,6" />
+
+        <Grid
+            Grid.Row="2"
+            Margin="0,0,0,20">
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBox
+                x:Name="VerificationUrlTextBox"
+                Grid.Column="0"
+                Height="36"
+                FontSize="14"
+                Padding="8"
+                IsReadOnly="True"
+                TextWrapping="NoWrap"
+                VerticalContentAlignment="Center"
+                Margin="0,0,10,0" />
+
+            <Button
+                x:Name="OpenBrowserButton"
+                Grid.Column="1"
+                Content="Открыть"
+                Width="100"
+                Height="36"
+                Click="OpenBrowserButton_Click"
+                Margin="0,0,10,0" />
+
+            <Button
+                x:Name="CopyUrlButton"
+                Grid.Column="2"
+                Content="Копировать"
+                Width="110"
+                Height="36"
+                Click="CopyUrlButton_Click" />
+
+        </Grid>
+
+        <TextBlock
+            Grid.Row="3"
+            Text="Код устройства:"
+            FontSize="15"
+            Margin="0,0,0,6" />
+
+        <Grid Grid.Row="4">
+
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBox
+                x:Name="UserCodeTextBox"
+                Grid.Column="0"
+                Height="36"
+                FontSize="18"
+                FontWeight="Bold"
+                Padding="8"
+                IsReadOnly="True"
+                HorizontalContentAlignment="Center"
+                VerticalContentAlignment="Center"
+                Margin="0,0,10,0" />
+
+            <Button
+                x:Name="CopyCodeButton"
+                Grid.Column="1"
+                Content="Копировать"
+                Width="110"
+                Height="36"
+                Click="CopyCodeButton_Click" />
+
+        </Grid>
+
+        <StackPanel
+            Grid.Row="5"
+            Orientation="Horizontal"
+            HorizontalAlignment="Right"
+            Margin="0,20,0,0">
+
+            <TextBlock
+                x:Name="StatusTextBlock"
+                Text=""
+                VerticalAlignment="Center"
+                Margin="0,0,15,0" />
+
+            <Button
+                x:Name="CloseButton"
+                Content="Закрыть"
+                Width="100"
+                Height="36"
+                Click="CloseButton_Click" />
+
+        </StackPanel>
+
+    </Grid>
+
+</Window>
