@@ -27,6 +27,11 @@ public partial class YandexAuthorizationWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        OpenVerificationUrl();
+    }
+
+    private void OpenVerificationUrl()
+    {
         if (string.IsNullOrWhiteSpace(
                 _verificationUrl))
         {
@@ -38,8 +43,11 @@ public partial class YandexAuthorizationWindow : Window
             Process.Start(
                 new ProcessStartInfo
                 {
-                    FileName = _verificationUrl,
-                    UseShellExecute = true
+                    FileName =
+                        _verificationUrl,
+
+                    UseShellExecute =
+                        true
                 });
         }
         catch (Exception ex)
@@ -47,6 +55,39 @@ public partial class YandexAuthorizationWindow : Window
             MessageBox.Show(
                 this,
                 $"Не удалось открыть страницу авторизации.\n\n{ex.Message}",
+                "Yandex Music",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    private void CopyCodeButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(
+                UserCodeText.Text))
+        {
+            return;
+        }
+
+        try
+        {
+            Clipboard.SetText(
+                UserCodeText.Text);
+
+            MessageBox.Show(
+                this,
+                "Код скопирован в буфер обмена.",
+                "Yandex Music",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                this,
+                $"Не удалось скопировать код.\n\n{ex.Message}",
                 "Yandex Music",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);

@@ -8,6 +8,8 @@ public class YandexAuthService
     private readonly YandexMusicClient _client;
     private readonly YandexAuthStorage _storage;
 
+    public event EventHandler<bool>? AuthenticationStateChanged;
+
     public YandexAuthService(
         YandexMusicClient client,
         YandexAuthStorage storage)
@@ -26,13 +28,24 @@ public class YandexAuthService
 
         if (snapshot == null)
         {
+            AuthenticationStateChanged?.Invoke(
+                this,
+                false);
+
             return false;
         }
 
         _client.Authentication.Session.Import(
             snapshot);
 
-        return _client.Authentication.IsAuthenticated;
+        var isAuthenticated =
+            _client.Authentication.IsAuthenticated;
+
+        AuthenticationStateChanged?.Invoke(
+            this,
+            isAuthenticated);
+
+        return isAuthenticated;
     }
 
     public async Task AuthorizeAsync(
@@ -51,6 +64,10 @@ public class YandexAuthService
 
         await _storage.SaveAsync(
             snapshot);
+
+        AuthenticationStateChanged?.Invoke(
+            this,
+            true);
     }
 
     public async Task SignOutAsync()
@@ -58,5 +75,9 @@ public class YandexAuthService
         _client.Authentication.SignOut();
 
         await _storage.DeleteAsync();
+
+        AuthenticationStateChanged?.Invoke(
+            this,
+            false);
     }
 }
