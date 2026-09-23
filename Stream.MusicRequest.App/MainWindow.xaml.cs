@@ -10,6 +10,7 @@ using Stream.MusicRequest.Core.Services;
 using Stream.MusicRequest.Core.Sources;
 using Stream.MusicRequest.Infrastructure.Storage;
 using Stream.MusicRequest.Twitch.Configuration;
+using Stream.MusicRequest.Twitch.Models;
 using Stream.MusicRequest.Twitch.Services;
 using Stream.MusicRequest.Twitch.Storage;
 using Stream.MusicRequest.Yandex.Services;
@@ -142,6 +143,9 @@ public partial class MainWindow : Window
                 _yandexAuthService,
                 _twitchAuthService,
                 _twitchApiClient);
+
+        _appServices.TwitchService.RewardActionReceived +=
+            TwitchService_RewardActionReceived;
 
         _playbackUiTimer =
             new DispatcherTimer
@@ -726,6 +730,9 @@ public partial class MainWindow : Window
 
             if (twitchToken == null)
             {
+                await _appServices.TwitchService
+                    .DisconnectAsync();
+
                 SetTwitchDisconnectedUi();
                 return;
             }
@@ -745,6 +752,8 @@ public partial class MainWindow : Window
 
             SetTwitchStatusVisual(
                 isConnected: true);
+
+            await ConnectTwitchServiceAsync();
         }
         catch (Exception ex)
         {
@@ -779,7 +788,10 @@ public partial class MainWindow : Window
 
         if (!isAuthenticated)
         {
+            await DisconnectTwitchServiceAsync();
+
             SetTwitchDisconnectedUi();
+
             return;
         }
 
@@ -798,7 +810,10 @@ public partial class MainWindow : Window
                 string.IsNullOrWhiteSpace(
                     token.AccessToken))
             {
+                await DisconnectTwitchServiceAsync();
+
                 SetTwitchDisconnectedUi();
+
                 return;
             }
 
@@ -811,11 +826,143 @@ public partial class MainWindow : Window
 
             SetTwitchStatusVisual(
                 isConnected: true);
+
+            await ConnectTwitchServiceAsync();
+        }
+        catch
+        {
+            await DisconnectTwitchServiceAsync();
+
+            SetTwitchDisconnectedUi();
+        }
+    }
+
+    private async Task ConnectTwitchServiceAsync()
+    {
+        try
+        {
+            await _appServices.TwitchService
+                .ConnectAsync();
         }
         catch
         {
             SetTwitchDisconnectedUi();
         }
+    }
+
+    private async Task DisconnectTwitchServiceAsync()
+    {
+        try
+        {
+            await _appServices.TwitchService
+                .DisconnectAsync();
+        }
+        catch
+        {
+            // Twitch already disconnected.
+        }
+    }
+
+    private async void TwitchService_RewardActionReceived(
+        object? sender,
+        TwitchRewardActionReceivedEventArgs e)
+    {
+        try
+        {
+            switch (e.Action)
+            {
+                case TwitchRewardAction.OrderMusic:
+                    await HandleOrderMusicRewardAsync(
+                        e.Redemption);
+
+                    break;
+
+                case TwitchRewardAction.SkipTrack:
+                    await HandleSkipTrackRewardAsync();
+
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                $"Не удалось обработать Twitch-награду.\n\n{ex.Message}",
+                "Ошибка Twitch-награды",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    private async Task HandleOrderMusicRewardAsync(
+        TwitchRewardRedemption redemption)
+    {
+        var sourceUrl =
+            redemption.UserInput.Trim();
+
+        if (string.IsNullOrWhiteSpace(sourceUrl))
+        {
+            return;
+        }
+
+        var request =
+            new Stream.MusicRequest.Core.Requests.MusicRequest
+            {
+                Id =
+                    redemption.Id,
+
+                ViewerName =
+                    redemption.UserName,
+
+                SourceUrl =
+                    sourceUrl,
+
+                CreatedAt =
+                    redemption.RedeemedAt
+            };
+
+        var result =
+            await _requestService.AddRequestAsync(
+                request);
+
+        if (!result.Success)
+        {
+            return;
+        }
+
+        var item =
+            result.Item;
+
+        if (item == null ||
+            item.Track == null)
+        {
+            return;
+        }
+
+        await _playbackController
+            .AddViewerRequestAsync(
+                item);
+
+        await Dispatcher.InvokeAsync(
+            () =>
+            {
+                UpdatePlaybackUi();
+                UpdatePlaybackModeUi();
+                RefreshQueueUi();
+            });
+    }
+
+    private async Task HandleSkipTrackRewardAsync()
+    {
+        await _playbackController
+            .NextAsync();
+
+        await Dispatcher.InvokeAsync(
+            () =>
+            {
+                UpdatePlaybackUi();
+                UpdatePlaybackModeUi();
+                RefreshQueueUi();
+            });
     }
 
     private void SetTwitchDisconnectedUi()
@@ -1367,6 +1514,21 @@ public partial class MainWindow : Window
 
         _twitchAuthService.AuthenticationStateChanged -=
             TwitchAuthService_AuthenticationStateChanged;
+
+        _appServices.TwitchService.RewardActionReceived -=
+            TwitchService_RewardActionReceived;
+
+        try
+        {
+            _appServices.TwitchService
+                .DisconnectAsync()
+                .GetAwaiter()
+                .GetResult();
+        }
+        catch
+        {
+            // Twitch service is being shut down.
+        }
 
         CloseTwitchAuthorizationWindow();
 

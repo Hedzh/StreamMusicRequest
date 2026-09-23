@@ -5,240 +5,270 @@ namespace Stream.MusicRequest.Twitch.Services;
 
 public class TwitchService : ITwitchService
 {
-    private readonly TwitchAuthService _authService;
+private readonly TwitchAuthService _authService;
 
-    private readonly TwitchApiClient _apiClient;
+private readonly TwitchApiClient _apiClient;
 
-    private readonly TwitchEventSubClient _eventSubClient;
+private readonly TwitchEventSubClient _eventSubClient;
 
-    private readonly IReadOnlyList<TwitchRewardBinding>
-        _rewardBindings;
+private readonly IReadOnlyList<TwitchRewardBinding>
+    _rewardBindings;
 
-    private TwitchUser? _currentUser;
+private TwitchUser? _currentUser;
 
-    private CancellationTokenSource?
-        _connectionCancellation;
+private CancellationTokenSource?
+    _connectionCancellation;
 
-    private bool _isConnected;
+private bool _isConnected;
 
-    private bool _connectionInProgress;
+private bool _connectionInProgress;
 
-    public event EventHandler<
-        TwitchRewardActionReceivedEventArgs>?
-        RewardActionReceived;
+public event EventHandler<
+    TwitchRewardActionReceivedEventArgs>?
+    RewardActionReceived;
 
-    public TwitchService(
-        TwitchAuthService authService,
-        TwitchApiClient apiClient,
-        TwitchEventSubClient eventSubClient,
-        IEnumerable<TwitchRewardBinding> rewardBindings)
+public TwitchService(
+    TwitchAuthService authService,
+    TwitchApiClient apiClient,
+    TwitchEventSubClient eventSubClient,
+    IEnumerable<TwitchRewardBinding> rewardBindings)
+{
+    _authService =
+        authService
+        ?? throw new ArgumentNullException(
+            nameof(authService));
+
+    _apiClient =
+        apiClient
+        ?? throw new ArgumentNullException(
+            nameof(apiClient));
+
+    _eventSubClient =
+        eventSubClient
+        ?? throw new ArgumentNullException(
+            nameof(eventSubClient));
+
+    _rewardBindings =
+        rewardBindings?.ToList()
+        ?? throw new ArgumentNullException(
+            nameof(rewardBindings));
+
+    _eventSubClient.Connected +=
+        EventSubClient_Connected;
+
+    _eventSubClient.RewardRedemptionReceived +=
+        EventSubClient_RewardRedemptionReceived;
+}
+
+public async Task ConnectAsync(
+    CancellationToken cancellationToken = default)
+{
+    if (_isConnected ||
+        _connectionInProgress)
     {
-        _authService =
-            authService
-            ?? throw new ArgumentNullException(
-                nameof(authService));
-
-        _apiClient =
-            apiClient
-            ?? throw new ArgumentNullException(
-                nameof(apiClient));
-
-        _eventSubClient =
-            eventSubClient
-            ?? throw new ArgumentNullException(
-                nameof(eventSubClient));
-
-        _rewardBindings =
-            rewardBindings?.ToList()
-            ?? throw new ArgumentNullException(
-                nameof(rewardBindings));
-
-        _eventSubClient.Connected +=
-            EventSubClient_Connected;
-
-        _eventSubClient.RewardRedemptionReceived +=
-            EventSubClient_RewardRedemptionReceived;
+        return;
     }
 
-    public async Task ConnectAsync(
-        CancellationToken cancellationToken = default)
+    _connectionInProgress =
+        true;
+
+    try
     {
-        if (_isConnected ||
-            _connectionInProgress)
+        var token =
+            await _authService.TryRestoreAsync();
+
+        if (token == null ||
+            string.IsNullOrWhiteSpace(
+                token.AccessToken))
         {
             return;
         }
 
-        _connectionInProgress =
-            true;
+        _currentUser =
+            await _apiClient.GetCurrentUserAsync(
+                token.AccessToken,
+                cancellationToken);
 
-        try
-        {
-            var token =
-                await _authService.TryRestoreAsync();
-
-            if (token == null ||
-                string.IsNullOrWhiteSpace(
-                    token.AccessToken))
-            {
-                return;
-            }
-
-            _currentUser =
-                await _apiClient.GetCurrentUserAsync(
-                    token.AccessToken,
-                    cancellationToken);
-
-            _connectionCancellation =
-                CancellationTokenSource.CreateLinkedTokenSource(
-                    cancellationToken);
-
-            await _eventSubClient.ConnectAsync(
-                _connectionCancellation.Token);
-        }
-        finally
-        {
-            _connectionInProgress =
-                false;
-        }
-    }
-
-    public async Task DisconnectAsync()
-    {
-        _connectionCancellation?.Cancel();
-
-        _connectionCancellation?.Dispose();
+        await EnsureRewardsAsync(
+            token.AccessToken,
+            _currentUser.Id,
+            cancellationToken);
 
         _connectionCancellation =
-            null;
+            CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken);
 
-        await _eventSubClient.DisconnectAsync();
-
-        _currentUser =
-            null;
-
-        _isConnected =
+        await _eventSubClient.ConnectAsync(
+            _connectionCancellation.Token);
+    }
+    finally
+    {
+        _connectionInProgress =
             false;
     }
+}
 
-    private void EventSubClient_Connected(
-        object? sender,
-        TwitchEventSubWelcomeMessage message)
+public async Task DisconnectAsync()
+{
+    _connectionCancellation?.Cancel();
+
+    _connectionCancellation?.Dispose();
+
+    _connectionCancellation =
+        null;
+
+    await _eventSubClient.DisconnectAsync();
+
+    _currentUser =
+        null;
+
+    _isConnected =
+        false;
+}
+
+private async Task EnsureRewardsAsync(
+    string accessToken,
+    string broadcasterId,
+    CancellationToken cancellationToken)
+{
+    var rewardService =
+        new TwitchRewardService(
+            _apiClient);
+
+    foreach (var binding in _rewardBindings)
     {
-        _isConnected =
-            true;
-
-        _ = RegisterSubscriptionsAsync(
-            message);
-    }
-
-    private async Task RegisterSubscriptionsAsync(
-        TwitchEventSubWelcomeMessage message)
-    {
-        try
+        if (!binding.IsEnabled)
         {
-            if (_currentUser == null)
-            {
-                return;
-            }
-
-            var token =
-                await _authService.TryRestoreAsync();
-
-            if (token == null ||
-                string.IsNullOrWhiteSpace(
-                    token.AccessToken))
-            {
-                return;
-            }
-
-            await _apiClient.CreateEventSubSubscriptionAsync(
-                token.AccessToken,
-                message.Payload.Session.Id,
-                _currentUser.Id);
+            continue;
         }
-        catch
-        {
-            _isConnected =
-                false;
 
-            await _eventSubClient.DisconnectAsync();
-        }
+        await rewardService.EnsureRewardAsync(
+            accessToken,
+            broadcasterId,
+            binding,
+            cancellationToken);
     }
+}
 
-    private void EventSubClient_RewardRedemptionReceived(
-        object? sender,
-        TwitchRewardRedemption redemption)
+private void EventSubClient_Connected(
+    object? sender,
+    TwitchEventSubWelcomeMessage message)
+{
+    _isConnected =
+        true;
+
+    _ = RegisterSubscriptionsAsync(
+        message);
+}
+
+private async Task RegisterSubscriptionsAsync(
+    TwitchEventSubWelcomeMessage message)
+{
+    try
     {
         if (_currentUser == null)
         {
             return;
         }
 
-        if (!redemption.BroadcasterUserId.Equals(
-                _currentUser.Id,
-                StringComparison.Ordinal))
+        var token =
+            await _authService.TryRestoreAsync();
+
+        if (token == null ||
+            string.IsNullOrWhiteSpace(
+                token.AccessToken))
         {
             return;
         }
 
-        var binding =
-            FindBinding(
-                redemption.Reward.Id);
+        await _apiClient.CreateEventSubSubscriptionAsync(
+            token.AccessToken,
+            message.Payload.Session.Id,
+            _currentUser.Id);
+    }
+    catch
+    {
+        _isConnected =
+            false;
 
-        if (binding == null)
-        {
-            return;
-        }
+        await _eventSubClient.DisconnectAsync();
+    }
+}
 
-        if (!binding.IsEnabled)
-        {
-            return;
-        }
-
-        var action =
-            TwitchRewardService.ResolveAction(
-                binding);
-
-        if (action ==
-            TwitchRewardAction.Unknown)
-        {
-            return;
-        }
-
-        RewardActionReceived?.Invoke(
-            this,
-            new TwitchRewardActionReceivedEventArgs(
-                action,
-                redemption));
+private void EventSubClient_RewardRedemptionReceived(
+    object? sender,
+    TwitchRewardRedemption redemption)
+{
+    if (_currentUser == null)
+    {
+        return;
     }
 
-    private TwitchRewardBinding? FindBinding(
-        string rewardId)
+    if (!redemption.BroadcasterUserId.Equals(
+            _currentUser.Id,
+            StringComparison.Ordinal))
     {
-        if (string.IsNullOrWhiteSpace(
-                rewardId))
-        {
-            return null;
-        }
+        return;
+    }
 
-        foreach (var binding in _rewardBindings)
-        {
-            if (binding == null)
-            {
-                continue;
-            }
+    var binding =
+        FindBinding(
+            redemption.Reward.Id);
 
-            if (!binding.RewardId.Equals(
-                    rewardId,
-                    StringComparison.Ordinal))
-            {
-                continue;
-            }
+    if (binding == null)
+    {
+        return;
+    }
 
-            return binding;
-        }
+    if (!binding.IsEnabled)
+    {
+        return;
+    }
 
+    var action =
+        TwitchRewardService.ResolveAction(
+            binding);
+
+    if (action ==
+        TwitchRewardAction.Unknown)
+    {
+        return;
+    }
+
+    RewardActionReceived?.Invoke(
+        this,
+        new TwitchRewardActionReceivedEventArgs(
+            action,
+            redemption));
+}
+
+private TwitchRewardBinding? FindBinding(
+    string rewardId)
+{
+    if (string.IsNullOrWhiteSpace(
+            rewardId))
+    {
         return null;
     }
+
+    foreach (var binding in _rewardBindings)
+    {
+        if (binding == null)
+        {
+            continue;
+        }
+
+        if (!binding.RewardId.Equals(
+                rewardId,
+                StringComparison.Ordinal))
+        {
+            continue;
+        }
+
+        return binding;
+    }
+
+    return null;
+}
+
 }
