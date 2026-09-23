@@ -134,6 +134,9 @@ public partial class MainWindow : Window
                 twitchHttpClient,
                 twitchSettings.ClientId);
 
+        _twitchAuthService.AuthenticationStateChanged +=
+            TwitchAuthService_AuthenticationStateChanged;
+
         _appServices =
             new AppServices(
                 _yandexAuthService,
@@ -723,12 +726,7 @@ public partial class MainWindow : Window
 
             if (twitchToken == null)
             {
-                TwitchStatusText.Text =
-                    "Не подключено";
-
-                SetTwitchStatusVisual(
-                    isConnected: false);
-
+                SetTwitchDisconnectedUi();
                 return;
             }
 
@@ -762,6 +760,71 @@ public partial class MainWindow : Window
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
+    }
+
+    private async void TwitchAuthService_AuthenticationStateChanged(
+        object? sender,
+        bool isAuthenticated)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            await Dispatcher.InvokeAsync(
+                () =>
+                    TwitchAuthService_AuthenticationStateChanged(
+                        sender,
+                        isAuthenticated));
+
+            return;
+        }
+
+        if (!isAuthenticated)
+        {
+            SetTwitchDisconnectedUi();
+            return;
+        }
+
+        try
+        {
+            TwitchStatusText.Text =
+                "Проверка подключения...";
+
+            SetTwitchStatusVisual(
+                isConnected: false);
+
+            var token =
+                await _twitchAuthService.TryRestoreAsync();
+
+            if (token == null ||
+                string.IsNullOrWhiteSpace(
+                    token.AccessToken))
+            {
+                SetTwitchDisconnectedUi();
+                return;
+            }
+
+            var user =
+                await _twitchApiClient.GetCurrentUserAsync(
+                    token.AccessToken);
+
+            TwitchStatusText.Text =
+                $"Подключено — {user.DisplayName}";
+
+            SetTwitchStatusVisual(
+                isConnected: true);
+        }
+        catch
+        {
+            SetTwitchDisconnectedUi();
+        }
+    }
+
+    private void SetTwitchDisconnectedUi()
+    {
+        TwitchStatusText.Text =
+            "Не подключено";
+
+        SetTwitchStatusVisual(
+            isConnected: false);
     }
 
     private void YandexAuthService_AuthenticationStateChanged(
@@ -1301,6 +1364,9 @@ public partial class MainWindow : Window
 
         _yandexAuthService.AuthenticationStateChanged -=
             YandexAuthService_AuthenticationStateChanged;
+
+        _twitchAuthService.AuthenticationStateChanged -=
+            TwitchAuthService_AuthenticationStateChanged;
 
         CloseTwitchAuthorizationWindow();
 
