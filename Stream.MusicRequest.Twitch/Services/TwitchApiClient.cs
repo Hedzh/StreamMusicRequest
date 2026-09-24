@@ -186,6 +186,71 @@ public class TwitchApiClient
         return result.Data[0];
     }
 
+    public async Task<IReadOnlyList<TwitchCustomReward>> GetCustomRewardsAsync(
+        string accessToken,
+        string broadcasterId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(
+                accessToken))
+        {
+            throw new ArgumentException(
+                "Access Token Twitch не указан.",
+                nameof(accessToken));
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                broadcasterId))
+        {
+            throw new ArgumentException(
+                "Broadcaster ID Twitch не указан.",
+                nameof(broadcasterId));
+        }
+
+        var requestUrl =
+            $"{ApiBaseUrl}" +
+            $"channel_points/custom_rewards" +
+            $"?broadcaster_id={Uri.EscapeDataString(broadcasterId)}";
+
+        using var request =
+            new HttpRequestMessage(
+                HttpMethod.Get,
+                requestUrl);
+
+        AddAuthenticationHeaders(
+            request,
+            accessToken);
+
+        using var response =
+            await _httpClient.SendAsync(
+                request,
+                cancellationToken);
+
+        var responseContent =
+            await response.Content.ReadAsStringAsync(
+                cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException(
+                $"Twitch API не смог получить список Custom Rewards. " +
+                $"HTTP {(int)response.StatusCode}: " +
+                responseContent);
+        }
+
+        var result =
+            JsonSerializer.Deserialize<TwitchCustomRewardResponse>(
+                responseContent);
+
+        if (result == null)
+        {
+            throw new InvalidOperationException(
+                "Twitch API вернул пустой ответ при получении списка Custom Rewards.");
+        }
+
+        return result.Data;
+    }
+
     public async Task<TwitchCustomReward?> GetCustomRewardAsync(
         string accessToken,
         string broadcasterId,
