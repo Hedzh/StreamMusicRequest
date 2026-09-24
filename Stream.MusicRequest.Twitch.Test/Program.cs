@@ -104,92 +104,72 @@ try
         $"Broadcaster ID: {user.Id}");
 
     Console.WriteLine();
-    Console.WriteLine(
-        "Введите Reward ID для проверки.");
-
-    Console.WriteLine(
-        "Например: 123456789");
-
-    Console.WriteLine();
-    Console.Write(
-        "Reward ID: ");
-
-    var rewardId =
-        Console.ReadLine()?.Trim();
-
-    if (string.IsNullOrWhiteSpace(
-            rewardId))
-    {
-        Console.WriteLine();
-        Console.WriteLine(
-            "Reward ID не указан.");
-
-        return;
-    }
-
     Console.WriteLine();
     Console.WriteLine(
-        "Запрашиваем награду через Twitch API...");
+        "Запрашиваем все пользовательские Channel Point Rewards...");
 
-    var reward =
-        await apiClient.GetCustomRewardAsync(
+    var rewards =
+        await apiClient.GetCustomRewardsAsync(
             token.AccessToken,
-            user.Id,
-            rewardId);
+            user.Id);
 
     Console.WriteLine();
 
-    if (reward == null)
+    if (rewards.Count == 0)
     {
         Console.WriteLine(
-            "Награда не найдена.");
-
-        Console.WriteLine(
-            "Twitch API вернул 404 для указанного Reward ID.");
+            "Twitch API не вернул ни одной Custom Reward.");
 
         return;
     }
 
     Console.WriteLine(
-        "✓ Награда найдена!");
+        $"Найдено наград: {rewards.Count}");
 
     Console.WriteLine();
-    Console.WriteLine(
-        "=== Метаданные Twitch Custom Reward ===");
+
+    for (var i = 0; i < rewards.Count; i++)
+    {
+        var reward = rewards[i];
+
+        Console.WriteLine(
+            $"--- Награда #{i + 1} ---");
+
+        Console.WriteLine(
+            $"Reward ID: {reward.Id}");
+
+        Console.WriteLine(
+            $"Название: {reward.Title}");
+
+        Console.WriteLine(
+            $"Стоимость: {reward.Cost} Channel Points");
+
+        Console.WriteLine(
+            $"Описание / Prompt: " +
+            $"{(string.IsNullOrWhiteSpace(reward.Prompt) ? "—" : reward.Prompt)}");
+
+        Console.WriteLine(
+            $"Требуется ввод пользователя: " +
+            $"{(reward.IsUserInputRequired ? "Да" : "Нет")}");
+
+        Console.WriteLine(
+            $"Награда включена: " +
+            $"{(reward.IsEnabled ? "Да" : "Нет")}");
+
+        Console.WriteLine(
+            $"Broadcaster ID: {reward.BroadcasterId}");
+
+        Console.WriteLine(
+            $"Broadcaster Login: {reward.BroadcasterLogin}");
+
+        Console.WriteLine(
+            $"Broadcaster Name: {reward.BroadcasterName}");
+
+        Console.WriteLine();
+    }
 
     Console.WriteLine(
-        $"Reward ID: {reward.Id}");
-
-    Console.WriteLine(
-        $"Название: {reward.Title}");
-
-    Console.WriteLine(
-        $"Стоимость: {reward.Cost} Channel Points");
-
-    Console.WriteLine(
-        $"Описание / Prompt: " +
-        $"{(string.IsNullOrWhiteSpace(reward.Prompt) ? "—" : reward.Prompt)}");
-
-    Console.WriteLine(
-        $"Требуется ввод пользователя: " +
-        $"{(reward.IsUserInputRequired ? "Да" : "Нет")}");
-
-    Console.WriteLine(
-        $"Награда включена: " +
-        $"{(reward.IsEnabled ? "Да" : "Нет")}");
-
-    Console.WriteLine(
-        $"Broadcaster ID: {reward.BroadcasterId}");
-
-    Console.WriteLine(
-        $"Broadcaster Login: {reward.BroadcasterLogin}");
-
-    Console.WriteLine(
-        $"Broadcaster Name: {reward.BroadcasterName}");
-
-    Console.WriteLine();
-    Console.WriteLine(
-        "=== Проверка завершена успешно ===");
+        "=== Проверка списка завершена успешно ===");
 
     Console.WriteLine();
     Console.WriteLine(
