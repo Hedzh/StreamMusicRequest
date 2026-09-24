@@ -274,70 +274,136 @@ try
 
     Console.WriteLine();
     Console.WriteLine(
-        "Запрашиваем все пользовательские Channel Point Rewards...");
+        "=== Диагностика Get Custom Rewards ===");
+
+    var rewardsUrl =
+        "https://api.twitch.tv/helix/channel_points/custom_rewards" +
+        $"?broadcaster_id={Uri.EscapeDataString(user.Id)}";
+
+    Console.WriteLine();
+    Console.WriteLine(
+        "1. Запрос всех Custom Rewards:");
+
+    using var rewardsRequest =
+        new HttpRequestMessage(
+            HttpMethod.Get,
+            rewardsUrl);
+
+    rewardsRequest.Headers.Authorization =
+        new System.Net.Http.Headers.AuthenticationHeaderValue(
+            "Bearer",
+            token.AccessToken);
+
+    rewardsRequest.Headers.Add(
+        "Client-Id",
+        settings.ClientId);
+
+    using var rewardsResponse =
+        await httpClient.SendAsync(
+            rewardsRequest);
+
+    var rewardsContent =
+        await rewardsResponse.Content.ReadAsStringAsync();
+
+    Console.WriteLine(
+        $"HTTP статус: {(int)rewardsResponse.StatusCode} " +
+        $"({rewardsResponse.StatusCode})");
+
+    Console.WriteLine(
+        "Raw JSON:");
+
+    Console.WriteLine(
+        rewardsContent);
+
+    Console.WriteLine();
+    Console.WriteLine(
+        "2. Запрос Custom Rewards с only_manageable_rewards=true:");
+
+    var manageableRewardsUrl =
+        rewardsUrl +
+        "&only_manageable_rewards=true";
+
+    using var manageableRewardsRequest =
+        new HttpRequestMessage(
+            HttpMethod.Get,
+            manageableRewardsUrl);
+
+    manageableRewardsRequest.Headers.Authorization =
+        new System.Net.Http.Headers.AuthenticationHeaderValue(
+            "Bearer",
+            token.AccessToken);
+
+    manageableRewardsRequest.Headers.Add(
+        "Client-Id",
+        settings.ClientId);
+
+    using var manageableRewardsResponse =
+        await httpClient.SendAsync(
+            manageableRewardsRequest);
+
+    var manageableRewardsContent =
+        await manageableRewardsResponse.Content.ReadAsStringAsync();
+
+    Console.WriteLine(
+        $"HTTP статус: {(int)manageableRewardsResponse.StatusCode} " +
+        $"({manageableRewardsResponse.StatusCode})");
+
+    Console.WriteLine(
+        "Raw JSON:");
+
+    Console.WriteLine(
+        manageableRewardsContent);
+
+    Console.WriteLine();
+    Console.WriteLine(
+        "3. Проверяем GetCustomRewardsAsync через TwitchApiClient:");
 
     var rewards =
         await apiClient.GetCustomRewardsAsync(
             token.AccessToken,
             user.Id);
 
-    Console.WriteLine();
-
-    if (rewards.Count == 0)
-    {
-        Console.WriteLine(
-            "Twitch API не вернул ни одной Custom Reward.");
-
-        return;
-    }
-
     Console.WriteLine(
-        $"Найдено наград: {rewards.Count}");
+        $"Результат TwitchApiClient: {rewards.Count} наград.");
 
-    Console.WriteLine();
-
-    for (var i = 0; i < rewards.Count; i++)
+    if (rewards.Count > 0)
     {
-        var reward = rewards[i];
-
-        Console.WriteLine(
-            $"--- Награда #{i + 1} ---");
-
-        Console.WriteLine(
-            $"Reward ID: {reward.Id}");
-
-        Console.WriteLine(
-            $"Название: {reward.Title}");
-
-        Console.WriteLine(
-            $"Стоимость: {reward.Cost} Channel Points");
-
-        Console.WriteLine(
-            $"Описание / Prompt: " +
-            $"{(string.IsNullOrWhiteSpace(reward.Prompt) ? "—" : reward.Prompt)}");
-
-        Console.WriteLine(
-            $"Требуется ввод пользователя: " +
-            $"{(reward.IsUserInputRequired ? "Да" : "Нет")}");
-
-        Console.WriteLine(
-            $"Награда включена: " +
-            $"{(reward.IsEnabled ? "Да" : "Нет")}");
-
-        Console.WriteLine(
-            $"Broadcaster ID: {reward.BroadcasterId}");
-
-        Console.WriteLine(
-            $"Broadcaster Login: {reward.BroadcasterLogin}");
-
-        Console.WriteLine(
-            $"Broadcaster Name: {reward.BroadcasterName}");
-
         Console.WriteLine();
+
+        for (var i = 0; i < rewards.Count; i++)
+        {
+            var reward = rewards[i];
+
+            Console.WriteLine(
+                $"--- Награда #{i + 1} ---");
+
+            Console.WriteLine(
+                $"Reward ID: {reward.Id}");
+
+            Console.WriteLine(
+                $"Название: {reward.Title}");
+
+            Console.WriteLine(
+                $"Стоимость: {reward.Cost} Channel Points");
+
+            Console.WriteLine(
+                $"Описание / Prompt: " +
+                $"{(string.IsNullOrWhiteSpace(reward.Prompt) ? "—" : reward.Prompt)}");
+
+            Console.WriteLine(
+                $"Требуется ввод пользователя: " +
+                $"{(reward.IsUserInputRequired ? "Да" : "Нет")}");
+
+            Console.WriteLine(
+                $"Награда включена: " +
+                $"{(reward.IsEnabled ? "Да" : "Нет")}");
+
+            Console.WriteLine();
+        }
     }
 
     Console.WriteLine(
-        "=== Проверка списка завершена успешно ===");
+        "=== Диагностика Get Custom Rewards завершена ===");
 
     Console.WriteLine();
     Console.WriteLine(
