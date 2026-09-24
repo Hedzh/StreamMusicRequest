@@ -601,8 +601,32 @@ public partial class SettingsWindow : Window
             return;
         }
 
+        if (!Guid.TryParse(
+                rewardId,
+                out _))
+        {
+            SetRewardCheckError(
+                isOrderMusic,
+                "Некорректный Reward ID. Используйте ID в формате UUID.");
+            return;
+        }
+
+        var checkButton =
+            isOrderMusic
+                ? FindName("OrderMusicRewardCheckButton") as Button
+                : FindName("SkipTrackRewardCheckButton") as Button;
+
         try
         {
+            if (checkButton != null)
+            {
+                checkButton.IsEnabled = false;
+            }
+
+            using var timeoutCts =
+                new CancellationTokenSource(
+                    TimeSpan.FromSeconds(10));
+
             var token =
                 await _appServices
                     .TwitchAuthService
@@ -621,7 +645,8 @@ public partial class SettingsWindow : Window
                 await _appServices
                     .TwitchApiClient
                     .GetCurrentUserAsync(
-                        token.AccessToken);
+                        token.AccessToken,
+                        timeoutCts.Token);
 
             var reward =
                 await _appServices
@@ -629,7 +654,8 @@ public partial class SettingsWindow : Window
                     .GetCustomRewardAsync(
                         token.AccessToken,
                         user.Id,
-                        rewardId);
+                        rewardId,
+                        timeoutCts.Token);
 
             if (reward == null)
             {
@@ -680,11 +706,24 @@ public partial class SettingsWindow : Window
                     reward.IsEnabled ? "Да" : "Нет";
             }
         }
+        catch (OperationCanceledException)
+        {
+            SetRewardCheckError(
+                isOrderMusic,
+                "Проверка не завершилась за 10 секунд. Проверьте подключение к Twitch.");
+        }
         catch (Exception ex)
         {
             SetRewardCheckError(
                 isOrderMusic,
                 $"Ошибка проверки: {ex.Message}");
+        }
+        finally
+        {
+            if (checkButton != null)
+            {
+                checkButton.IsEnabled = true;
+            }
         }
     }
 
