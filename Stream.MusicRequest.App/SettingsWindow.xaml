@@ -827,9 +827,11 @@
                         <TextBlock Text="Twitch → Награды"
                                    Style="{StaticResource PageTitle}"/>
 
-                        <TextBlock Text="Настройка наград Twitch для управления музыкальными функциями."
+                        <TextBlock Text="Привязка существующих наград Twitch к функциям приложения."
                                    Style="{StaticResource PageDescription}"
                                    Margin="0,0,0,20"/>
+
+                        <!-- ORDER MUSIC -->
 
                         <Border Style="{StaticResource SettingsCard}">
 
@@ -838,59 +840,84 @@
                                 <TextBlock Text="Заказ музыки"
                                            Style="{StaticResource SectionTitle}"/>
 
-                                <RadioButton Content="Создать награду автоматически"
-                                             GroupName="MusicRequestRewardMode"
-                                             IsChecked="True"
-                                             Style="{StaticResource SettingsRadioButton}"/>
+                                <TextBlock Text="Reward ID"
+                                           Style="{StaticResource FieldTitle}"/>
 
-                                <RadioButton Content="Использовать существующую награду"
-                                             GroupName="MusicRequestRewardMode"
-                                             Style="{StaticResource SettingsRadioButton}"/>
+                                <TextBox x:Name="OrderMusicRewardIdTextBox"
+                                         Style="{StaticResource InputBox}"
+                                         Margin="0,0,0,12"/>
 
-                                <Grid Margin="0,14,0,0">
+                                <StackPanel Orientation="Horizontal">
 
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="150"/>
-                                    </Grid.ColumnDefinitions>
+                                    <Button Content="Проверить"
+                                            Style="{StaticResource ActionButton}"
+                                            Width="105"
+                                            Margin="0,0,8,0"
+                                            Click="OrderMusicRewardCheckButton_Click"/>
 
-                                    <StackPanel Margin="0,0,12,0">
+                                    <Button Content="Сохранить"
+                                            Style="{StaticResource AccentButton}"
+                                            Width="105"
+                                            Margin="0,0,8,0"
+                                            Click="OrderMusicRewardSaveButton_Click"/>
 
-                                        <TextBlock Text="Название награды"
-                                                   Style="{StaticResource FieldTitle}"/>
-
-                                        <TextBox Text="Заказ музыки"
-                                                 Style="{StaticResource InputBox}"/>
-
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="1">
-
-                                        <TextBlock Text="Стоимость"
-                                                   Style="{StaticResource FieldTitle}"/>
-
-                                        <TextBox Text="1000"
-                                                 Style="{StaticResource InputBox}"/>
-
-                                    </StackPanel>
-
-                                </Grid>
-
-                                <StackPanel Margin="0,12,0,0">
-
-                                    <TextBlock Text="Reward ID"
-                                               Style="{StaticResource FieldTitle}"/>
-
-                                    <TextBox Style="{StaticResource InputBox}"/>
+                                    <Button Content="Очистить"
+                                            Style="{StaticResource ActionButton}"
+                                            Width="105"
+                                            Click="OrderMusicRewardClearButton_Click"/>
 
                                 </StackPanel>
 
-                                <TextBlock Text="Зритель передаёт ссылку на трек или альбом через поле ввода награды."
-                                           Style="{StaticResource FieldDescription}"/>
+                                <Border Background="#15181E"
+                                        BorderBrush="{StaticResource BorderBrushDark}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="14"
+                                        Margin="0,14,0,0">
+
+                                    <StackPanel>
+
+                                        <TextBlock>
+                                            <Run Text="Статус: "/>
+                                            <Run x:Name="OrderMusicRewardStatusText"
+                                                 Text="Не проверена"
+                                                 FontWeight="SemiBold"/>
+                                        </TextBlock>
+
+                                        <TextBlock Margin="0,7,0,0">
+                                            <Run Text="Название: "/>
+                                            <Run x:Name="OrderMusicRewardNameText"
+                                                 Text="—"/>
+                                        </TextBlock>
+
+                                        <TextBlock Margin="0,5,0,0">
+                                            <Run Text="Стоимость: "/>
+                                            <Run x:Name="OrderMusicRewardCostText"
+                                                 Text="—"/>
+                                        </TextBlock>
+
+                                        <TextBlock Margin="0,5,0,0">
+                                            <Run Text="Ввод пользователя: "/>
+                                            <Run x:Name="OrderMusicRewardInputText"
+                                                 Text="—"/>
+                                        </TextBlock>
+
+                                        <TextBlock Margin="0,5,0,0"
+                                                   TextWrapping="Wrap">
+                                            <Run Text="Включена: "/>
+                                            <Run x:Name="OrderMusicRewardEnabledText"
+                                                 Text="—"/>
+                                        </TextBlock>
+
+                                    </StackPanel>
+
+                                </Border>
 
                             </StackPanel>
 
                         </Border>
+
+                        <!-- SKIP TRACK -->
 
                         <Border Style="{StaticResource SettingsCard}">
 
@@ -899,124 +926,81 @@
                                 <TextBlock Text="Пропустить трек"
                                            Style="{StaticResource SectionTitle}"/>
 
-                                <RadioButton Content="Создать награду автоматически"
-                                             GroupName="SkipRewardMode"
-                                             IsChecked="True"
-                                             Style="{StaticResource SettingsRadioButton}"/>
+                                <TextBlock Text="Reward ID"
+                                           Style="{StaticResource FieldTitle}"/>
 
-                                <RadioButton Content="Использовать существующую награду"
-                                             GroupName="SkipRewardMode"
-                                             Style="{StaticResource SettingsRadioButton}"/>
+                                <TextBox x:Name="SkipTrackRewardIdTextBox"
+                                         Style="{StaticResource InputBox}"
+                                         Margin="0,0,0,12"/>
 
-                                <Grid Margin="0,14,0,0">
+                                <StackPanel Orientation="Horizontal">
 
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="150"/>
-                                    </Grid.ColumnDefinitions>
+                                    <Button Content="Проверить"
+                                            Style="{StaticResource ActionButton}"
+                                            Width="105"
+                                            Margin="0,0,8,0"
+                                            Click="SkipTrackRewardCheckButton_Click"/>
 
-                                    <StackPanel Margin="0,0,12,0">
+                                    <Button Content="Сохранить"
+                                            Style="{StaticResource AccentButton}"
+                                            Width="105"
+                                            Margin="0,0,8,0"
+                                            Click="SkipTrackRewardSaveButton_Click"/>
 
-                                        <TextBlock Text="Название награды"
-                                                   Style="{StaticResource FieldTitle}"/>
-
-                                        <TextBox Text="Пропустить трек"
-                                                 Style="{StaticResource InputBox}"/>
-
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="1">
-
-                                        <TextBlock Text="Стоимость"
-                                                   Style="{StaticResource FieldTitle}"/>
-
-                                        <TextBox Text="1500"
-                                                 Style="{StaticResource InputBox}"/>
-
-                                    </StackPanel>
-
-                                </Grid>
-
-                                <StackPanel Margin="0,12,0,0">
-
-                                    <TextBlock Text="Reward ID"
-                                               Style="{StaticResource FieldTitle}"/>
-
-                                    <TextBox Style="{StaticResource InputBox}"/>
+                                    <Button Content="Очистить"
+                                            Style="{StaticResource ActionButton}"
+                                            Width="105"
+                                            Click="SkipTrackRewardClearButton_Click"/>
 
                                 </StackPanel>
+
+                                <Border Background="#15181E"
+                                        BorderBrush="{StaticResource BorderBrushDark}"
+                                        BorderThickness="1"
+                                        CornerRadius="8"
+                                        Padding="14"
+                                        Margin="0,14,0,0">
+
+                                    <StackPanel>
+
+                                        <TextBlock>
+                                            <Run Text="Статус: "/>
+                                            <Run x:Name="SkipTrackRewardStatusText"
+                                                 Text="Не проверена"
+                                                 FontWeight="SemiBold"/>
+                                        </TextBlock>
+
+                                        <TextBlock Margin="0,7,0,0">
+                                            <Run Text="Название: "/>
+                                            <Run x:Name="SkipTrackRewardNameText"
+                                                 Text="—"/>
+                                        </TextBlock>
+
+                                        <TextBlock Margin="0,5,0,0">
+                                            <Run Text="Стоимость: "/>
+                                            <Run x:Name="SkipTrackRewardCostText"
+                                                 Text="—"/>
+                                        </TextBlock>
+
+                                        <TextBlock Margin="0,5,0,0">
+                                            <Run Text="Ввод пользователя: "/>
+                                            <Run x:Name="SkipTrackRewardInputText"
+                                                 Text="—"/>
+                                        </TextBlock>
+
+                                        <TextBlock Margin="0,5,0,0">
+                                            <Run Text="Включена: "/>
+                                            <Run x:Name="SkipTrackRewardEnabledText"
+                                                 Text="—"/>
+                                        </TextBlock>
+
+                                    </StackPanel>
+
+                                </Border>
 
                             </StackPanel>
 
                         </Border>
-
-                        <Border Style="{StaticResource SettingsCard}">
-
-                            <StackPanel>
-
-                                <TextBlock Text="Повторить трек"
-                                           Style="{StaticResource SectionTitle}"/>
-
-                                <RadioButton Content="Создать награду автоматически"
-                                             GroupName="RepeatRewardMode"
-                                             IsChecked="True"
-                                             Style="{StaticResource SettingsRadioButton}"/>
-
-                                <RadioButton Content="Использовать существующую награду"
-                                             GroupName="RepeatRewardMode"
-                                             Style="{StaticResource SettingsRadioButton}"/>
-
-                                <Grid Margin="0,14,0,0">
-
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="150"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <StackPanel Margin="0,0,12,0">
-
-                                        <TextBlock Text="Название награды"
-                                                   Style="{StaticResource FieldTitle}"/>
-
-                                        <TextBox Text="Повторить трек"
-                                                 Style="{StaticResource InputBox}"/>
-
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Column="1">
-
-                                        <TextBlock Text="Стоимость"
-                                                   Style="{StaticResource FieldTitle}"/>
-
-                                        <TextBox Text="1000"
-                                                 Style="{StaticResource InputBox}"/>
-
-                                    </StackPanel>
-
-                                </Grid>
-
-                                <StackPanel Margin="0,12,0,0">
-
-                                    <TextBlock Text="Reward ID"
-                                               Style="{StaticResource FieldTitle}"/>
-
-                                    <TextBox Style="{StaticResource InputBox}"/>
-
-                                </StackPanel>
-
-                            </StackPanel>
-
-                        </Border>
-
-                        <StackPanel Orientation="Horizontal"
-                                    HorizontalAlignment="Right"
-                                    Margin="0,4,0,20">
-
-                            <Button Content="Сохранить"
-                                    Style="{StaticResource AccentButton}"
-                                    Width="120"/>
-
-                        </StackPanel>
 
                     </StackPanel>
 
