@@ -111,6 +111,70 @@ public class AppServices
         }
     }
 
+    public async Task SaveTwitchRewardSettingAsync(
+        string featureKey,
+        string rewardId)
+    {
+        featureKey =
+            featureKey?.Trim()
+            ?? string.Empty;
+
+        rewardId =
+            rewardId?.Trim()
+            ?? string.Empty;
+
+        if (string.IsNullOrWhiteSpace(featureKey))
+        {
+            throw new ArgumentException(
+                "Ключ функции Twitch-награды не указан.",
+                nameof(featureKey));
+        }
+
+        if (featureKey != TwitchRewardService.OrderMusicFeatureKey &&
+            featureKey != TwitchRewardService.SkipTrackFeatureKey)
+        {
+            throw new ArgumentException(
+                "Неизвестная функция Twitch-награды.",
+                nameof(featureKey));
+        }
+
+        var settings =
+            await _twitchRewardSettingsStorage
+                .LoadAsync();
+
+        if (featureKey ==
+            TwitchRewardService.OrderMusicFeatureKey)
+        {
+            settings.OrderMusicRewardId =
+                rewardId;
+        }
+        else
+        {
+            settings.SkipTrackRewardId =
+                rewardId;
+        }
+
+        var binding =
+            TwitchRewardBindings
+                .FirstOrDefault(
+                    item =>
+                        item.FeatureKey ==
+                        featureKey);
+
+        if (binding != null)
+        {
+            binding.RewardId =
+                rewardId;
+
+            binding.IsEnabled =
+                !string.IsNullOrWhiteSpace(
+                    rewardId);
+        }
+
+        await _twitchRewardSettingsStorage
+            .SaveAsync(settings);
+    }
+
     public async Task SaveTwitchRewardSettingsAsync(
         string orderMusicRewardId,
         string skipTrackRewardId)
