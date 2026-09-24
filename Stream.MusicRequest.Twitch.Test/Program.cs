@@ -104,6 +104,174 @@ try
         $"Broadcaster ID: {user.Id}");
 
     Console.WriteLine();
+
+
+    Console.WriteLine();
+    Console.WriteLine(
+        "Проверяем фактические данные OAuth-токена Twitch...");
+
+    using var validateRequest =
+        new HttpRequestMessage(
+            HttpMethod.Get,
+            "https://id.twitch.tv/oauth2/validate");
+
+    validateRequest.Headers.Authorization =
+        new System.Net.Http.Headers.AuthenticationHeaderValue(
+            "OAuth",
+            token.AccessToken);
+
+    using var validateResponse =
+        await httpClient.SendAsync(
+            validateRequest);
+
+    var validateContent =
+        await validateResponse.Content.ReadAsStringAsync();
+
+    if (!validateResponse.IsSuccessStatusCode)
+    {
+        Console.WriteLine();
+        Console.WriteLine(
+            $"OAuth-токен не прошёл проверку. " +
+            $"HTTP {(int)validateResponse.StatusCode}: " +
+            validateContent);
+
+        return;
+    }
+
+    using var validateJson =
+        System.Text.Json.JsonDocument.Parse(
+            validateContent);
+
+    var validateRoot =
+        validateJson.RootElement;
+
+    var validateClientId =
+        validateRoot.TryGetProperty(
+            "client_id",
+            out var clientIdProperty)
+            ? clientIdProperty.GetString()
+            : null;
+
+    var validateUserId =
+        validateRoot.TryGetProperty(
+            "user_id",
+            out var userIdProperty)
+            ? userIdProperty.GetString()
+            : null;
+
+    var validateLogin =
+        validateRoot.TryGetProperty(
+            "login",
+            out var loginProperty)
+            ? loginProperty.GetString()
+            : null;
+
+    var expiresIn =
+        validateRoot.TryGetProperty(
+            "expires_in",
+            out var expiresInProperty)
+            ? expiresInProperty.GetInt64()
+            : 0;
+
+    Console.WriteLine();
+    Console.WriteLine(
+        "OAuth-токен действителен.");
+
+    Console.WriteLine(
+        $"Client ID токена: {validateClientId ?? "—"}");
+
+    Console.WriteLine(
+        $"Client ID приложения: {settings.ClientId}");
+
+    Console.WriteLine(
+        $"User ID токена: {validateUserId ?? "—"}");
+
+    Console.WriteLine(
+        $"Login токена: {validateLogin ?? "—"}");
+
+    Console.WriteLine(
+        $"Срок действия: {expiresIn} сек.");
+
+    Console.WriteLine();
+    Console.WriteLine(
+        "Фактические scopes токена:");
+
+    var hasReadRedemptionsScope = false;
+    var hasManageRedemptionsScope = false;
+
+    if (validateRoot.TryGetProperty(
+            "scopes",
+            out var scopesProperty) &&
+        scopesProperty.ValueKind ==
+            System.Text.Json.JsonValueKind.Array)
+    {
+        foreach (var scope in scopesProperty.EnumerateArray())
+        {
+            var scopeName =
+                scope.GetString();
+
+            if (string.IsNullOrWhiteSpace(
+                    scopeName))
+            {
+                continue;
+            }
+
+            Console.WriteLine(
+                $"  - {scopeName}");
+
+            if (scopeName ==
+                "channel:read:redemptions")
+            {
+                hasReadRedemptionsScope = true;
+            }
+
+            if (scopeName ==
+                "channel:manage:redemptions")
+            {
+                hasManageRedemptionsScope = true;
+            }
+        }
+    }
+
+    Console.WriteLine();
+    Console.WriteLine(
+        $"channel:read:redemptions: " +
+        $"{(hasReadRedemptionsScope ? "ЕСТЬ" : "НЕТ")}");
+
+    Console.WriteLine(
+        $"channel:manage:redemptions: " +
+        $"{(hasManageRedemptionsScope ? "ЕСТЬ" : "НЕТ")}");
+
+    Console.WriteLine();
+
+    if (!string.Equals(
+            validateClientId,
+            settings.ClientId,
+            StringComparison.Ordinal))
+    {
+        Console.WriteLine(
+            "ВНИМАНИЕ: Client ID токена не совпадает " +
+            "с Client ID приложения.");
+    }
+
+    if (!string.Equals(
+            validateUserId,
+            user.Id,
+            StringComparison.Ordinal))
+    {
+        Console.WriteLine(
+            "ВНИМАНИЕ: User ID токена не совпадает " +
+            "с Broadcaster ID.");
+    }
+
+    if (!hasReadRedemptionsScope &&
+        !hasManageRedemptionsScope)
+    {
+        Console.WriteLine(
+            "ВНИМАНИЕ: у токена нет ни одного scope, " +
+            "необходимого для работы с Custom Rewards.");
+    }
+
     Console.WriteLine();
     Console.WriteLine(
         "Запрашиваем все пользовательские Channel Point Rewards...");
