@@ -39,6 +39,9 @@
         <SolidColorBrush x:Key="SuccessBrush"
                          Color="#55C98A"/>
 
+        <SolidColorBrush x:Key="WarningBrush"
+                         Color="#E0A458"/>
+
         <!-- ====================================================== -->
         <!-- PAGE -->
         <!-- ====================================================== -->
