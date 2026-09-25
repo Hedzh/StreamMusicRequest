@@ -1693,6 +1693,15 @@ public partial class MainWindow : Window
             FileLogger.Info($"Завершение Twitch с таймаутом: {ex.Message}");
         }
 
+        try
+        {
+            _musicPlayer.Dispose();
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Info($"Ошибка освобождения аудиоплеера: {ex.Message}");
+        }
+
         Application.Current.Shutdown();
     }
 
