@@ -1669,6 +1669,19 @@ public partial class MainWindow : Window
         object? sender,
         EventArgs e)
     {
+        _playbackUiTimer.Stop();
+
+        _yandexAuthService.AuthenticationStateChanged -=
+            YandexAuthService_AuthenticationStateChanged;
+
+        _twitchAuthService.AuthenticationStateChanged -=
+            TwitchAuthService_AuthenticationStateChanged;
+
+        _appServices.TwitchService.RewardActionReceived -=
+            TwitchService_RewardActionReceived;
+
+        CloseTwitchAuthorizationWindow();
+
         Application.Current.Shutdown();
     }
 
