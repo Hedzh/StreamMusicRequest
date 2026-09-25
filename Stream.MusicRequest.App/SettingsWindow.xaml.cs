@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using Stream.MusicRequest.Infrastructure.Storage;
 using Stream.MusicRequest.Twitch.Models;
 
 namespace Stream.MusicRequest.App;
