@@ -165,7 +165,15 @@ public sealed class LocalAudioStreamServer : IDisposable
         {
             try
             {
-                await _acceptTask;
+                await _acceptTask.WaitAsync(
+                    TimeSpan.FromSeconds(2));
+            }
+            catch (TimeoutException)
+            {
+                FileLogger.Info(
+                    "Ожидание остановки локального " +
+                    "аудиосервера превысило 2 секунды. " +
+                    "Продолжаем завершение приложения.");
             }
             catch
             {
