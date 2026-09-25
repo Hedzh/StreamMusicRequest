@@ -17,6 +17,19 @@ public class MainMusicService
 
     private bool _handlingPlaybackFinished;
 
+    private bool _shuffleEnabled;
+
+    private readonly Random _shuffleRandom =
+        new();
+
+    private readonly List<int> _shuffleOrder =
+        new();
+
+    private int _shufflePosition;
+
+    private readonly List<int> _shuffleHistory =
+        new();
+
     public MainMusicService(
         IMusicPlayer player)
     {
@@ -47,6 +60,35 @@ public class MainMusicService
     public bool IsMainMusicActive =>
         _isMainMusicActive;
 
+    public bool IsShuffleEnabled =>
+        _shuffleEnabled;
+
+    public void SetShuffleEnabled(
+        bool enabled)
+    {
+        if (_shuffleEnabled == enabled)
+        {
+            return;
+        }
+
+        _shuffleEnabled = enabled;
+        _shuffleOrder.Clear();
+        _shuffleHistory.Clear();
+        _shufflePosition = 0;
+
+        if (_shuffleEnabled &&
+            _currentAlbum != null &&
+            _currentAlbum.Tracks.Count > 1)
+        {
+            BuildShuffleOrder(
+                _currentTrackIndex);
+        }
+
+        FileLogger.Info(
+            $"Случайный порядок основной музыки: " +
+            $"{(_shuffleEnabled ? "включён" : "выключен")}");
+    }
+
     public void SetAlbum(
         MusicAlbum album)
     {
@@ -70,6 +112,16 @@ public class MainMusicService
 
         _isMainMusicActive =
             false;
+
+        _shuffleOrder.Clear();
+        _shuffleHistory.Clear();
+        _shufflePosition = 0;
+
+        if (_shuffleEnabled &&
+            album.Tracks.Count > 1)
+        {
+            BuildShuffleOrder(0);
+        }
 
         FileLogger.Info(
             $"Основной источник установлен: " +
@@ -191,13 +243,35 @@ public class MainMusicService
             return;
         }
 
-        _currentTrackIndex++;
+        var previousTrackIndex =
+            _currentTrackIndex;
 
-        if (_currentTrackIndex >=
-            _currentAlbum.Tracks.Count)
+        if (_shuffleEnabled &&
+            _currentAlbum.Tracks.Count > 1)
         {
+            var nextTrackIndex =
+                GetNextShuffleTrackIndex();
+
+            if (nextTrackIndex !=
+                previousTrackIndex)
+            {
+                _shuffleHistory.Add(
+                    previousTrackIndex);
+            }
+
             _currentTrackIndex =
-                0;
+                nextTrackIndex;
+        }
+        else
+        {
+            _currentTrackIndex++;
+
+            if (_currentTrackIndex >=
+                _currentAlbum.Tracks.Count)
+            {
+                _currentTrackIndex =
+                    0;
+            }
         }
 
         FileLogger.Info(
@@ -216,12 +290,24 @@ public class MainMusicService
             return;
         }
 
-        _currentTrackIndex--;
-
-        if (_currentTrackIndex < 0)
+        if (_shuffleEnabled &&
+            _shuffleHistory.Count > 0)
         {
             _currentTrackIndex =
-                _currentAlbum.Tracks.Count - 1;
+                _shuffleHistory[^1];
+
+            _shuffleHistory.RemoveAt(
+                _shuffleHistory.Count - 1);
+        }
+        else
+        {
+            _currentTrackIndex--;
+
+            if (_currentTrackIndex < 0)
+            {
+                _currentTrackIndex =
+                    _currentAlbum.Tracks.Count - 1;
+            }
         }
 
         FileLogger.Info(
@@ -329,6 +415,17 @@ public class MainMusicService
         _isMainMusicActive =
             false;
 
+        _shuffleOrder.Clear();
+        _shuffleHistory.Clear();
+        _shufflePosition = 0;
+
+        if (_shuffleEnabled &&
+            state.Album.Tracks.Count > 1)
+        {
+            BuildShuffleOrder(
+                _currentTrackIndex);
+        }
+
         var track =
             _currentAlbum.Tracks[
                 _currentTrackIndex];
@@ -391,6 +488,69 @@ public class MainMusicService
 
         _isMainMusicActive =
             false;
+
+        _shuffleOrder.Clear();
+        _shuffleHistory.Clear();
+        _shufflePosition = 0;
+    }
+
+    private int GetNextShuffleTrackIndex()
+    {
+        if (_currentAlbum == null ||
+            _currentAlbum.Tracks.Count <= 1)
+        {
+            return _currentTrackIndex;
+        }
+
+        if (_shufflePosition >=
+            _shuffleOrder.Count)
+        {
+            BuildShuffleOrder(
+                _currentTrackIndex);
+        }
+
+        if (_shuffleOrder.Count == 0)
+        {
+            return _currentTrackIndex;
+        }
+
+        return _shuffleOrder[
+            _shufflePosition++];
+    }
+
+    private void BuildShuffleOrder(
+        int excludedTrackIndex)
+    {
+        _shuffleOrder.Clear();
+        _shufflePosition = 0;
+
+        if (_currentAlbum == null)
+        {
+            return;
+        }
+
+        for (var index = 0;
+             index < _currentAlbum.Tracks.Count;
+             index++)
+        {
+            if (index != excludedTrackIndex)
+            {
+                _shuffleOrder.Add(index);
+            }
+        }
+
+        for (var index = _shuffleOrder.Count - 1;
+             index > 0;
+             index--)
+        {
+            var swapIndex =
+                _shuffleRandom.Next(index + 1);
+
+            (_shuffleOrder[index],
+             _shuffleOrder[swapIndex]) =
+                (_shuffleOrder[swapIndex],
+                 _shuffleOrder[index]);
+        }
     }
 
     private async Task<string?> GetPlaybackUrlAsync(
