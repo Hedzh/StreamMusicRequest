@@ -1669,10 +1669,7 @@ public partial class MainWindow : Window
         object? sender,
         EventArgs e)
     {
-        // DIAGNOSTIC: intentionally terminate before disposing
-        // any application services. This isolates whether the
-        // process is kept alive by shutdown/cleanup code.
-        Environment.Exit(0);
+        Application.Current.Shutdown();
     }
 
     private void CloseTwitchAuthorizationWindow()
