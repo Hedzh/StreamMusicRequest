@@ -394,6 +394,7 @@ public sealed class ObsWidgetServer : IAsyncDisposable
 
                 let lastKey = "";
                 let timer = null;
+                let hasLoadedState = false;
 
                 const setState = state => {
                     if (state.visible === false) {
