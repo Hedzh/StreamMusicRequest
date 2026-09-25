@@ -560,8 +560,29 @@ public partial class SettingsWindow : Window
             SkipTrackRewardIdTextBox.Text =
                 skipTrackBinding?.RewardId ?? string.Empty;
 
-            ResetOrderMusicRewardDetails();
-            ResetSkipTrackRewardDetails();
+            if (string.IsNullOrWhiteSpace(
+                    OrderMusicRewardIdTextBox.Text))
+            {
+                ResetOrderMusicRewardDetails();
+            }
+            else
+            {
+                await CheckTwitchRewardAsync(
+                    OrderMusicRewardIdTextBox.Text,
+                    true);
+            }
+
+            if (string.IsNullOrWhiteSpace(
+                    SkipTrackRewardIdTextBox.Text))
+            {
+                ResetSkipTrackRewardDetails();
+            }
+            else
+            {
+                await CheckTwitchRewardAsync(
+                    SkipTrackRewardIdTextBox.Text,
+                    false);
+            }
         }
         catch
         {
