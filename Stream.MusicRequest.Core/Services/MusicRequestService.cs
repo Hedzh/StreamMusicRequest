@@ -71,6 +71,9 @@ public class MusicRequestService
                 "Не удалось найти музыкальный трек.");
         }
 
+        track.RequestedBy =
+            request.ViewerName;
+
         var item =
             new QueueItem
             {
