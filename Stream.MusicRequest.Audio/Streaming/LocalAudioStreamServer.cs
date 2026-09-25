@@ -166,7 +166,8 @@ public sealed class LocalAudioStreamServer : IDisposable
             try
             {
                 await _acceptTask.WaitAsync(
-                    TimeSpan.FromSeconds(2));
+                    TimeSpan.FromSeconds(2))
+                    .ConfigureAwait(false);
             }
             catch (TimeoutException)
             {
@@ -191,6 +192,20 @@ public sealed class LocalAudioStreamServer : IDisposable
 
         FileLogger.Info(
             "Локальный аудиопоток остановлен.");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            await StopAsync()
+                .ConfigureAwait(false);
+        }
+        catch
+        {
+            // Завершение приложения не должно
+            // зависеть от остановки HTTP-сервера.
+        }
     }
 
     public void Dispose()
