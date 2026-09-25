@@ -42,10 +42,14 @@ public class NAudioMusicPlayer :
         _outputDevice?.PlaybackState ==
         PlaybackState.Playing;
 
-    public NAudioMusicPlayer()
+    public NAudioMusicPlayer(
+        string obsBindAddress = "127.0.0.1",
+        int obsAudioPort = 8766)
     {
         _audioStreamServer =
-            new LocalAudioStreamServer();
+            new LocalAudioStreamServer(
+                obsBindAddress,
+                obsAudioPort);
 
         _audioStreamServer.SetFormat(
             OutputFormat);
