@@ -535,7 +535,7 @@ public sealed class LocalAudioStreamServer : IDisposable
             (() => {
                 const bytesPerFrame = 4;
                 const context = new AudioContext({latencyHint:"interactive", sampleRate:48000});
-                const processor = context.createScriptProcessor(1024, 0, 2);
+                const processor = context.createScriptProcessor(2048, 0, 2);
                 const queue = [];
                 let pending = new Uint8Array(0);
 
@@ -579,7 +579,7 @@ public sealed class LocalAudioStreamServer : IDisposable
                         for (const item of queue)
                             frames += item.data.length / 2 - item.position;
 
-                        if (frames <= 4096) break;
+                        if (frames <= 12000) break;
                         queue.shift();
                     }
                 };
