@@ -54,13 +54,15 @@ public sealed class LocalAudioStreamServer : IDisposable
     {
         if (!IPAddress.TryParse(
                 bindAddress,
-                out _address) ||
-            _address.AddressFamily != AddressFamily.InterNetwork)
+                out var address) ||
+            address.AddressFamily != AddressFamily.InterNetwork)
         {
             throw new ArgumentException(
                 "HTTP-адрес OBS должен быть корректным IPv4-адресом.",
                 nameof(bindAddress));
         }
+
+        _address = address;
 
         if (port is < 1 or > 65535)
         {
