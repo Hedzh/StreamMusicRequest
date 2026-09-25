@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Stream.MusicRequest.Audio.Players;
 using Stream.MusicRequest.Core.Events;
@@ -237,6 +238,9 @@ public partial class MainWindow : Window
         SetMainMusicButton.Click +=
             SetMainMusicButton_Click;
 
+        ShuffleMainMusicButton.Click +=
+            ShuffleMainMusicButton_Click;
+
         PlaybackSlider.PreviewMouseLeftButtonDown +=
             PlaybackSlider_PreviewMouseLeftButtonDown;
 
@@ -430,6 +434,42 @@ public partial class MainWindow : Window
 
         if (track == null)
         {
+            CurrentArtistText.Text =
+                "Нет активного трека";
+
+            CurrentTitleText.Text =
+                "Ожидание воспроизведения";
+
+            CurrentAlbumText.Text =
+                "—";
+
+            CurrentPositionText.Text =
+                "00:00";
+
+            DurationText.Text =
+                "00:00";
+
+            PlaybackSlider.Minimum =
+                0;
+
+            PlaybackSlider.Maximum =
+                100;
+
+            PlaybackSlider.Value =
+                0;
+
+            SetPlaybackButtonText(
+                "▶");
+
+            CurrentCoverImage.Source =
+                null;
+
+            CurrentCoverImage.Visibility =
+                Visibility.Collapsed;
+
+            CoverPlaceholder.Visibility =
+                Visibility.Visible;
+
             return;
         }
 
@@ -456,6 +496,9 @@ public partial class MainWindow : Window
                 track.Album)
                 ? "Без альбома"
                 : track.Album;
+
+        UpdateCurrentCover(
+            track.CoverUrl);
 
         var duration =
             _musicPlayer.GetDuration();
@@ -495,6 +538,96 @@ public partial class MainWindow : Window
                 : "▶");
     }
 
+    private void UpdateCurrentCover(
+        string? coverUrl)
+    {
+        if (string.IsNullOrWhiteSpace(coverUrl))
+        {
+            CurrentCoverImage.Source =
+                null;
+
+            CurrentCoverImage.Visibility =
+                Visibility.Collapsed;
+
+            CoverPlaceholder.Visibility =
+                Visibility.Visible;
+
+            return;
+        }
+
+        try
+        {
+            var bitmap =
+                new BitmapImage();
+
+            bitmap.BeginInit();
+            bitmap.UriSource =
+                new Uri(
+                    coverUrl,
+                    UriKind.Absolute);
+            bitmap.CacheOption =
+                BitmapCacheOption.OnLoad;
+            bitmap.EndInit();
+            bitmap.Freeze();
+
+            CurrentCoverImage.Source =
+                bitmap;
+
+            CurrentCoverImage.Visibility =
+                Visibility.Visible;
+
+            CoverPlaceholder.Visibility =
+                Visibility.Collapsed;
+        }
+        catch (Exception ex)
+        {
+            CurrentCoverImage.Source =
+                null;
+
+            CurrentCoverImage.Visibility =
+                Visibility.Collapsed;
+
+            CoverPlaceholder.Visibility =
+                Visibility.Visible;
+
+            Stream.MusicRequest.Core.Diagnostics.FileLogger.Error(
+                "Не удалось загрузить обложку текущего трека.",
+                ex);
+        }
+    }
+
+    private void ShuffleMainMusicButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (!_playbackController.HasMainMusic)
+        {
+            return;
+        }
+
+        _mainMusicService.SetShuffleEnabled(
+            !_mainMusicService.IsShuffleEnabled);
+
+        UpdateShuffleButtonUi();
+    }
+
+    private void UpdateShuffleButtonUi()
+    {
+        if (!_mainMusicService.IsShuffleEnabled)
+        {
+            ShuffleMainMusicButton.Foreground =
+                (Brush)FindResource("TextPrimary");
+            ShuffleMainMusicButton.ToolTip =
+                "Включить случайный порядок";
+            return;
+        }
+
+        ShuffleMainMusicButton.Foreground =
+            (Brush)FindResource("AccentBrush");
+        ShuffleMainMusicButton.ToolTip =
+            "Выключить случайный порядок";
+    }
+
     private void UpdatePlaybackModeUi()
     {
         if (_playbackController.IsViewerModeActive)
@@ -521,6 +654,8 @@ public partial class MainWindow : Window
     {
         var album =
             _playbackController.CurrentMainMusic;
+
+        UpdateShuffleButtonUi();
 
         if (album == null)
         {
@@ -1156,18 +1291,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (_playbackController.IsViewerModeActive)
-        {
-            MessageBox.Show(
-                "Сейчас воспроизводится очередь зрителей.\n\n" +
-                "Сначала дождитесь её окончания, " +
-                "после чего можно будет изменить основной источник.",
-                "Основная музыка",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
-
-            return;
-        }
+        var viewerModeWasActive =
+            _playbackController.IsViewerModeActive;
 
         try
         {
@@ -1226,6 +1351,27 @@ public partial class MainWindow : Window
                     album);
 
             UpdateMainMusicUi();
+
+            if (viewerModeWasActive)
+            {
+                UpdatePlaybackUi();
+                UpdatePlaybackModeUi();
+                UpdateMainMusicUi();
+
+                MainMusicUrlTextBox.Clear();
+
+                MessageBox.Show(
+                    $"Основная музыка загружена.\n\n" +
+                    $"Название: {album.Title}\n" +
+                    $"Треков: {album.Tracks.Count}\n\n" +
+                    "Сейчас продолжает играть музыка зрителей.\n" +
+                    "Выбранный источник запустится после окончания очереди.",
+                    "Основная музыка",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+
+                return;
+            }
 
             var started =
                 await _playbackController
