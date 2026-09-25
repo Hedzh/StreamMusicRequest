@@ -15,7 +15,7 @@ public sealed class LocalAudioStreamServer : IDisposable
     private readonly int _port;
 
     private const int MaxBufferedChunks =
-        64;
+        8;
 
     private readonly TcpListener _listener;
 
@@ -41,12 +41,6 @@ public sealed class LocalAudioStreamServer : IDisposable
     private int _nextClientId;
 
     private bool _started;
-
-    private long _publishedBytes;
-    private long _publishedChunks;
-    private long _droppedChunks;
-    private long _deliveredBytes;
-    private long _deliveredChunks;
 
     public string BrowserSourceUrl =>
         $"http://{_address}:{_port}/";
@@ -153,15 +147,10 @@ public sealed class LocalAudioStreamServer : IDisposable
         var data =
             buffer.ToArray();
 
-        Interlocked.Add(ref _publishedBytes, data.Length);
-        Interlocked.Increment(ref _publishedChunks);
-
         foreach (var client in _clients.Values)
         {
-            if (!client.Publish(data))
-            {
-                Interlocked.Increment(ref _droppedChunks);
-            }
+            client.Publish(
+                data);
         }
     }
 
@@ -323,18 +312,6 @@ public sealed class LocalAudioStreamServer : IDisposable
                 return;
             }
 
-            if (string.Equals(
-                    request.Path,
-                    "/debug",
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                await WriteDebugResponseAsync(
-                    stream,
-                    cancellationToken);
-
-                return;
-            }
-
             if (!string.Equals(
                     request.Path,
                     "/pcm",
@@ -422,9 +399,6 @@ public sealed class LocalAudioStreamServer : IDisposable
                         stream,
                         data,
                         cancellationToken);
-
-                    Interlocked.Add(ref _deliveredBytes, data.Length);
-                    Interlocked.Increment(ref _deliveredChunks);
 
                     await stream.FlushAsync(
                         cancellationToken);
@@ -671,46 +645,6 @@ public sealed class LocalAudioStreamServer : IDisposable
             cancellationToken);
     }
 
-
-    private async Task WriteDebugResponseAsync(
-        NetworkStream stream,
-        CancellationToken cancellationToken)
-    {
-        var activeClients = _clients.Count;
-        var publishedBytes = Interlocked.Read(ref _publishedBytes);
-        var publishedChunks = Interlocked.Read(ref _publishedChunks);
-        var droppedChunks = Interlocked.Read(ref _droppedChunks);
-        var deliveredBytes = Interlocked.Read(ref _deliveredBytes);
-        var deliveredChunks = Interlocked.Read(ref _deliveredChunks);
-
-        var json =
-            $"{{\"activeClients\":{activeClients}," +
-            $" \"publishedBytes\":{publishedBytes}," +
-            $" \"publishedChunks\":{publishedChunks}," +
-            $" \"droppedChunks\":{droppedChunks}," +
-            $" \"deliveredBytes\":{deliveredBytes}," +
-            $" \"deliveredChunks\":{deliveredChunks}}}";
-
-        var data = Encoding.UTF8.GetBytes(json);
-        var header =
-            $"HTTP/1.1 200 OK\r\n" +
-            "Content-Type: application/json; charset=utf-8\r\n" +
-            $"Content-Length: {data.Length}\r\n" +
-            "Cache-Control: no-cache, no-store, must-revalidate\r\n" +
-            "Connection: close\r\n\r\n";
-
-        await stream.WriteAsync(
-            Encoding.ASCII.GetBytes(header),
-            cancellationToken);
-
-        await stream.WriteAsync(
-            data,
-            cancellationToken);
-
-        await stream.FlushAsync(
-            cancellationToken);
-    }
-
     private static async Task WriteTextResponseAsync(
         NetworkStream stream,
         string status,
@@ -904,7 +838,7 @@ public sealed class LocalAudioStreamServer : IDisposable
                     MaxBufferedChunks)
                 {
                     FullMode =
-                        BoundedChannelFullMode.DropWrite,
+                        BoundedChannelFullMode.DropOldest,
 
                     SingleReader =
                         true,
@@ -922,10 +856,10 @@ public sealed class LocalAudioStreamServer : IDisposable
 
         public int Id { get; }
 
-        public bool Publish(
+        public void Publish(
             byte[] data)
         {
-            return _channel.Writer.TryWrite(
+            _channel.Writer.TryWrite(
                 data);
         }
 
