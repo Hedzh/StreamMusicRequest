@@ -8,7 +8,8 @@ namespace Stream.MusicRequest.Audio.Players;
 
 public class NAudioMusicPlayer :
     IMusicPlayer,
-    IDisposable
+    IDisposable,
+    IAsyncDisposable
 {
     private static readonly WaveFormat OutputFormat =
         new(
@@ -349,6 +350,18 @@ public class NAudioMusicPlayer :
     {
         return _audioReader?.TotalTime
                ?? TimeSpan.Zero;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        FileLogger.Info(
+            "DisposeAsync NAudioMusicPlayer.");
+
+        StopPlayback();
+
+        await _audioStreamServer
+            .DisposeAsync()
+            .ConfigureAwait(false);
     }
 
     public void Dispose()
