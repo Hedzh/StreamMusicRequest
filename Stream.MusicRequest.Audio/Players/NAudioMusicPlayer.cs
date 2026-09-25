@@ -368,6 +368,8 @@ public class NAudioMusicPlayer :
         FileLogger.Info(
             "PlaybackFinished вызывается.");
 
+        _currentTrack = null;
+
         PlaybackFinished?.Invoke(
             this,
             EventArgs.Empty);
