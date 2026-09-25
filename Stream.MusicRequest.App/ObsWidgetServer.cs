@@ -26,6 +26,7 @@ public sealed class ObsWidgetServer : IAsyncDisposable
     private string _artist = string.Empty;
     private string _requestedBy = string.Empty;
     private double _scrollSpeed = 60.0;
+    private bool _visible;
 
     public ObsWidgetServer(
         string bindAddress,
@@ -116,8 +117,11 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                 _title = string.Empty;
                 _artist = string.Empty;
                 _requestedBy = string.Empty;
+                _visible = false;
                 return;
             }
+
+            _visible = true;
 
             _title =
                 track.Title?.Trim()
@@ -377,8 +381,8 @@ public sealed class ObsWidgetServer : IAsyncDisposable
             <body>
             <div id="viewport">
                 <div id="marquee" class="idle">
-                    <span id="item1" class="item">Ожидание воспроизведения</span>
-                    <span id="item2" class="item">Ожидание воспроизведения</span>
+                    <span id="item1" class="item"></span>
+                    <span id="item2" class="item"></span>
                 </div>
             </div>
 
@@ -392,11 +396,16 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                 let timer = null;
 
                 const setState = state => {
+                    if (state.visible === false) {
+                        clearState();
+                        return;
+                    }
+
                     const artist = (state.artist || "").trim();
                     const title = (state.title || "").trim();
                     const requestedBy = (state.requestedBy || "").trim();
 
-                    let text = "Ожидание воспроизведения";
+                    let text = "";
 
                     if (artist || title) {
                         text =
@@ -506,6 +515,7 @@ public sealed class ObsWidgetServer : IAsyncDisposable
         string artist;
         string requestedBy;
         double scrollSpeed;
+        bool visible;
 
         lock (_stateLock)
         {
@@ -513,6 +523,7 @@ public sealed class ObsWidgetServer : IAsyncDisposable
             artist = _artist;
             requestedBy = _requestedBy;
             scrollSpeed = _scrollSpeed;
+            visible = _visible;
         }
 
         var state =
@@ -522,7 +533,8 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                     title,
                     artist,
                     requestedBy,
-                    scrollSpeed
+                    scrollSpeed,
+                    visible
                 });
 
         await WriteResponseAsync(
