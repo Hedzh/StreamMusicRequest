@@ -1684,26 +1684,44 @@ public partial class MainWindow : Window
         try
         {
             await _appServices.TwitchService
-                .DisconnectAsync();
+                .DisconnectAsync()
+                .WaitAsync(
+                    TimeSpan.FromSeconds(3));
         }
-        catch
+        catch (Exception ex)
         {
-            // Twitch service is being shut down.
+            FileLogger.Info(
+                $"Завершение Twitch с таймаутом: {ex.Message}");
         }
 
-        _musicPlayer.Dispose();
+        try
+        {
+            _musicPlayer.Dispose();
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Info(
+                $"Ошибка освобождения аудиоплеера: {ex.Message}");
+        }
 
         try
         {
             await _yandexClient
-                .DisposeAsync();
+                .DisposeAsync()
+                .AsTask()
+                .WaitAsync(
+                    TimeSpan.FromSeconds(3));
         }
-        catch
+        catch (Exception ex)
         {
-            // Yandex client is being shut down.
+            FileLogger.Info(
+                $"Завершение Yandex клиента с таймаутом: {ex.Message}");
         }
 
         Application.Current.Shutdown();
+
+        // Гарантированно завершаем процесс после освобождения ресурсов.
+        Environment.Exit(0);
     }
 
     private void CloseTwitchAuthorizationWindow()
