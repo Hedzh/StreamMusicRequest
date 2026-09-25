@@ -1664,7 +1664,7 @@ public partial class MainWindow : Window
             $"В очереди: {items.Count}";
     }
 
-    private void MainWindow_Closed(
+    private async void MainWindow_Closed(
         object? sender,
         EventArgs e)
     {
@@ -1679,26 +1679,31 @@ public partial class MainWindow : Window
         _appServices.TwitchService.RewardActionReceived -=
             TwitchService_RewardActionReceived;
 
+        CloseTwitchAuthorizationWindow();
+
         try
         {
-            _appServices.TwitchService
-                .DisconnectAsync()
-                .GetAwaiter()
-                .GetResult();
+            await _appServices.TwitchService
+                .DisconnectAsync();
         }
         catch
         {
             // Twitch service is being shut down.
         }
 
-        CloseTwitchAuthorizationWindow();
-
         _musicPlayer.Dispose();
 
-        _yandexClient.DisposeAsync()
-            .AsTask()
-            .GetAwaiter()
-            .GetResult();
+        try
+        {
+            await _yandexClient
+                .DisposeAsync();
+        }
+        catch
+        {
+            // Yandex client is being shut down.
+        }
+
+        Application.Current.Shutdown();
     }
 
     private void CloseTwitchAuthorizationWindow()
