@@ -18,12 +18,18 @@ public class TwitchAuthService
     private const string RevokeTokenUrl =
         "https://id.twitch.tv/oauth2/revoke";
 
+    private const string ValidateTokenUrl =
+        "https://id.twitch.tv/oauth2/validate";
+
     private const string DeviceGrantType =
         "urn:ietf:params:oauth:grant-type:device_code";
 
     private readonly HttpClient _httpClient;
     private readonly TwitchSettings _settings;
     private readonly TwitchAuthStorage _storage;
+
+    private readonly SemaphoreSlim _tokenOperationLock =
+        new(1, 1);
 
     public event EventHandler<bool>? AuthenticationStateChanged;
 
@@ -166,24 +172,182 @@ public class TwitchAuthService
             "Время ожидания авторизации Twitch истекло.");
     }
 
-    public async Task<TwitchTokenResponse?> TryRestoreAsync()
+    public async Task<TwitchTokenResponse?> TryRestoreAsync(
+        CancellationToken cancellationToken = default)
     {
         var snapshot =
             await _storage.LoadAsync();
 
-        if (snapshot == null)
+        if (snapshot == null ||
+            string.IsNullOrWhiteSpace(snapshot.AccessToken))
         {
             return null;
         }
 
-        return new TwitchTokenResponse
+        await _tokenOperationLock.WaitAsync(
+            cancellationToken);
+
+        try
         {
-            AccessToken = snapshot.AccessToken,
-            RefreshToken = snapshot.RefreshToken,
-            ExpiresIn = snapshot.ExpiresIn,
-            Scope = snapshot.Scope,
-            TokenType = snapshot.TokenType
-        };
+            var token =
+                new TwitchTokenResponse
+                {
+                    AccessToken = snapshot.AccessToken,
+                    RefreshToken = snapshot.RefreshToken,
+                    ExpiresIn = snapshot.ExpiresIn,
+                    Scope = snapshot.Scope,
+                    TokenType = snapshot.TokenType
+                };
+
+            try
+            {
+                await ValidateTokenAsync(
+                    token.AccessToken,
+                    cancellationToken);
+
+                return token;
+            }
+            catch (TwitchTokenInvalidException)
+            {
+                if (string.IsNullOrWhiteSpace(
+                        token.RefreshToken))
+                {
+                    await _storage.DeleteAsync();
+                    AuthenticationStateChanged?.Invoke(
+                        this,
+                        false);
+                    return null;
+                }
+            }
+
+            var refreshedToken =
+                await RefreshTokenAsync(
+                    token.RefreshToken,
+                    cancellationToken);
+
+            await SaveTokenAsync(
+                refreshedToken);
+
+            AuthenticationStateChanged?.Invoke(
+                this,
+                true);
+
+            return refreshedToken;
+        }
+        catch (TwitchRefreshTokenInvalidException)
+        {
+            await _storage.DeleteAsync();
+
+            AuthenticationStateChanged?.Invoke(
+                this,
+                false);
+
+            return null;
+        }
+        finally
+        {
+            _tokenOperationLock.Release();
+        }
+    }
+
+    private async Task ValidateTokenAsync(
+        string accessToken,
+        CancellationToken cancellationToken)
+    {
+        using var request =
+            new HttpRequestMessage(
+                HttpMethod.Get,
+                ValidateTokenUrl);
+
+        request.Headers.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue(
+                "Bearer",
+                accessToken);
+
+        using var response =
+            await _httpClient.SendAsync(
+                request,
+                cancellationToken);
+
+        if (response.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        if ((int)response.StatusCode == 401)
+        {
+            throw new TwitchTokenInvalidException();
+        }
+
+        var responseContent =
+            await response.Content.ReadAsStringAsync(
+                cancellationToken);
+
+        throw new InvalidOperationException(
+            $"Twitch не смог проверить OAuth-токен. " +
+            $"HTTP {(int)response.StatusCode}: " +
+            responseContent);
+    }
+
+    private async Task<TwitchTokenResponse> RefreshTokenAsync(
+        string refreshToken,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            throw new TwitchRefreshTokenInvalidException();
+        }
+
+        using var request =
+            new HttpRequestMessage(
+                HttpMethod.Post,
+                TokenUrl);
+
+        request.Content =
+            new FormUrlEncodedContent(
+                new Dictionary<string, string>
+                {
+                    ["client_id"] = _settings.ClientId,
+                    ["refresh_token"] = refreshToken,
+                    ["grant_type"] = "refresh_token"
+                });
+
+        using var response =
+            await _httpClient.SendAsync(
+                request,
+                cancellationToken);
+
+        var responseContent =
+            await response.Content.ReadAsStringAsync(
+                cancellationToken);
+
+        if (response.IsSuccessStatusCode)
+        {
+            var token =
+                JsonSerializer.Deserialize<TwitchTokenResponse>(
+                    responseContent);
+
+            if (token == null ||
+                string.IsNullOrWhiteSpace(
+                    token.AccessToken))
+            {
+                throw new InvalidOperationException(
+                    "Twitch вернул пустой или некорректный ответ при обновлении токена.");
+            }
+
+            return token;
+        }
+
+        if ((int)response.StatusCode == 400 ||
+            (int)response.StatusCode == 401)
+        {
+            throw new TwitchRefreshTokenInvalidException();
+        }
+
+        throw new InvalidOperationException(
+            $"Twitch не смог обновить OAuth-токен. " +
+            $"HTTP {(int)response.StatusCode}: " +
+            responseContent);
     }
 
     public async Task SignOutAsync()
@@ -332,6 +496,14 @@ public class TwitchAuthService
             null,
             errorResponse?.Message ??
             errorResponse?.Error);
+    }
+
+    private sealed class TwitchTokenInvalidException : Exception
+    {
+    }
+
+    private sealed class TwitchRefreshTokenInvalidException : Exception
+    {
     }
 
     private class TwitchTokenAttemptResult
