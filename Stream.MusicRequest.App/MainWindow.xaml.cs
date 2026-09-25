@@ -39,6 +39,7 @@ public partial class MainWindow : Window
 
     private readonly YandexMusicSource _yandexMusicSource;
     private readonly NAudioMusicPlayer _musicPlayer;
+    private readonly ObsWidgetServer _obsWidgetServer;
 
     private DeviceAuthorizationWindow? _twitchAuthorizationWindow;
 
@@ -98,8 +99,32 @@ public partial class MainWindow : Window
                 _queue,
                 sourceResolver);
 
+        var obsSettingsDirectory =
+            Path.Combine(
+                Environment.GetFolderPath(
+                    Environment.SpecialFolder.LocalApplicationData),
+                "StreamMusicRequest",
+                "Settings");
+
+        var obsSettingsStorage =
+            new ObsSettingsStorage(
+                obsSettingsDirectory);
+
+        var obsSettings =
+            obsSettingsStorage.Load();
+
         _musicPlayer =
-            new NAudioMusicPlayer();
+            new NAudioMusicPlayer(
+                obsSettings.BindAddress,
+                obsSettings.AudioPort);
+
+        _obsWidgetServer =
+            new ObsWidgetServer(
+                obsSettings.BindAddress,
+                obsSettings.WidgetPort,
+                obsSettings.ScrollSpeed);
+
+        _obsWidgetServer.Start();
 
         _mainMusicService =
             new MainMusicService(
@@ -175,6 +200,7 @@ public partial class MainWindow : Window
         RefreshQueueUi();
         UpdatePlaybackModeUi();
         UpdateMainMusicUi();
+        UpdateObsWidgetState();
 
         Loaded +=
             MainWindow_Loaded;
@@ -423,6 +449,13 @@ public partial class MainWindow : Window
         EventArgs e)
     {
         UpdatePlaybackUi();
+        UpdateObsWidgetState();
+    }
+
+    private void UpdateObsWidgetState()
+    {
+        _obsWidgetServer.SetCurrentTrack(
+            _musicPlayer.GetCurrentTrack());
     }
 
     private void UpdatePlaybackUi()
