@@ -250,6 +250,22 @@ public class TwitchAuthService
         }
     }
 
+    public async Task<string?> GetValidAccessTokenAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var token =
+            await TryRestoreAsync(
+                cancellationToken);
+
+        if (token == null ||
+            string.IsNullOrWhiteSpace(token.AccessToken))
+        {
+            return null;
+        }
+
+        return token.AccessToken;
+    }
+
     public async Task<TwitchTokenResponse?> RefreshAccessTokenAsync(
         CancellationToken cancellationToken = default)
     {
