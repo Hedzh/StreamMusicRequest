@@ -582,9 +582,9 @@ public class NAudioMusicPlayer :
         {
             var bytesRead =
                 _source.Read(
-                    buffer,
-                    offset,
-                    count);
+                    buffer.AsSpan(
+                        offset,
+                        count));
 
             if (bytesRead > 0)
             {
