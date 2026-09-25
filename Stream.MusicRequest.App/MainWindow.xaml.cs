@@ -454,13 +454,8 @@ public partial class MainWindow : Window
 
     private void UpdateObsWidgetState()
     {
-        var track =
-            _musicPlayer.IsPlaying
-                ? _musicPlayer.GetCurrentTrack()
-                : null;
-
         _obsWidgetServer.SetCurrentTrack(
-            track);
+            _musicPlayer.GetCurrentTrack());
     }
 
     private void UpdatePlaybackUi()
