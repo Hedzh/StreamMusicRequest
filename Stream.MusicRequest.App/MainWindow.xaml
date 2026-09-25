@@ -463,19 +463,27 @@
 
                                                                 <Grid>
 
-                                                                        <TextBlock Text="♪"
-                                                                                   FontSize="72"
-                                                                                   Foreground="#414957"
-                                                                                   HorizontalAlignment="Center"
-                                                                                   VerticalAlignment="Center"/>
+                                                                        <Image x:Name="CurrentCoverImage"
+                                                                               Stretch="UniformToFill"
+                                                                               Visibility="Collapsed"/>
 
-                                                                        <TextBlock Text="ОБЛОЖКА"
-                                                                                   FontSize="10"
-                                                                                   FontWeight="SemiBold"
-                                                                                   Foreground="#59616D"
-                                                                                   HorizontalAlignment="Center"
-                                                                                   VerticalAlignment="Bottom"
-                                                                                   Margin="0,0,0,24"/>
+                                                                        <StackPanel x:Name="CoverPlaceholder"
+                                                                                    HorizontalAlignment="Center"
+                                                                                    VerticalAlignment="Center">
+
+                                                                                <TextBlock Text="♪"
+                                                                                           FontSize="72"
+                                                                                           Foreground="#414957"
+                                                                                           HorizontalAlignment="Center"/>
+
+                                                                                <TextBlock Text="ОБЛОЖКА"
+                                                                                           FontSize="10"
+                                                                                           FontWeight="SemiBold"
+                                                                                           Foreground="#59616D"
+                                                                                           HorizontalAlignment="Center"
+                                                                                           Margin="0,8,0,0"/>
+
+                                                                        </StackPanel>
 
                                                                 </Grid>
 
@@ -942,10 +950,11 @@
 
                                                 </StackPanel>
 
-                                                <Button Grid.Column="1"
-                                                        Content="Настроить"
-                                                        Style="{StaticResource SecondaryButton}"
-                                                        Width="95"
+                                                <Button x:Name="ShuffleMainMusicButton"
+                                                        Grid.Column="1"
+                                                        Content="🔀"
+                                                        Style="{StaticResource IconButton}"
+                                                        ToolTip="Случайный порядок"
                                                         VerticalAlignment="Center"/>
 
                                         </Grid>
