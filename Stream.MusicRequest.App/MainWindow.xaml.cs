@@ -1665,63 +1665,13 @@ public partial class MainWindow : Window
             $"В очереди: {items.Count}";
     }
 
-    private async void MainWindow_Closed(
+    private void MainWindow_Closed(
         object? sender,
         EventArgs e)
     {
-        _playbackUiTimer.Stop();
-
-        _yandexAuthService.AuthenticationStateChanged -=
-            YandexAuthService_AuthenticationStateChanged;
-
-        _twitchAuthService.AuthenticationStateChanged -=
-            TwitchAuthService_AuthenticationStateChanged;
-
-        _appServices.TwitchService.RewardActionReceived -=
-            TwitchService_RewardActionReceived;
-
-        CloseTwitchAuthorizationWindow();
-
-        try
-        {
-            await _appServices.TwitchService
-                .DisconnectAsync()
-                .WaitAsync(
-                    TimeSpan.FromSeconds(3));
-        }
-        catch (Exception ex)
-        {
-            FileLogger.Info(
-                $"Завершение Twitch с таймаутом: {ex.Message}");
-        }
-
-        try
-        {
-            _musicPlayer.Dispose();
-        }
-        catch (Exception ex)
-        {
-            FileLogger.Info(
-                $"Ошибка освобождения аудиоплеера: {ex.Message}");
-        }
-
-        try
-        {
-            await _yandexClient
-                .DisposeAsync()
-                .AsTask()
-                .WaitAsync(
-                    TimeSpan.FromSeconds(3));
-        }
-        catch (Exception ex)
-        {
-            FileLogger.Info(
-                $"Завершение Yandex клиента с таймаутом: {ex.Message}");
-        }
-
-        Application.Current.Shutdown();
-
-        // Гарантированно завершаем процесс после освобождения ресурсов.
+        // DIAGNOSTIC: intentionally terminate before disposing
+        // any application services. This isolates whether the
+        // process is kept alive by shutdown/cleanup code.
         Environment.Exit(0);
     }
 
