@@ -14,7 +14,7 @@ public sealed class LocalAudioStreamServer : IDisposable
         8766;
 
     private const int MaxBufferedChunks =
-        64;
+        8;
 
     private readonly TcpListener _listener =
         new(
@@ -330,10 +330,22 @@ public sealed class LocalAudioStreamServer : IDisposable
 
             try
             {
-                await WriteAudioHeadersAsync(
-                    stream,
-                    format,
-                    cancellationToken);
+                if (string.Equals(
+                        request.Path,
+                        "/pcm",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    await WritePcmHeadersAsync(
+                        stream,
+                        cancellationToken);
+                }
+                else
+                {
+                    await WriteAudioHeadersAsync(
+                        stream,
+                        format,
+                        cancellationToken);
+                }
 
                 await foreach (
                     var data in client.ReadAllAsync(
@@ -473,44 +485,94 @@ public sealed class LocalAudioStreamServer : IDisposable
         const string html =
             """
             <!doctype html>
-            <html lang="en">
-            <head>
-                <meta charset="utf-8">
-                <meta name="viewport" content="width=device-width,initial-scale=1">
-                <title>StreamMusicRequest Audio</title>
-                <style>
-                    html, body {
-                        margin: 0;
-                        width: 100%;
-                        height: 100%;
-                        overflow: hidden;
-                        background: transparent;
-                    }
-
-                    audio {
-                        display: none;
-                    }
-                </style>
-            </head>
+            <html>
             <body>
-                <audio id="audio" autoplay></audio>
-                <script>
-                    const audio = document.getElementById("audio");
-                    audio.src = "/audio";
-                    audio.autoplay = true;
+            <script>
+            (() => {
+                const bytesPerFrame = 4;
+                const context = new AudioContext({latencyHint:"interactive", sampleRate:48000});
+                const processor = context.createScriptProcessor(2048, 0, 2);
+                const queue = [];
+                let pending = new Uint8Array(0);
 
-                    const start = () => {
-                        audio.play().catch(() => {
-                            setTimeout(start, 1000);
-                        });
-                    };
+                processor.onaudioprocess = e => {
+                    const left = e.outputBuffer.getChannelData(0);
+                    const right = e.outputBuffer.getChannelData(1);
 
-                    audio.addEventListener("error", () => {
-                        setTimeout(start, 1000);
-                    });
+                    for (let i = 0; i < left.length; i++) {
+                        if (!queue.length) {
+                            left[i] = 0;
+                            right[i] = 0;
+                            continue;
+                        }
 
-                    start();
-                </script>
+                        const frame = queue[0];
+                        const p = frame.position++;
+                        left[i] = frame.data[p * 2];
+                        right[i] = frame.data[p * 2 + 1];
+
+                        if (frame.position >= frame.data.length / 2)
+                            queue.shift();
+                    }
+                };
+
+                processor.connect(context.destination);
+
+                const append = bytes => {
+                    const usable = bytes.length - (bytes.length % bytesPerFrame);
+                    if (!usable) return;
+
+                    const view = new DataView(bytes.buffer, bytes.byteOffset, usable);
+                    const data = new Float32Array(usable / 2);
+
+                    for (let i = 0; i < data.length; i++)
+                        data[i] = view.getInt16(i * 2, true) / 32768;
+
+                    queue.push({data:data, position:0});
+
+                    while (queue.length > 1) {
+                        let frames = 0;
+                        for (const item of queue)
+                            frames += item.data.length / 2 - item.position;
+
+                        if (frames <= 12000) break;
+                        queue.shift();
+                    }
+                };
+
+                const connect = async () => {
+                    try {
+                        const response = await fetch("/pcm", {cache:"no-store"});
+                        if (!response.ok || !response.body) throw new Error();
+
+                        await context.resume();
+                        const reader = response.body.getReader();
+
+                        while (true) {
+                            const result = await reader.read();
+                            if (result.done) break;
+
+                            const combined = new Uint8Array(
+                                pending.length + result.value.length);
+
+                            combined.set(pending);
+                            combined.set(result.value, pending.length);
+
+                            const usable =
+                                combined.length -
+                                (combined.length % bytesPerFrame);
+
+                            append(combined.subarray(0, usable));
+                            pending = combined.subarray(usable);
+                        }
+                    } catch {
+                        setTimeout(connect, 250);
+                    }
+                };
+
+                connect();
+            })();
+            </script>
             </body>
             </html>
             """;
@@ -525,15 +587,10 @@ public sealed class LocalAudioStreamServer : IDisposable
             $"Content-Length: {data.Length}\r\n" +
             "Cache-Control: no-cache, no-store, must-revalidate\r\n" +
             "Connection: close\r\n" +
-            "Access-Control-Allow-Origin: *\r\n" +
             "\r\n";
 
-        var headerData =
-            Encoding.ASCII.GetBytes(
-                header);
-
         await stream.WriteAsync(
-            headerData,
+            Encoding.ASCII.GetBytes(header),
             cancellationToken);
 
         await stream.WriteAsync(
@@ -571,6 +628,27 @@ public sealed class LocalAudioStreamServer : IDisposable
 
         await stream.WriteAsync(
             data,
+            cancellationToken);
+
+        await stream.FlushAsync(
+            cancellationToken);
+    }
+
+    private static async Task WritePcmHeadersAsync(
+        NetworkStream stream,
+        CancellationToken cancellationToken)
+    {
+        const string header =
+            "HTTP/1.1 200 OK\r\n" +
+            "Content-Type: application/octet-stream\r\n" +
+            "Transfer-Encoding: chunked\r\n" +
+            "Cache-Control: no-cache, no-store, must-revalidate\r\n" +
+            "Connection: keep-alive\r\n" +
+            "Access-Control-Allow-Origin: *\r\n" +
+            "\r\n";
+
+        await stream.WriteAsync(
+            Encoding.ASCII.GetBytes(header),
             cancellationToken);
 
         await stream.FlushAsync(
