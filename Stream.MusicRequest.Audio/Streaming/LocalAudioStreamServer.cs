@@ -305,7 +305,7 @@ public sealed class LocalAudioStreamServer : IDisposable
 
             if (string.Equals(
                     request.Path,
-                    "/",
+                    "/audio",
                     StringComparison.OrdinalIgnoreCase))
             {
                 await WriteBrowserSourcePageAsync(
@@ -316,10 +316,6 @@ public sealed class LocalAudioStreamServer : IDisposable
             }
 
             if (!string.Equals(
-                    request.Path,
-                    "/audio",
-                    StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(
                     request.Path,
                     "/pcm",
                     StringComparison.OrdinalIgnoreCase))
