@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -240,79 +241,79 @@ public sealed class ObsWidgetServer : IAsyncDisposable
     {
         using (client)
 
-        try
-        {
-            client.NoDelay = true;
-
-            await using var stream =
-                client.GetStream();
-
-            var request =
-                await ReadRequestAsync(
-                    stream,
-                    cancellationToken);
-
-            if (request == null)
+            try
             {
-                return;
-            }
+                client.NoDelay = true;
 
-            if (string.Equals(
-                    request.Path,
-                    "/widget",
-                    StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(
-                    request.Path,
-                    "/",
-                    StringComparison.OrdinalIgnoreCase))
-            {
-                await WriteHtmlAsync(
+                await using var stream =
+                    client.GetStream();
+
+                var request =
+                    await ReadRequestAsync(
+                        stream,
+                        cancellationToken);
+
+                if (request == null)
+                {
+                    return;
+                }
+
+                if (string.Equals(
+                        request.Path,
+                        "/widget",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(
+                        request.Path,
+                        "/",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    await WriteHtmlAsync(
+                        stream,
+                        cancellationToken);
+
+                    return;
+                }
+
+                if (string.Equals(
+                        request.Path,
+                        "/state",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    await WriteStateAsync(
+                        stream,
+                        cancellationToken);
+
+                    return;
+                }
+
+                await WriteResponseAsync(
                     stream,
+                    "404 Not Found",
+                    "Not Found",
+                    "text/plain; charset=utf-8",
                     cancellationToken);
-
-                return;
             }
-
-            if (string.Equals(
-                    request.Path,
-                    "/state",
-                    StringComparison.OrdinalIgnoreCase))
+            catch (OperationCanceledException)
             {
-                await WriteStateAsync(
-                    stream,
-                    cancellationToken);
-
-                return;
             }
-
-            await WriteResponseAsync(
-                stream,
-                "404 Not Found",
-                "Not Found",
-                "text/plain; charset=utf-8",
-                cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        catch (IOException)
-        {
-        }
-        catch (SocketException)
-        {
-        }
-        catch (Exception ex)
-        {
-            FileLogger.Error(
-                "Ошибка клиента OBS виджета.",
-                ex);
-        }
-        finally
-        {
-            _clients.TryRemove(
-                id,
-                out _);
-        }
+            catch (IOException)
+            {
+            }
+            catch (SocketException)
+            {
+            }
+            catch (Exception ex)
+            {
+                FileLogger.Error(
+                    "Ошибка клиента OBS виджета.",
+                    ex);
+            }
+            finally
+            {
+                _clients.TryRemove(
+                    id,
+                    out _);
+            }
     }
 
     private async Task WriteHtmlAsync(
