@@ -454,8 +454,13 @@ public partial class MainWindow : Window
 
     private void UpdateObsWidgetState()
     {
+        var track =
+            _musicPlayer.IsPlaying
+                ? _musicPlayer.GetCurrentTrack()
+                : null;
+
         _obsWidgetServer.SetCurrentTrack(
-            _musicPlayer.GetCurrentTrack());
+            track);
     }
 
     private void UpdatePlaybackUi()
@@ -1714,6 +1719,17 @@ public partial class MainWindow : Window
             TwitchService_RewardActionReceived;
 
         CloseTwitchAuthorizationWindow();
+
+        _obsWidgetServer.SetCurrentTrack(null);
+
+        try
+        {
+            await Task.Delay(750);
+        }
+        catch
+        {
+            // Завершение приложения не должно зависеть от задержки очистки OBS.
+        }
 
         try
         {
