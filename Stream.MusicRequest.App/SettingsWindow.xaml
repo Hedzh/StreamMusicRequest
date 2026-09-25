@@ -1236,7 +1236,7 @@
                         <TextBlock Text="OBS / Виджет"
                                    Style="{StaticResource PageTitle}"/>
 
-                        <TextBlock Text="Локальный сервер и содержимое виджета для OBS."
+                        <TextBlock Text="Настройка локального HTTP-соединения OBS и текста, который отображается поверх трансляции."
                                    Style="{StaticResource PageDescription}"
                                    Margin="0,0,0,20"/>
 
@@ -1244,8 +1244,12 @@
 
                             <StackPanel>
 
-                                <TextBlock Text="Локальный сервер"
+                                <TextBlock Text="HTTP-сервер OBS"
                                            Style="{StaticResource SectionTitle}"/>
+
+                                <TextBlock Text="Приложение поднимает два локальных HTTP-порта: один для текстового виджета, второй для аудиопотока."
+                                           Style="{StaticResource FieldDescription}"
+                                           Margin="0,0,0,16"/>
 
                                 <Grid>
 
@@ -1256,20 +1260,23 @@
 
                                     <StackPanel Margin="0,0,12,0">
 
-                                        <TextBlock Text="Адрес"
+                                        <TextBlock Text="Адрес привязки"
                                                    Style="{StaticResource FieldTitle}"/>
 
-                                        <TextBox Text="127.0.0.1"
+                                        <TextBox x:Name="ObsBindAddressTextBox"
                                                  Style="{StaticResource InputBox}"/>
+
+                                        <TextBlock Text="Например: 127.0.0.1 для доступа только с этого ПК или 0.0.0.0 для всех сетевых интерфейсов."
+                                                   Style="{StaticResource FieldDescription}"/>
 
                                     </StackPanel>
 
                                     <StackPanel Grid.Column="1">
 
-                                        <TextBlock Text="Порт"
+                                        <TextBlock Text="Порт виджета"
                                                    Style="{StaticResource FieldTitle}"/>
 
-                                        <TextBox Text="8765"
+                                        <TextBox x:Name="ObsWidgetPortTextBox"
                                                  Style="{StaticResource InputBox}"/>
 
                                     </StackPanel>
@@ -1280,36 +1287,51 @@
 
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="Auto"/>
+                                        <ColumnDefinition Width="150"/>
                                     </Grid.ColumnDefinitions>
 
-                                    <StackPanel>
+                                    <StackPanel Margin="0,0,12,0">
 
-                                        <TextBlock Text="Состояние сервера"
+                                        <TextBlock Text="Порт аудио"
                                                    Style="{StaticResource FieldTitle}"/>
 
-                                        <StackPanel Orientation="Horizontal">
-
-                                            <Ellipse Width="8"
-                                                     Height="8"
-                                                     Fill="{StaticResource SuccessBrush}"
-                                                     VerticalAlignment="Center"/>
-
-                                            <TextBlock Text="Сервер запущен"
-                                                       Foreground="{StaticResource SuccessBrush}"
-                                                       Margin="7,0,0,0"/>
-
-                                        </StackPanel>
+                                        <TextBox x:Name="ObsAudioPortTextBox"
+                                                 Style="{StaticResource InputBox}"/>
 
                                     </StackPanel>
 
-                                    <Button Grid.Column="1"
-                                            Content="Остановить сервер"
-                                            Style="{StaticResource ActionButton}"
-                                            Width="160"
-                                            VerticalAlignment="Center"/>
+                                    <StackPanel Grid.Column="1">
+
+                                        <TextBlock Text="Скорость текста"
+                                                   Style="{StaticResource FieldTitle}"/>
+
+                                        <TextBox x:Name="ObsScrollSpeedTextBox"
+                                                 Style="{StaticResource InputBox}"/>
+
+                                    </StackPanel>
 
                                 </Grid>
+
+                                <TextBlock Text="Скорость бегущей строки задаётся в пикселях в секунду. Изменения адреса и портов применяются после перезапуска приложения."
+                                           Style="{StaticResource FieldDescription}"
+                                           Margin="0,10,0,0"/>
+
+                                <StackPanel Orientation="Horizontal"
+                                            HorizontalAlignment="Right"
+                                            Margin="0,18,0,0">
+
+                                    <Button Content="Сбросить"
+                                            Style="{StaticResource ActionButton}"
+                                            Width="110"
+                                            Margin="0,0,8,0"
+                                            Click="ObsResetButton_Click"/>
+
+                                    <Button Content="Сохранить"
+                                            Style="{StaticResource AccentButton}"
+                                            Width="110"
+                                            Click="ObsSaveButton_Click"/>
+
+                                </StackPanel>
 
                             </StackPanel>
 
@@ -1319,28 +1341,26 @@
 
                             <StackPanel>
 
-                                <TextBlock Text="Виджет"
+                                <TextBlock Text="Текстовый виджет"
                                            Style="{StaticResource SectionTitle}"/>
 
-                                <TextBlock Text="Адрес виджета"
+                                <TextBlock Text="Виджет показывает название трека, исполнителя и имя зрителя, заказавшего трек. Для основной музыки строка помечается как «Основная музыка»."
+                                           Style="{StaticResource FieldDescription}"
+                                           Margin="0,0,0,14"/>
+
+                                <TextBlock Text="URL виджета"
                                            Style="{StaticResource FieldTitle}"/>
 
-                                <Grid>
+                                <TextBox x:Name="ObsWidgetUrlTextBox"
+                                         Style="{StaticResource InputBox}"
+                                         IsReadOnly="True"/>
 
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="130"/>
-                                    </Grid.ColumnDefinitions>
-
-                                    <TextBox Text="http://127.0.0.1:8765/widget"
-                                             Style="{StaticResource InputBox}"
-                                             Margin="0,0,10,0"/>
-
-                                    <Button Grid.Column="1"
-                                            Content="Открыть виджет"
-                                            Style="{StaticResource ActionButton}"/>
-
-                                </Grid>
+                                <Button Content="Открыть виджет"
+                                        Style="{StaticResource ActionButton}"
+                                        Width="140"
+                                        HorizontalAlignment="Right"
+                                        Margin="0,10,0,0"
+                                        Click="ObsOpenWidgetButton_Click"/>
 
                             </StackPanel>
 
@@ -1350,34 +1370,52 @@
 
                             <StackPanel>
 
-                                <TextBlock Text="Отображаемые элементы"
+                                <TextBlock Text="Аудио для OBS"
                                            Style="{StaticResource SectionTitle}"/>
 
-                                <CheckBox Content="Обложка"
-                                          IsChecked="True"
-                                          Style="{StaticResource SettingsCheckBox}"/>
+                                <TextBlock Text="Этот HTTP-адрес можно указать в OBS как источник браузера/аудио в зависимости от используемой схемы подключения."
+                                           Style="{StaticResource FieldDescription}"
+                                           Margin="0,0,0,14"/>
 
-                                <CheckBox Content="Исполнитель"
-                                          IsChecked="True"
-                                          Style="{StaticResource SettingsCheckBox}"/>
+                                <TextBlock Text="URL аудиопотока"
+                                           Style="{StaticResource FieldTitle}"/>
 
-                                <CheckBox Content="Название трека"
-                                          IsChecked="True"
-                                          Style="{StaticResource SettingsCheckBox}"/>
-
-                                <CheckBox Content="Прогресс воспроизведения"
-                                          IsChecked="True"
-                                          Style="{StaticResource SettingsCheckBox}"/>
-
-                                <CheckBox Content="Очередь запросов"
-                                          IsChecked="True"
-                                          Style="{StaticResource SettingsCheckBox}"/>
+                                <TextBox x:Name="ObsAudioUrlTextBox"
+                                         Style="{StaticResource InputBox}"
+                                         IsReadOnly="True"/>
 
                             </StackPanel>
 
                         </Border>
 
-                    </StackPanel>
+                        <Border Style="{StaticResource SettingsCard}">
+
+                            <StackPanel>
+
+                                <TextBlock Text="Отображение"
+                                           Style="{StaticResource SectionTitle}"/>
+
+                                <TextBlock Text="Строка прокручивается плавно и автоматически обновляется при смене трека."
+                                           Style="{StaticResource FieldDescription}"/>
+
+                                <TextBlock Text="Формат"
+                                           Style="{StaticResource FieldTitle}"
+                                           Margin="0,14,0,5"/>
+
+                                <TextBlock Text="Исполнитель — Название трека  •  Заказал: Имя зрителя"
+                                           FontSize="13"
+                                           Foreground="{StaticResource TextSecondary}"/>
+
+                                <TextBlock Text="Для основной музыки: Исполнитель — Название трека  •  Основная музыка"
+                                           FontSize="13"
+                                           Foreground="{StaticResource TextSecondary}"
+                                           Margin="0,6,0,0"/>
+
+                            </StackPanel>
+
+                        </Border>
+
+                    </StackPanel>       </StackPanel>
 
                 </Grid>
 
