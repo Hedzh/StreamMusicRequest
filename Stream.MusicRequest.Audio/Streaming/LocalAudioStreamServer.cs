@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Channels;
 using NAudio.Wave;
@@ -9,14 +10,16 @@ namespace Stream.MusicRequest.Audio.Streaming;
 
 public sealed class LocalAudioStreamServer : IDisposable
 {
-    private const string Prefix =
-        "http://127.0.0.1:8766/";
+    private const int Port =
+        8766;
 
     private const int MaxBufferedChunks =
         64;
 
-    private readonly HttpListener _listener =
-        new();
+    private readonly TcpListener _listener =
+        new(
+            IPAddress.Loopback,
+            Port);
 
     private readonly ConcurrentDictionary<
         int,
@@ -42,15 +45,13 @@ public sealed class LocalAudioStreamServer : IDisposable
     private bool _started;
 
     public string BrowserSourceUrl =>
-        Prefix;
+        $"http://127.0.0.1:{Port}/";
 
     public string AudioStreamUrl =>
-        Prefix + "audio";
+        $"http://127.0.0.1:{Port}/audio";
 
     public LocalAudioStreamServer()
     {
-        _listener.Prefixes.Add(
-            Prefix);
     }
 
     public void Start()
@@ -197,8 +198,6 @@ public sealed class LocalAudioStreamServer : IDisposable
             // Завершение приложения не должно
             // зависеть от остановки HTTP-сервера.
         }
-
-        _listener.Close();
     }
 
     private async Task AcceptLoopAsync(
@@ -206,21 +205,15 @@ public sealed class LocalAudioStreamServer : IDisposable
     {
         while (!cancellationToken.IsCancellationRequested)
         {
-            HttpListenerContext context;
+            TcpClient client;
 
             try
             {
-                context =
-                    await _listener
-                        .GetContextAsync()
-                        .WaitAsync(
-                            cancellationToken);
+                client =
+                    await _listener.AcceptTcpClientAsync(
+                        cancellationToken);
             }
             catch (OperationCanceledException)
-            {
-                return;
-            }
-            catch (HttpListenerException)
             {
                 return;
             }
@@ -228,148 +221,150 @@ public sealed class LocalAudioStreamServer : IDisposable
             {
                 return;
             }
+            catch (SocketException)
+            {
+                return;
+            }
 
-            _ = HandleRequestAsync(
-                context,
+            _ = HandleClientAsync(
+                client,
                 cancellationToken);
         }
     }
 
-    private async Task HandleRequestAsync(
-        HttpListenerContext context,
+    private async Task HandleClientAsync(
+        TcpClient tcpClient,
         CancellationToken cancellationToken)
     {
-        var path =
-            context.Request.Url?.AbsolutePath;
-
-        if (string.Equals(
-                path,
-                "/",
-                StringComparison.OrdinalIgnoreCase))
-        {
-            await WriteBrowserSourcePageAsync(
-                context,
-                cancellationToken);
-
-            return;
-        }
-
-        if (!string.Equals(
-                path,
-                "/audio",
-                StringComparison.OrdinalIgnoreCase))
-        {
-            context.Response.StatusCode =
-                (int)HttpStatusCode.NotFound;
-
-            context.Response.Close();
-
-            return;
-        }
-
-        WaveFormat? format;
-
-        lock (_formatLock)
-        {
-            format =
-                _currentFormat;
-        }
-
-        if (format == null)
-        {
-            try
-            {
-                format =
-                    await _formatReady.Task.WaitAsync(
-                        cancellationToken);
-            }
-            catch
-            {
-                context.Response.StatusCode =
-                    (int)HttpStatusCode.ServiceUnavailable;
-
-                context.Response.Close();
-
-                return;
-            }
-        }
-
-        var client =
-            new ClientConnection(
-                Interlocked.Increment(
-                    ref _nextClientId));
-
-        if (!_clients.TryAdd(
-                client.Id,
-                client))
-        {
-            context.Response.StatusCode =
-                (int)HttpStatusCode.ServiceUnavailable;
-
-            context.Response.Close();
-
-            return;
-        }
+        using (tcpClient)
 
         try
         {
-            context.Response.StatusCode =
-                (int)HttpStatusCode.OK;
-
-            context.Response.ContentType =
-                "audio/wav";
-
-            context.Response.SendChunked =
+            tcpClient.NoDelay =
                 true;
 
-            context.Response.KeepAlive =
-                true;
+            await using var stream =
+                tcpClient.GetStream();
 
-            context.Response.Headers[
-                "Cache-Control"] =
-                "no-cache, no-store, must-revalidate";
+            var request =
+                await ReadRequestAsync(
+                    stream,
+                    cancellationToken);
 
-            context.Response.Headers[
-                "Pragma"] =
-                "no-cache";
-
-            context.Response.Headers[
-                "Access-Control-Allow-Origin"] =
-                "*";
-
-            var header =
-                CreateStreamingWaveHeader(
-                    format);
-
-            await context.Response.OutputStream.WriteAsync(
-                header,
-                cancellationToken);
-
-            await context.Response.OutputStream.FlushAsync(
-                cancellationToken);
-
-            await foreach (
-                var data in client.ReadAllAsync(
-                    cancellationToken))
+            if (request == null)
             {
-                await context.Response.OutputStream.WriteAsync(
-                    data,
+                return;
+            }
+
+            if (string.Equals(
+                    request.Path,
+                    "/",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                await WriteBrowserSourcePageAsync(
+                    stream,
                     cancellationToken);
 
-                await context.Response.OutputStream.FlushAsync(
+                return;
+            }
+
+            if (!string.Equals(
+                    request.Path,
+                    "/audio",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                await WriteTextResponseAsync(
+                    stream,
+                    "404 Not Found",
+                    "Not Found",
                     cancellationToken);
+
+                return;
+            }
+
+            WaveFormat? format;
+
+            lock (_formatLock)
+            {
+                format =
+                    _currentFormat;
+            }
+
+            if (format == null)
+            {
+                try
+                {
+                    format =
+                        await _formatReady.Task.WaitAsync(
+                            cancellationToken);
+                }
+                catch
+                {
+                    await WriteTextResponseAsync(
+                        stream,
+                        "503 Service Unavailable",
+                        "Audio format is not ready.",
+                        cancellationToken);
+
+                    return;
+                }
+            }
+
+            var client =
+                new ClientConnection(
+                    Interlocked.Increment(
+                        ref _nextClientId));
+
+            if (!_clients.TryAdd(
+                    client.Id,
+                    client))
+            {
+                await WriteTextResponseAsync(
+                    stream,
+                    "503 Service Unavailable",
+                    "Audio stream is unavailable.",
+                    cancellationToken);
+
+                return;
+            }
+
+            try
+            {
+                await WriteAudioHeadersAsync(
+                    stream,
+                    format,
+                    cancellationToken);
+
+                await foreach (
+                    var data in client.ReadAllAsync(
+                        cancellationToken))
+                {
+                    await stream.WriteAsync(
+                        data,
+                        cancellationToken);
+
+                    await stream.FlushAsync(
+                        cancellationToken);
+                }
+            }
+            finally
+            {
+                _clients.TryRemove(
+                    client.Id,
+                    out _);
+
+                client.Complete();
             }
         }
-        catch (
-            OperationCanceledException)
+        catch (OperationCanceledException)
         {
             // Клиент или сервер отключён.
         }
-        catch (HttpListenerException)
+        catch (IOException)
         {
             // Клиент закрыл соединение.
         }
-        catch (IOException)
+        catch (SocketException)
         {
             // Клиент закрыл соединение.
         }
@@ -379,27 +374,99 @@ public sealed class LocalAudioStreamServer : IDisposable
                 "Ошибка клиента локального аудиопотока.",
                 ex);
         }
-        finally
+    }
+
+    private static async Task<HttpRequest?> ReadRequestAsync(
+        NetworkStream stream,
+        CancellationToken cancellationToken)
+    {
+        var buffer =
+            new byte[8192];
+
+        var bytesRead =
+            0;
+
+        while (bytesRead <
+               buffer.Length)
         {
-            _clients.TryRemove(
-                client.Id,
-                out _);
+            var count =
+                await stream.ReadAsync(
+                    buffer.AsMemory(
+                        bytesRead,
+                        buffer.Length - bytesRead),
+                    cancellationToken);
 
-            client.Complete();
-
-            try
+            if (count == 0)
             {
-                context.Response.Close();
+                return null;
             }
-            catch
+
+            bytesRead += count;
+
+            if (ContainsHeaderTerminator(
+                    buffer,
+                    bytesRead))
             {
-                // Ответ уже закрыт.
+                break;
             }
         }
+
+        var requestText =
+            Encoding.ASCII.GetString(
+                buffer,
+                0,
+                bytesRead);
+
+        var firstLineEnd =
+            requestText.IndexOf(
+                "\r\n",
+                StringComparison.Ordinal);
+
+        if (firstLineEnd < 0)
+        {
+            return null;
+        }
+
+        var firstLine =
+            requestText[..firstLineEnd];
+
+        var parts =
+            firstLine.Split(
+                ' ',
+                StringSplitOptions.RemoveEmptyEntries);
+
+        if (parts.Length < 2)
+        {
+            return null;
+        }
+
+        return new HttpRequest(
+            parts[0],
+            parts[1]);
+    }
+
+    private static bool ContainsHeaderTerminator(
+        byte[] buffer,
+        int length)
+    {
+        for (var index = 3;
+             index < length;
+             index++)
+        {
+            if (buffer[index - 3] == '\r' &&
+                buffer[index - 2] == '\n' &&
+                buffer[index - 1] == '\r' &&
+                buffer[index] == '\n')
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static async Task WriteBrowserSourcePageAsync(
-        HttpListenerContext context,
+        NetworkStream stream,
         CancellationToken cancellationToken)
     {
         const string html =
@@ -451,28 +518,116 @@ public sealed class LocalAudioStreamServer : IDisposable
             Encoding.UTF8.GetBytes(
                 html);
 
-        context.Response.StatusCode =
-            (int)HttpStatusCode.OK;
+        var header =
+            $"HTTP/1.1 200 OK\r\n" +
+            $"Content-Type: text/html; charset=utf-8\r\n" +
+            $"Content-Length: {data.Length}\r\n" +
+            "Cache-Control: no-cache, no-store, must-revalidate\r\n" +
+            "Connection: close\r\n" +
+            "Access-Control-Allow-Origin: *\r\n" +
+            "\r\n";
 
-        context.Response.ContentType =
-            "text/html; charset=utf-8";
+        var headerData =
+            Encoding.ASCII.GetBytes(
+                header);
 
-        context.Response.ContentLength64 =
-            data.Length;
+        await stream.WriteAsync(
+            headerData,
+            cancellationToken);
 
-        context.Response.Headers[
-            "Cache-Control"] =
-            "no-cache, no-store, must-revalidate";
-
-        context.Response.Headers[
-            "Access-Control-Allow-Origin"] =
-            "*";
-
-        await context.Response.OutputStream.WriteAsync(
+        await stream.WriteAsync(
             data,
             cancellationToken);
 
-        context.Response.Close();
+        await stream.FlushAsync(
+            cancellationToken);
+    }
+
+    private static async Task WriteTextResponseAsync(
+        NetworkStream stream,
+        string status,
+        string body,
+        CancellationToken cancellationToken)
+    {
+        var data =
+            Encoding.UTF8.GetBytes(
+                body);
+
+        var header =
+            $"HTTP/1.1 {status}\r\n" +
+            $"Content-Type: text/plain; charset=utf-8\r\n" +
+            $"Content-Length: {data.Length}\r\n" +
+            "Connection: close\r\n" +
+            "\r\n";
+
+        var headerData =
+            Encoding.ASCII.GetBytes(
+                header);
+
+        await stream.WriteAsync(
+            headerData,
+            cancellationToken);
+
+        await stream.WriteAsync(
+            data,
+            cancellationToken);
+
+        await stream.FlushAsync(
+            cancellationToken);
+    }
+
+    private static async Task WriteAudioHeadersAsync(
+        NetworkStream stream,
+        WaveFormat format,
+        CancellationToken cancellationToken)
+    {
+        var header =
+            CreateStreamingWaveHeader(
+                format);
+
+        var headerText =
+            "HTTP/1.1 200 OK\r\n" +
+            "Content-Type: audio/wav\r\n" +
+            "Transfer-Encoding: chunked\r\n" +
+            "Cache-Control: no-cache, no-store, must-revalidate\r\n" +
+            "Connection: keep-alive\r\n" +
+            "Access-Control-Allow-Origin: *\r\n" +
+            "\r\n";
+
+        await stream.WriteAsync(
+            Encoding.ASCII.GetBytes(
+                headerText),
+            cancellationToken);
+
+        await WriteChunkAsync(
+            stream,
+            header,
+            cancellationToken);
+
+        await stream.FlushAsync(
+            cancellationToken);
+    }
+
+    private static async Task WriteChunkAsync(
+        NetworkStream stream,
+        byte[] data,
+        CancellationToken cancellationToken)
+    {
+        var size =
+            Encoding.ASCII.GetBytes(
+                $"{data.Length:X}\r\n");
+
+        await stream.WriteAsync(
+            size,
+            cancellationToken);
+
+        await stream.WriteAsync(
+            data,
+            cancellationToken);
+
+        await stream.WriteAsync(
+            "\r\n"u8.ToArray(),
+            cancellationToken);
     }
 
     private static byte[] CreateStreamingWaveHeader(
@@ -547,6 +702,10 @@ public sealed class LocalAudioStreamServer : IDisposable
 
         return header;
     }
+
+    private sealed record HttpRequest(
+        string Method,
+        string Path);
 
     private sealed class ClientConnection
     {
