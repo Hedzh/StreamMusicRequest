@@ -1682,6 +1682,17 @@ public partial class MainWindow : Window
 
         CloseTwitchAuthorizationWindow();
 
+        try
+        {
+            await _appServices.TwitchService
+                .DisconnectAsync()
+                .WaitAsync(TimeSpan.FromSeconds(3));
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Info($"Завершение Twitch с таймаутом: {ex.Message}");
+        }
+
         Application.Current.Shutdown();
     }
 
