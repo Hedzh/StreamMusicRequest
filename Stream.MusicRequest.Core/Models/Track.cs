@@ -15,4 +15,6 @@ public class Track
     public string? CoverUrl { get; set; }
 
     public string? SourceUrl { get; set; }
+
+    public string? RequestedBy { get; set; }
 }
