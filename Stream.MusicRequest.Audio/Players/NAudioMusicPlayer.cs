@@ -1,4 +1,5 @@
 using NAudio.Wave;
+using Stream.MusicRequest.Audio.Streaming;
 using Stream.MusicRequest.Core.Diagnostics;
 using Stream.MusicRequest.Core.Models;
 using Stream.MusicRequest.Core.Player;
@@ -9,20 +10,51 @@ public class NAudioMusicPlayer :
     IMusicPlayer,
     IDisposable
 {
+    private static readonly WaveFormat OutputFormat =
+        new(
+            48000,
+            16,
+            2);
+
+    private readonly LocalAudioStreamServer
+        _audioStreamServer;
+
     private WaveOut? _outputDevice;
     private MediaFoundationReader? _audioReader;
+    private MediaFoundationResampler? _resampler;
+    private TeeWaveProvider? _streamingProvider;
     private Track? _currentTrack;
 
-    private CancellationTokenSource? _playbackMonitorCancellation;
+    private CancellationTokenSource?
+        _playbackMonitorCancellation;
 
     private bool _manualStop;
     private bool _playbackFinishedRaised;
+    private float _volume = 1.0f;
 
     public event EventHandler? PlaybackFinished;
+
+    public string ObsAudioUrl =>
+        _audioStreamServer.BrowserSourceUrl;
 
     public bool IsPlaying =>
         _outputDevice?.PlaybackState ==
         PlaybackState.Playing;
+
+    public NAudioMusicPlayer()
+    {
+        _audioStreamServer =
+            new LocalAudioStreamServer();
+
+        _audioStreamServer.SetFormat(
+            OutputFormat);
+
+        _audioStreamServer.Start();
+
+        FileLogger.Info(
+            $"OBS аудиопоток доступен по адресу: " +
+            $"{ObsAudioUrl}");
+    }
 
     public async Task PlayAsync(
         Track track)
@@ -61,16 +93,42 @@ public class NAudioMusicPlayer :
                         $"MediaFoundationReader создан. " +
                         $"Duration: {reader.TotalTime}");
 
+                    var resampler =
+                        new MediaFoundationResampler(
+                            reader,
+                            OutputFormat)
+                        {
+                            ResamplerQuality = 60
+                        };
+
+                    var streamingProvider =
+                        new TeeWaveProvider(
+                            resampler,
+                            _audioStreamServer);
+
                     var output =
                         new WaveOut();
 
                     output.PlaybackStopped +=
                         Output_PlaybackStopped;
 
-                    output.Init(reader);
+                    output.Init(
+                        streamingProvider);
 
-                    _audioReader = reader;
-                    _outputDevice = output;
+                    output.Volume =
+                        _volume;
+
+                    _audioReader =
+                        reader;
+
+                    _resampler =
+                        resampler;
+
+                    _streamingProvider =
+                        streamingProvider;
+
+                    _outputDevice =
+                        output;
 
                     FileLogger.Info(
                         "WaveOut инициализирован. " +
@@ -164,14 +222,82 @@ public class NAudioMusicPlayer :
                     ? duration
                     : position;
 
+        var wasPlaying =
+            IsPlaying;
+
         FileLogger.Info(
             $"SeekAsync: перемещение на " +
             $"{clampedPosition} из {duration}.");
 
         try
         {
+            _manualStop =
+                true;
+
+            _playbackMonitorCancellation?.Cancel();
+            _playbackMonitorCancellation?.Dispose();
+            _playbackMonitorCancellation = null;
+
+            if (_outputDevice != null)
+            {
+                _outputDevice.PlaybackStopped -=
+                    Output_PlaybackStopped;
+
+                _outputDevice.Stop();
+                _outputDevice.Dispose();
+                _outputDevice = null;
+            }
+
+            _resampler?.Dispose();
+            _resampler = null;
+            _streamingProvider = null;
+
             reader.CurrentTime =
                 clampedPosition;
+
+            var resampler =
+                new MediaFoundationResampler(
+                    reader,
+                    OutputFormat)
+                {
+                    ResamplerQuality = 60
+                };
+
+            var streamingProvider =
+                new TeeWaveProvider(
+                    resampler,
+                    _audioStreamServer);
+
+            var output =
+                new WaveOut();
+
+            output.PlaybackStopped +=
+                Output_PlaybackStopped;
+
+            output.Init(
+                streamingProvider);
+
+            output.Volume =
+                _volume;
+
+            _resampler =
+                resampler;
+
+            _streamingProvider =
+                streamingProvider;
+
+            _outputDevice =
+                output;
+
+            _manualStop =
+                false;
+
+            if (wasPlaying)
+            {
+                output.Play();
+            }
+
+            StartPlaybackMonitor();
         }
         catch (Exception ex)
         {
@@ -179,6 +305,9 @@ public class NAudioMusicPlayer :
                 "Ошибка перемещения позиции " +
                 "воспроизведения.",
                 ex);
+
+            _manualStop =
+                true;
 
             throw;
         }
@@ -189,22 +318,20 @@ public class NAudioMusicPlayer :
     public void SetVolume(
         float volume)
     {
-        if (_outputDevice == null)
-        {
-            return;
-        }
-
-        var clampedVolume =
+        _volume =
             Math.Clamp(
                 volume,
                 0.0f,
                 1.0f);
 
-        _outputDevice.Volume =
-            clampedVolume;
+        if (_outputDevice != null)
+        {
+            _outputDevice.Volume =
+                _volume;
+        }
 
         FileLogger.Info(
-            $"Громкость установлена: {clampedVolume:0.00}");
+            $"Громкость установлена: {_volume:0.00}");
     }
 
     public Track? GetCurrentTrack()
@@ -230,6 +357,8 @@ public class NAudioMusicPlayer :
             "Dispose NAudioMusicPlayer.");
 
         StopPlayback();
+
+        _audioStreamServer.Dispose();
     }
 
     private void StartPlaybackMonitor()
@@ -399,6 +528,17 @@ public class NAudioMusicPlayer :
             _outputDevice = null;
         }
 
+        _streamingProvider = null;
+
+        if (_resampler != null)
+        {
+            FileLogger.Info(
+                "Освобождение MediaFoundationResampler.");
+
+            _resampler.Dispose();
+            _resampler = null;
+        }
+
         if (_audioReader != null)
         {
             FileLogger.Info(
@@ -413,5 +553,48 @@ public class NAudioMusicPlayer :
 
         FileLogger.Info(
             "StopPlayback завершён.");
+    }
+
+    private sealed class TeeWaveProvider :
+        IWaveProvider
+    {
+        private readonly IWaveProvider _source;
+        private readonly LocalAudioStreamServer _server;
+
+        public TeeWaveProvider(
+            IWaveProvider source,
+            LocalAudioStreamServer server)
+        {
+            _source =
+                source;
+
+            _server =
+                server;
+        }
+
+        public WaveFormat WaveFormat =>
+            _source.WaveFormat;
+
+        public int Read(
+            byte[] buffer,
+            int offset,
+            int count)
+        {
+            var bytesRead =
+                _source.Read(
+                    buffer,
+                    offset,
+                    count);
+
+            if (bytesRead > 0)
+            {
+                _server.Publish(
+                    buffer.AsSpan(
+                        offset,
+                        bytesRead));
+            }
+
+            return bytesRead;
+        }
     }
 }
