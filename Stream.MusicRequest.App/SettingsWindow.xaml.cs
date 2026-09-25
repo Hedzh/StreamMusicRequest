@@ -579,7 +579,7 @@ public partial class SettingsWindow : Window
             $"http://{_obsSettings.BindAddress}:{_obsSettings.WidgetPort}/widget";
 
         ObsAudioUrlTextBox.Text =
-            $"http://{_obsSettings.BindAddress}:{_obsSettings.AudioPort}/audio";
+            $"http://{_obsSettings.BindAddress}:{_obsSettings.AudioPort}/";
     }
 
     private void ObsResetButton_Click(
