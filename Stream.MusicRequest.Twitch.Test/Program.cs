@@ -274,6 +274,141 @@ try
 
     Console.WriteLine();
     Console.WriteLine(
+        "=== Twitch OAuth Refresh Test ===");
+
+    Console.WriteLine();
+    Console.WriteLine(
+        "Принудительно обновляем Access Token через Refresh Token...");
+
+    var refreshedToken =
+        await authService.RefreshAccessTokenAsync();
+
+    if (refreshedToken == null ||
+        string.IsNullOrWhiteSpace(
+            refreshedToken.AccessToken))
+    {
+        Console.WriteLine(
+            "Refresh Token недействителен или отсутствует.");
+
+        return;
+    }
+
+    Console.WriteLine(
+        "Access Token успешно обновлён.");
+
+    var refreshedUser =
+        await apiClient.GetCurrentUserAsync(
+            refreshedToken.AccessToken);
+
+    Console.WriteLine(
+        $"Пользователь после refresh: {refreshedUser.DisplayName} " +
+        $"({refreshedUser.Login})");
+
+    Console.WriteLine(
+        $"Broadcaster ID: {refreshedUser.Id}");
+
+    Console.WriteLine();
+    Console.WriteLine(
+        "Проверяем обновлённый OAuth-токен...");
+
+    using var refreshedValidateRequest =
+        new HttpRequestMessage(
+            HttpMethod.Get,
+            "https://id.twitch.tv/oauth2/validate");
+
+    refreshedValidateRequest.Headers.Authorization =
+        new System.Net.Http.Headers.AuthenticationHeaderValue(
+            "OAuth",
+            refreshedToken.AccessToken);
+
+    using var refreshedValidateResponse =
+        await httpClient.SendAsync(
+            refreshedValidateRequest);
+
+    var refreshedValidateContent =
+        await refreshedValidateResponse.Content.ReadAsStringAsync();
+
+    if (!refreshedValidateResponse.IsSuccessStatusCode)
+    {
+        Console.WriteLine(
+            $"Новый Access Token не прошёл проверку. " +
+            $"HTTP {(int)refreshedValidateResponse.StatusCode}: " +
+            refreshedValidateContent);
+
+        return;
+    }
+
+    using var refreshedJson =
+        System.Text.Json.JsonDocument.Parse(
+            refreshedValidateContent);
+
+    var refreshedRoot =
+        refreshedJson.RootElement;
+
+    var refreshedClientId =
+        refreshedRoot.TryGetProperty(
+            "client_id",
+            out var refreshedClientIdProperty)
+            ? refreshedClientIdProperty.GetString()
+            : null;
+
+    var refreshedUserId =
+        refreshedRoot.TryGetProperty(
+            "user_id",
+            out var refreshedUserIdProperty)
+            ? refreshedUserIdProperty.GetString()
+            : null;
+
+    var refreshedExpiresIn =
+        refreshedRoot.TryGetProperty(
+            "expires_in",
+            out var refreshedExpiresProperty)
+            ? refreshedExpiresProperty.GetInt64()
+            : 0;
+
+    Console.WriteLine(
+        "Новый Access Token действителен.");
+
+    Console.WriteLine(
+        $"Client ID: {refreshedClientId ?? "—"}");
+
+    Console.WriteLine(
+        $"User ID: {refreshedUserId ?? "—"}");
+
+    Console.WriteLine(
+        $"Срок действия: {refreshedExpiresIn} сек.");
+
+    Console.WriteLine(
+        $"Scopes: {string.Join(", ",
+            refreshedRoot.TryGetProperty(
+                "scopes",
+                out var refreshedScopes) &&
+            refreshedScopes.ValueKind ==
+                System.Text.Json.JsonValueKind.Array
+                ? refreshedScopes.EnumerateArray()
+                    .Select(x => x.GetString())
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+                : Array.Empty<string>())}");
+
+    if (!string.Equals(
+            refreshedClientId,
+            settings.ClientId,
+            StringComparison.Ordinal) ||
+        !string.Equals(
+            refreshedUserId,
+            refreshedUser.Id,
+            StringComparison.Ordinal))
+    {
+        throw new InvalidOperationException(
+            "После refresh Twitch вернул токен с неожиданным Client ID или User ID.");
+    }
+
+    Console.WriteLine();
+    Console.WriteLine(
+        "=== Twitch OAuth Refresh Test завершён успешно ===");
+
+    Console.WriteLine();
+    Console.WriteLine(
         "=== Диагностика Get Custom Rewards ===");
 
     var rewardsUrl =
