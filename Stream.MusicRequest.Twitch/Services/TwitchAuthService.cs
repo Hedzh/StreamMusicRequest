@@ -250,6 +250,53 @@ public class TwitchAuthService
         }
     }
 
+    public async Task<TwitchTokenResponse?> RefreshAccessTokenAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var snapshot =
+            await _storage.LoadAsync();
+
+        if (snapshot == null ||
+            string.IsNullOrWhiteSpace(snapshot.RefreshToken))
+        {
+            return null;
+        }
+
+        await _tokenOperationLock.WaitAsync(
+            cancellationToken);
+
+        try
+        {
+            var refreshedToken =
+                await RefreshTokenAsync(
+                    snapshot.RefreshToken,
+                    cancellationToken);
+
+            await SaveTokenAsync(
+                refreshedToken);
+
+            AuthenticationStateChanged?.Invoke(
+                this,
+                true);
+
+            return refreshedToken;
+        }
+        catch (TwitchRefreshTokenInvalidException)
+        {
+            await _storage.DeleteAsync();
+
+            AuthenticationStateChanged?.Invoke(
+                this,
+                false);
+
+            return null;
+        }
+        finally
+        {
+            _tokenOperationLock.Release();
+        }
+    }
+
     private async Task ValidateTokenAsync(
         string accessToken,
         CancellationToken cancellationToken)
