@@ -1705,6 +1705,18 @@ public partial class MainWindow : Window
             FileLogger.Info($"Ошибка освобождения аудиоплеера: {ex.Message}");
         }
 
+        try
+        {
+            await _yandexClient
+                .DisposeAsync()
+                .AsTask()
+                .WaitAsync(TimeSpan.FromSeconds(3));
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Info($"Завершение Yandex клиента с таймаутом: {ex.Message}");
+        }
+
         Application.Current.Shutdown();
     }
 
