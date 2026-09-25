@@ -60,6 +60,28 @@ public class MusicPlaybackController
             $"Установка нового основного источника: " +
             $"{album.Title}");
 
+        if (_viewerModeActive)
+        {
+            _mainMusic.SetAlbum(
+                album);
+
+            _savedMainState =
+                new MainMusicPlaybackState
+                {
+                    Album = album,
+                    TrackIndex = 0,
+                    Position = TimeSpan.Zero,
+                    WasPlaying = true
+                };
+
+            FileLogger.Info(
+                "Основной источник изменён во время " +
+                "очереди зрителей. Новый источник " +
+                "будет запущен после окончания очереди.");
+
+            return;
+        }
+
         if (_mainMusic.IsMainMusicActive)
         {
             await _mainMusic.StopAsync();
