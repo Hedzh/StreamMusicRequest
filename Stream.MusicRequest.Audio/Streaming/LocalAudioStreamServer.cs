@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Net;
+using System.Text;
 using System.Threading.Channels;
 using NAudio.Wave;
 using Stream.MusicRequest.Core.Diagnostics;
@@ -9,7 +10,7 @@ namespace Stream.MusicRequest.Audio.Streaming;
 public sealed class LocalAudioStreamServer : IDisposable
 {
     private const string Prefix =
-        "http://127.0.0.1:8765/";
+        "http://127.0.0.1:8766/";
 
     private const int MaxBufferedChunks =
         64;
@@ -39,6 +40,9 @@ public sealed class LocalAudioStreamServer : IDisposable
     private int _nextClientId;
 
     private bool _started;
+
+    public string BrowserSourceUrl =>
+        Prefix;
 
     public string AudioStreamUrl =>
         Prefix + "audio";
@@ -72,7 +76,7 @@ public sealed class LocalAudioStreamServer : IDisposable
 
             FileLogger.Info(
                 $"Локальный аудиопоток запущен: " +
-                $"{AudioStreamUrl}");
+                $"{BrowserSourceUrl}");
         }
         catch
         {
@@ -112,12 +116,8 @@ public sealed class LocalAudioStreamServer : IDisposable
     public void Publish(
         ReadOnlySpan<byte> buffer)
     {
-        if (buffer.Length == 0)
-        {
-            return;
-        }
-
-        if (_clients.IsEmpty)
+        if (buffer.Length == 0 ||
+            _clients.IsEmpty)
         {
             return;
         }
@@ -241,6 +241,18 @@ public sealed class LocalAudioStreamServer : IDisposable
     {
         var path =
             context.Request.Url?.AbsolutePath;
+
+        if (string.Equals(
+                path,
+                "/",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            await WriteBrowserSourcePageAsync(
+                context,
+                cancellationToken);
+
+            return;
+        }
 
         if (!string.Equals(
                 path,
@@ -386,6 +398,83 @@ public sealed class LocalAudioStreamServer : IDisposable
         }
     }
 
+    private static async Task WriteBrowserSourcePageAsync(
+        HttpListenerContext context,
+        CancellationToken cancellationToken)
+    {
+        const string html =
+            """
+            <!doctype html>
+            <html lang="en">
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width,initial-scale=1">
+                <title>StreamMusicRequest Audio</title>
+                <style>
+                    html, body {
+                        margin: 0;
+                        width: 100%;
+                        height: 100%;
+                        overflow: hidden;
+                        background: transparent;
+                    }
+
+                    audio {
+                        display: none;
+                    }
+                </style>
+            </head>
+            <body>
+                <audio id="audio" autoplay></audio>
+                <script>
+                    const audio = document.getElementById("audio");
+                    audio.src = "/audio";
+                    audio.autoplay = true;
+
+                    const start = () => {
+                        audio.play().catch(() => {
+                            setTimeout(start, 1000);
+                        });
+                    };
+
+                    audio.addEventListener("error", () => {
+                        setTimeout(start, 1000);
+                    });
+
+                    start();
+                </script>
+            </body>
+            </html>
+            """;
+
+        var data =
+            Encoding.UTF8.GetBytes(
+                html);
+
+        context.Response.StatusCode =
+            (int)HttpStatusCode.OK;
+
+        context.Response.ContentType =
+            "text/html; charset=utf-8";
+
+        context.Response.ContentLength64 =
+            data.Length;
+
+        context.Response.Headers[
+            "Cache-Control"] =
+            "no-cache, no-store, must-revalidate";
+
+        context.Response.Headers[
+            "Access-Control-Allow-Origin"] =
+            "*";
+
+        await context.Response.OutputStream.WriteAsync(
+            data,
+            cancellationToken);
+
+        context.Response.Close();
+    }
+
     private static byte[] CreateStreamingWaveHeader(
         WaveFormat format)
     {
@@ -393,23 +482,11 @@ public sealed class LocalAudioStreamServer : IDisposable
             format.AsStandardWaveFormat();
 
         if (standardFormat.Encoding !=
-            WaveFormatEncoding.Pcm &&
-            standardFormat.Encoding !=
-            WaveFormatEncoding.IeeeFloat)
+            WaveFormatEncoding.Pcm)
         {
             throw new InvalidOperationException(
-                "Локальный аудиопоток поддерживает " +
-                "только PCM или IEEE Float.");
+                "Локальный аудиопоток ожидает PCM.");
         }
-
-        var bitsPerSample =
-            standardFormat.BitsPerSample;
-
-        var blockAlign =
-            standardFormat.BlockAlign;
-
-        var byteRate =
-            standardFormat.AverageBytesPerSecond;
 
         var header =
             new byte[44];
@@ -424,28 +501,25 @@ public sealed class LocalAudioStreamServer : IDisposable
                 stream);
 
         writer.Write(
-            System.Text.Encoding.ASCII.GetBytes(
+            Encoding.ASCII.GetBytes(
                 "RIFF"));
 
         writer.Write(
             uint.MaxValue);
 
         writer.Write(
-            System.Text.Encoding.ASCII.GetBytes(
+            Encoding.ASCII.GetBytes(
                 "WAVE"));
 
         writer.Write(
-            System.Text.Encoding.ASCII.GetBytes(
+            Encoding.ASCII.GetBytes(
                 "fmt "));
 
         writer.Write(
             16);
 
         writer.Write(
-            standardFormat.Encoding ==
-            WaveFormatEncoding.IeeeFloat
-                ? (ushort)3
-                : (ushort)1);
+            (ushort)1);
 
         writer.Write(
             (ushort)standardFormat.Channels);
@@ -454,16 +528,16 @@ public sealed class LocalAudioStreamServer : IDisposable
             standardFormat.SampleRate);
 
         writer.Write(
-            byteRate);
+            standardFormat.AverageBytesPerSecond);
 
         writer.Write(
-            (ushort)blockAlign);
+            (ushort)standardFormat.BlockAlign);
 
         writer.Write(
-            (ushort)bitsPerSample);
+            (ushort)standardFormat.BitsPerSample);
 
         writer.Write(
-            System.Text.Encoding.ASCII.GetBytes(
+            Encoding.ASCII.GetBytes(
                 "data"));
 
         writer.Write(
