@@ -1728,6 +1728,19 @@ public partial class MainWindow : Window
 
         try
         {
+            await _obsWidgetServer
+                .DisposeAsync()
+                .AsTask()
+                .WaitAsync(TimeSpan.FromSeconds(3));
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Info(
+                $"Ошибка остановки OBS виджета: {ex.Message}");
+        }
+
+        try
+        {
             await _musicPlayer
                 .DisposeAsync()
                 .AsTask()
