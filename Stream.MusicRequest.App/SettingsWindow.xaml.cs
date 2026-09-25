@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -17,6 +19,10 @@ public partial class SettingsWindow : Window
 
     private bool _isInitialized;
 
+    private readonly ObsSettingsStorage _obsSettingsStorage;
+
+    private ObsSettings _obsSettings = new();
+
     public SettingsWindow(
         AppServices appServices)
     {
@@ -26,6 +32,17 @@ public partial class SettingsWindow : Window
             appServices
             ?? throw new ArgumentNullException(
                 nameof(appServices));
+
+        var settingsDirectory =
+            Path.Combine(
+                Environment.GetFolderPath(
+                    Environment.SpecialFolder.LocalApplicationData),
+                "StreamMusicRequest",
+                "Settings");
+
+        _obsSettingsStorage =
+            new ObsSettingsStorage(
+                settingsDirectory);
 
         _pages =
         [
@@ -56,6 +73,7 @@ public partial class SettingsWindow : Window
                 : 0);
 
         UpdateYandexUi();
+        LoadObsSettingsUi();
 
         _ = UpdateTwitchUiAsync();
         _ = LoadTwitchRewardSettingsUiAsync();
@@ -527,6 +545,182 @@ public partial class SettingsWindow : Window
                 MessageBoxImage.Error);
 
             await UpdateTwitchUiAsync();
+        }
+    }
+
+    // ============================================================
+    // OBS
+    // ============================================================
+
+    private void LoadObsSettingsUi()
+    {
+        _obsSettings =
+            _obsSettingsStorage.Load();
+
+        ObsBindAddressTextBox.Text =
+            _obsSettings.BindAddress;
+
+        ObsWidgetPortTextBox.Text =
+            _obsSettings.WidgetPort.ToString();
+
+        ObsAudioPortTextBox.Text =
+            _obsSettings.AudioPort.ToString();
+
+        ObsScrollSpeedTextBox.Text =
+            _obsSettings.ScrollSpeed.ToString("0.##");
+
+        UpdateObsUrlsUi();
+    }
+
+    private void UpdateObsUrlsUi()
+    {
+        ObsWidgetUrlTextBox.Text =
+            $"http://{_obsSettings.BindAddress}:{_obsSettings.WidgetPort}/widget";
+
+        ObsAudioUrlTextBox.Text =
+            $"http://{_obsSettings.BindAddress}:{_obsSettings.AudioPort}/audio";
+    }
+
+    private void ObsResetButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        _obsSettings =
+            new ObsSettings();
+
+        LoadObsSettingsUi();
+    }
+
+    private async void ObsSaveButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var bindAddress =
+            ObsBindAddressTextBox.Text.Trim();
+
+        if (!System.Net.IPAddress.TryParse(
+                bindAddress,
+                out var address) ||
+            address.AddressFamily !=
+            System.Net.Sockets.AddressFamily.InterNetwork)
+        {
+            MessageBox.Show(
+                this,
+                "Адрес привязки должен быть корректным IPv4-адресом, например 127.0.0.1 или 0.0.0.0.",
+                "OBS",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!int.TryParse(
+                ObsWidgetPortTextBox.Text.Trim(),
+                out var widgetPort) ||
+            widgetPort is < 1 or > 65535)
+        {
+            MessageBox.Show(
+                this,
+                "Порт виджета должен быть целым числом от 1 до 65535.",
+                "OBS",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!int.TryParse(
+                ObsAudioPortTextBox.Text.Trim(),
+                out var audioPort) ||
+            audioPort is < 1 or > 65535)
+        {
+            MessageBox.Show(
+                this,
+                "Порт аудио должен быть целым числом от 1 до 65535.",
+                "OBS",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
+        if (widgetPort == audioPort)
+        {
+            MessageBox.Show(
+                this,
+                "Порт виджета и порт аудио должны отличаться.",
+                "OBS",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!double.TryParse(
+                ObsScrollSpeedTextBox.Text.Trim(),
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var scrollSpeed))
+        {
+            if (!double.TryParse(
+                    ObsScrollSpeedTextBox.Text.Trim(),
+                    out scrollSpeed))
+            {
+                MessageBox.Show(
+                    this,
+                    "Скорость текста должна быть числом.",
+                    "OBS",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+        }
+
+        scrollSpeed =
+            Math.Clamp(
+                scrollSpeed,
+                10.0,
+                300.0);
+
+        _obsSettings =
+            new ObsSettings
+            {
+                BindAddress = bindAddress,
+                WidgetPort = widgetPort,
+                AudioPort = audioPort,
+                ScrollSpeed = scrollSpeed
+            };
+
+        await _obsSettingsStorage
+            .SaveAsync(_obsSettings);
+
+        LoadObsSettingsUi();
+
+        MessageBox.Show(
+            this,
+            "Настройки OBS сохранены. Адрес и порты будут применены после перезапуска приложения.",
+            "OBS",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
+    private void ObsOpenWidgetButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(
+                new ProcessStartInfo
+                {
+                    FileName = ObsWidgetUrlTextBox.Text,
+                    UseShellExecute = true
+                });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                this,
+                $"Не удалось открыть виджет.\\n\\n{ex.Message}",
+                "OBS",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
     }
 
