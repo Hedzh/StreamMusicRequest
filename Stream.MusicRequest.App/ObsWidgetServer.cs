@@ -451,6 +451,17 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                         "marquee " + duration + "s linear infinite";
                 };
 
+                const clearState = () => {
+                    lastKey = "";
+
+                    item1.textContent = "";
+                    item2.textContent = "";
+
+                    marquee.classList.add("idle");
+                    marquee.style.animation = "none";
+                    marquee.style.transform = "translateX(0)";
+                };
+
                 const load = async () => {
                     try {
                         const response =
@@ -464,7 +475,7 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                         setState(
                             await response.json());
                     } catch {
-                        // Сервер временно недоступен.
+                        clearState();
                     }
                 };
 
