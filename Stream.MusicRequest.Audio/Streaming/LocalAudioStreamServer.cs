@@ -10,16 +10,14 @@ namespace Stream.MusicRequest.Audio.Streaming;
 
 public sealed class LocalAudioStreamServer : IDisposable
 {
-    private const int Port =
-        8766;
+    private readonly IPAddress _address;
+
+    private readonly int _port;
 
     private const int MaxBufferedChunks =
         8;
 
-    private readonly TcpListener _listener =
-        new(
-            IPAddress.Loopback,
-            Port);
+    private readonly TcpListener _listener;
 
     private readonly ConcurrentDictionary<
         int,
@@ -45,13 +43,37 @@ public sealed class LocalAudioStreamServer : IDisposable
     private bool _started;
 
     public string BrowserSourceUrl =>
-        $"http://127.0.0.1:{Port}/";
+        $"http://{_address}:{_port}/";
 
     public string AudioStreamUrl =>
-        $"http://127.0.0.1:{Port}/audio";
+        $"http://{_address}:{_port}/audio";
 
-    public LocalAudioStreamServer()
+    public LocalAudioStreamServer(
+        string bindAddress = "127.0.0.1",
+        int port = 8766)
     {
+        if (!IPAddress.TryParse(
+                bindAddress,
+                out _address) ||
+            _address.AddressFamily != AddressFamily.InterNetwork)
+        {
+            throw new ArgumentException(
+                "HTTP-адрес OBS должен быть корректным IPv4-адресом.",
+                nameof(bindAddress));
+        }
+
+        if (port is < 1 or > 65535)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(port));
+        }
+
+        _port = port;
+
+        _listener =
+            new TcpListener(
+                _address,
+                _port);
     }
 
     public void Start()
