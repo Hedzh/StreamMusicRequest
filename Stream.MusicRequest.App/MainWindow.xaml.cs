@@ -1665,7 +1665,7 @@ public partial class MainWindow : Window
             $"В очереди: {items.Count}";
     }
 
-    private void MainWindow_Closed(
+    private async void MainWindow_Closed(
         object? sender,
         EventArgs e)
     {
