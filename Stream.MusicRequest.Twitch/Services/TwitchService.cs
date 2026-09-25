@@ -19,6 +19,9 @@ public class TwitchService : ITwitchService
     private CancellationTokenSource?
         _connectionCancellation;
 
+    private TaskCompletionSource<bool>?
+        _subscriptionReady;
+
     private bool _isConnected;
 
     private bool _connectionInProgress;
@@ -97,8 +100,15 @@ public class TwitchService : ITwitchService
                 CancellationTokenSource.CreateLinkedTokenSource(
                     cancellationToken);
 
+            _subscriptionReady =
+                new TaskCompletionSource<bool>(
+                    TaskCreationOptions.RunContinuationsAsynchronously);
+
             await _eventSubClient.ConnectAsync(
                 _connectionCancellation.Token);
+
+            await _subscriptionReady.Task.WaitAsync(
+                cancellationToken);
         }
         finally
         {
@@ -114,6 +124,11 @@ public class TwitchService : ITwitchService
         _connectionCancellation?.Dispose();
 
         _connectionCancellation =
+            null;
+
+        _subscriptionReady?.TrySetCanceled();
+
+        _subscriptionReady =
             null;
 
         await _eventSubClient.DisconnectAsync();
@@ -166,47 +181,64 @@ public class TwitchService : ITwitchService
         }
     }
 
-    private void EventSubClient_Connected(
+    private async void EventSubClient_Connected(
         object? sender,
         TwitchEventSubWelcomeMessage message)
     {
-        _isConnected =
-            true;
+        try
+        {
+            await RegisterSubscriptionsAsync(
+                message);
 
-        _ = RegisterSubscriptionsAsync(
-            message);
+            _isConnected =
+                true;
+
+            _subscriptionReady?.TrySetResult(
+                true);
+        }
+        catch (Exception ex)
+        {
+            _isConnected =
+                false;
+
+            _subscriptionReady?.TrySetException(
+                ex);
+
+            try
+            {
+                await _eventSubClient.DisconnectAsync();
+            }
+            catch
+            {
+                // EventSub уже мог быть отключён.
+            }
+        }
     }
 
     private async Task RegisterSubscriptionsAsync(
         TwitchEventSubWelcomeMessage message)
     {
-        try
+        if (_currentUser == null)
         {
-            if (_currentUser == null)
-            {
-                return;
-            }
-
-            var accessToken =
-                await _authService.GetValidAccessTokenAsync();
-
-            if (string.IsNullOrWhiteSpace(accessToken))
-            {
-                return;
-            }
-
-            await _apiClient.CreateEventSubSubscriptionAsync(
-                accessToken,
-                message.Payload.Session.Id,
-                _currentUser.Id);
+            throw new InvalidOperationException(
+                "Невозможно зарегистрировать EventSub: " +
+                "текущий Twitch-пользователь не определён.");
         }
-        catch
+
+        var accessToken =
+            await _authService.GetValidAccessTokenAsync();
+
+        if (string.IsNullOrWhiteSpace(accessToken))
         {
-            _isConnected =
-                false;
-
-            await _eventSubClient.DisconnectAsync();
+            throw new InvalidOperationException(
+                "Невозможно зарегистрировать EventSub: " +
+                "действующий Twitch access token отсутствует.");
         }
+
+        await _apiClient.CreateEventSubSubscriptionAsync(
+            accessToken,
+            message.Payload.Session.Id,
+            _currentUser.Id);
     }
 
     private void EventSubClient_RewardRedemptionReceived(
