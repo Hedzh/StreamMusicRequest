@@ -339,7 +339,8 @@ public sealed class LocalAudioStreamServer : IDisposable
                     var data in client.ReadAllAsync(
                         cancellationToken))
                 {
-                    await stream.WriteAsync(
+                    await WriteChunkAsync(
+                        stream,
                         data,
                         cancellationToken);
 
