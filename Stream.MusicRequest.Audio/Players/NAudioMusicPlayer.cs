@@ -596,5 +596,21 @@ public class NAudioMusicPlayer :
 
             return bytesRead;
         }
+
+        public int Read(
+            Span<byte> buffer)
+        {
+            var bytesRead =
+                _source.Read(
+                    buffer);
+
+            if (bytesRead > 0)
+            {
+                _server.Publish(
+                    buffer[..bytesRead]);
+            }
+
+            return bytesRead;
+        }
     }
 }
