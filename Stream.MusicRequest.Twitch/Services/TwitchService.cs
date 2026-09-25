@@ -74,23 +74,22 @@ public class TwitchService : ITwitchService
 
         try
         {
-            var token =
-                await _authService.TryRestoreAsync();
+            var accessToken =
+                await _authService.GetValidAccessTokenAsync(
+                    cancellationToken);
 
-            if (token == null ||
-                string.IsNullOrWhiteSpace(
-                    token.AccessToken))
+            if (string.IsNullOrWhiteSpace(accessToken))
             {
                 return;
             }
 
             _currentUser =
                 await _apiClient.GetCurrentUserAsync(
-                    token.AccessToken,
+                    accessToken,
                     cancellationToken);
 
             await ValidateRewardsAsync(
-                token.AccessToken,
+                accessToken,
                 _currentUser.Id,
                 cancellationToken);
 
@@ -188,18 +187,16 @@ public class TwitchService : ITwitchService
                 return;
             }
 
-            var token =
-                await _authService.TryRestoreAsync();
+            var accessToken =
+                await _authService.GetValidAccessTokenAsync();
 
-            if (token == null ||
-                string.IsNullOrWhiteSpace(
-                    token.AccessToken))
+            if (string.IsNullOrWhiteSpace(accessToken))
             {
                 return;
             }
 
             await _apiClient.CreateEventSubSubscriptionAsync(
-                token.AccessToken,
+                accessToken,
                 message.Payload.Session.Id,
                 _currentUser.Id);
         }
