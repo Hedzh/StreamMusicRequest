@@ -1695,7 +1695,10 @@ public partial class MainWindow : Window
 
         try
         {
-            _musicPlayer.Dispose();
+            await _musicPlayer
+                .DisposeAsync()
+                .AsTask()
+                .WaitAsync(TimeSpan.FromSeconds(3));
         }
         catch (Exception ex)
         {
