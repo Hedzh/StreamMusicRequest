@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Stream.MusicRequest.Audio.Players;
+using Stream.MusicRequest.Core.Diagnostics;
 using Stream.MusicRequest.Core.Events;
 using Stream.MusicRequest.Core.Services;
 using Stream.MusicRequest.Core.Sources;
