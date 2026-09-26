@@ -91,3 +91,100 @@ public class ObsSettings
     public double ScrollSpeed { get; set; } =
         60.0;
 }
+
+public class PlaybackSettingsStorage
+{
+    private const string FileName =
+        "playback.json";
+
+    private readonly string _filePath;
+
+    public PlaybackSettingsStorage(
+        string storageDirectory)
+    {
+        if (string.IsNullOrWhiteSpace(
+                storageDirectory))
+        {
+            throw new ArgumentException(
+                "Путь к каталогу настроек не указан.",
+                nameof(storageDirectory));
+        }
+
+        Directory.CreateDirectory(
+            storageDirectory);
+
+        _filePath =
+            Path.Combine(
+                storageDirectory,
+                FileName);
+    }
+
+    public PlaybackSettings Load()
+    {
+        if (!File.Exists(_filePath))
+        {
+            return new PlaybackSettings();
+        }
+
+        try
+        {
+            var json =
+                File.ReadAllText(_filePath);
+
+            var settings =
+                JsonSerializer.Deserialize<PlaybackSettings>(
+                    json);
+
+            return settings
+                ?? new PlaybackSettings();
+        }
+        catch
+        {
+            return new PlaybackSettings();
+        }
+    }
+
+    public async Task SaveAsync(
+        PlaybackSettings settings)
+    {
+        if (settings == null)
+        {
+            throw new ArgumentNullException(
+                nameof(settings));
+        }
+
+        settings.Volume =
+            Math.Clamp(
+                settings.Volume,
+                0.0f,
+                1.0f);
+
+        settings.DefaultPlaylistUrl =
+            settings.DefaultPlaylistUrl?.Trim()
+            ?? string.Empty;
+
+        var json =
+            JsonSerializer.Serialize(
+                settings,
+                new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+
+        await File.WriteAllTextAsync(
+            _filePath,
+            json);
+    }
+}
+
+public class PlaybackSettings
+{
+    public float Volume { get; set; } =
+        0.75f;
+
+    public string DefaultPlaylistUrl { get; set; } =
+        string.Empty;
+
+    public bool LoadDefaultPlaylistOnStartup { get; set; } =
+        false;
+}
