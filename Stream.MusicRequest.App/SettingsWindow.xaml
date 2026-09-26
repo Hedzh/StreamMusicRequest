@@ -638,13 +638,34 @@
                                 </StackPanel>
 
                                 <TextBlock Grid.Column="1"
-                                           Text="1.0.0"
+                                           Text="1.1.0"
                                            FontSize="14"
                                            FontWeight="SemiBold"
                                            Foreground="{StaticResource AccentBrush}"
                                            VerticalAlignment="Center"/>
 
                             </Grid>
+
+                        </Border>
+
+                        <Border Style="{StaticResource SettingsCard}">
+
+                            <StackPanel>
+
+                                <TextBlock Text="Диагностика"
+                                           Style="{StaticResource SectionTitle}"/>
+
+                                <TextBlock Text="Открыть папку с журналами приложения для просмотра текущего app.log и других логов."
+                                           Style="{StaticResource FieldDescription}"
+                                           Margin="0,0,0,14"/>
+
+                                <Button Content="Открыть папку логов"
+                                        Click="OpenLogsButton_Click"
+                                        Style="{StaticResource ActionButton}"
+                                        Width="170"
+                                        HorizontalAlignment="Left"/>
+
+                            </StackPanel>
 
                         </Border>
 
