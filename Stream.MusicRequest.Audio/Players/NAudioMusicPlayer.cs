@@ -29,6 +29,9 @@ public class NAudioMusicPlayer :
     private CancellationTokenSource?
         _playbackMonitorCancellation;
 
+    private readonly SemaphoreSlim _operationGate =
+        new(1, 1);
+
     private bool _manualStop;
     private bool _playbackFinishedRaised;
     private float _volume = 1.0f;
@@ -64,6 +67,10 @@ public class NAudioMusicPlayer :
     public async Task PlayAsync(
         Track track)
     {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         if (string.IsNullOrWhiteSpace(
                 track.SourceUrl))
         {
@@ -159,51 +166,137 @@ public class NAudioMusicPlayer :
 
             throw;
         }
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
+
+}
 
     public Task PauseAsync()
     {
+        return PauseCoreAsync();
+    }
+
+    private async Task PauseCoreAsync()
+    {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         FileLogger.Info(
             "PauseAsync вызван.");
 
         _outputDevice?.Pause();
 
         return Task.CompletedTask;
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
+
+}
 
     public Task ResumeAsync()
     {
+        return ResumeCoreAsync();
+    }
+
+    private async Task ResumeCoreAsync()
+    {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         FileLogger.Info(
             "ResumeAsync вызван.");
 
         _outputDevice?.Play();
 
         return Task.CompletedTask;
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
+
+}
 
     public Task StopAsync()
     {
+        return StopCoreAsync();
+    }
+
+    private async Task StopCoreAsync()
+    {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         FileLogger.Info(
             "StopAsync вызван.");
 
         StopPlayback();
 
         return Task.CompletedTask;
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
+
+}
 
     public Task SkipAsync()
     {
+        return SkipCoreAsync();
+    }
+
+    private async Task SkipCoreAsync()
+    {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         FileLogger.Info(
             "SkipAsync вызван.");
 
         StopPlayback();
 
         return Task.CompletedTask;
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
+
+}
 
     public Task SeekAsync(
         TimeSpan position)
     {
+        return SeekCoreAsync(position);
+    }
+
+    private async Task SeekCoreAsync(
+        TimeSpan position)
+    {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         var reader =
             _audioReader;
 
@@ -318,7 +411,15 @@ public class NAudioMusicPlayer :
         }
 
         return Task.CompletedTask;
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
+
+}
 
     public void SetVolume(
         float volume)
@@ -361,11 +462,22 @@ public class NAudioMusicPlayer :
         FileLogger.Info(
             "DisposeAsync NAudioMusicPlayer.");
 
-        StopPlayback();
-
-        await _audioStreamServer
-            .DisposeAsync()
+        await _operationGate
+            .WaitAsync()
             .ConfigureAwait(false);
+
+        try
+        {
+            StopPlayback();
+
+            await _audioStreamServer
+                .DisposeAsync()
+                .ConfigureAwait(false);
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     public void Dispose()
@@ -373,9 +485,18 @@ public class NAudioMusicPlayer :
         FileLogger.Info(
             "Dispose NAudioMusicPlayer.");
 
-        StopPlayback();
+        _operationGate.Wait();
 
-        _audioStreamServer.Dispose();
+        try
+        {
+            StopPlayback();
+            _audioStreamServer.Dispose();
+        }
+        finally
+        {
+            _operationGate.Release();
+            _operationGate.Dispose();
+        }
     }
 
     private void StartPlaybackMonitor()
@@ -417,6 +538,13 @@ public class NAudioMusicPlayer :
                         _audioReader;
 
                     if (reader == null)
+                    {
+                        return;
+                    }
+
+                    if (!ReferenceEquals(
+                            reader,
+                            _audioReader))
                     {
                         return;
                     }
@@ -477,6 +605,17 @@ public class NAudioMusicPlayer :
         object? sender,
         StoppedEventArgs e)
     {
+        if (!ReferenceEquals(
+                sender,
+                _outputDevice))
+        {
+            FileLogger.Info(
+                "PlaybackStopped получен от устаревшего " +
+                "WaveOut. Событие проигнорировано.");
+
+            return;
+        }
+
         FileLogger.Info(
             $"WaveOut.PlaybackStopped получен. " +
             $"ManualStop: {_manualStop}");
