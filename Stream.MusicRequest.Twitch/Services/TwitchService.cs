@@ -211,9 +211,16 @@ public class TwitchService : ITwitchService
 
                 try
                 {
+                    using var attemptCancellation =
+                        CancellationTokenSource.CreateLinkedTokenSource(
+                            cancellationToken);
+
+                    attemptCancellation.CancelAfter(
+                        TimeSpan.FromSeconds(20));
+
                     var accessToken =
                         await _authService.GetValidAccessTokenAsync(
-                            cancellationToken);
+                            attemptCancellation.Token);
 
                     if (string.IsNullOrWhiteSpace(accessToken))
                     {
@@ -228,7 +235,8 @@ public class TwitchService : ITwitchService
                         return;
                     }
 
-                    await ConnectAsync(cancellationToken);
+                    await ConnectAsync(
+                        attemptCancellation.Token);
 
                     if (_isConnected)
                     {
