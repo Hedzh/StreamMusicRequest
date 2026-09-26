@@ -14,6 +14,9 @@ public class MusicPlaybackController
 
     private bool _viewerModeActive;
 
+    private readonly SemaphoreSlim _operationGate =
+        new(1, 1);
+
     public MusicPlaybackController(
         MainMusicService mainMusic,
         MusicPlaybackService viewerMusic,
@@ -50,6 +53,10 @@ public class MusicPlaybackController
     public async Task SetMainMusicAsync(
         MusicAlbum album)
     {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         if (album == null)
         {
             throw new ArgumentNullException(
@@ -92,10 +99,20 @@ public class MusicPlaybackController
 
         _mainMusic.SetAlbum(
             album);
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     public async Task<bool> StartMainMusicAsync()
     {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         if (_viewerModeActive)
         {
             FileLogger.Info(
@@ -106,21 +123,51 @@ public class MusicPlaybackController
         }
 
         return await _mainMusic.PlayAsync();
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     public async Task PauseMainMusicAsync()
     {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         await _mainMusic.PauseAsync();
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     public async Task ResumeMainMusicAsync()
     {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         await _mainMusic.ResumeAsync();
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     public async Task AddViewerRequestAsync(
         QueueItem item)
     {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         if (item == null)
         {
             throw new ArgumentNullException(
@@ -163,20 +210,50 @@ public class MusicPlaybackController
         {
             await _viewerMusic.StartNextAsync();
         }
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     public async Task PauseViewerMusicAsync()
     {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         await _viewerMusic.PauseAsync();
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     public async Task ResumeViewerMusicAsync()
     {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         await _viewerMusic.ResumeAsync();
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     public async Task NextAsync()
     {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         if (_viewerModeActive)
         {
             FileLogger.Info(
@@ -198,10 +275,20 @@ public class MusicPlaybackController
         }
 
         await _mainMusic.NextAsync();
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     public async Task PreviousAsync()
     {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         if (_viewerModeActive)
         {
             FileLogger.Info(
@@ -222,10 +309,20 @@ public class MusicPlaybackController
         }
 
         await _mainMusic.PreviousAsync();
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     public async Task ResumeMainAfterViewerQueueAsync()
     {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         if (!_viewerModeActive)
         {
             return;
@@ -237,10 +334,20 @@ public class MusicPlaybackController
         }
 
         await RestoreMainMusicAsync();
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     public async Task StopAsync()
     {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         FileLogger.Info(
             "MusicPlaybackController.StopAsync.");
 
@@ -253,6 +360,12 @@ public class MusicPlaybackController
 
         _savedMainState =
             null;
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     private async void ViewerMusic_QueuePlaybackFinished(
