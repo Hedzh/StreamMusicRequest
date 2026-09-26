@@ -39,6 +39,8 @@ public partial class MainWindow : Window
     private readonly YandexMusicSource _yandexMusicSource;
     private readonly NAudioMusicPlayer _musicPlayer;
     private readonly ObsWidgetServer _obsWidgetServer;
+    private readonly PlaybackSettingsStorage _playbackSettingsStorage;
+    private PlaybackSettings _playbackSettings = new();
 
     private DeviceAuthorizationWindow? _twitchAuthorizationWindow;
 
@@ -111,8 +113,15 @@ public partial class MainWindow : Window
             new ObsSettingsStorage(
                 obsSettingsDirectory);
 
+        _playbackSettingsStorage =
+            new PlaybackSettingsStorage(
+                obsSettingsDirectory);
+
         var obsSettings =
             obsSettingsStorage.Load();
+
+        _playbackSettings =
+            _playbackSettingsStorage.Load();
 
         _musicPlayer =
             new NAudioMusicPlayer(
@@ -287,8 +296,11 @@ public partial class MainWindow : Window
         VolumeSlider.ValueChanged +=
             VolumeSlider_ValueChanged;
 
+        VolumeSlider.Value =
+            _playbackSettings.Volume * 100.0;
+
         _musicPlayer.SetVolume(
-            (float)(VolumeSlider.Value / 100.0));
+            _playbackSettings.Volume);
     }
 
     private static IEnumerable<T> FindVisualChildren<T>(
@@ -835,7 +847,14 @@ public partial class MainWindow : Window
     {
         var settingsWindow =
             new SettingsWindow(
-                _appServices)
+                _appServices,
+                _yandexMusicSource,
+                volume =>
+                {
+                    _musicPlayer.SetVolume(volume);
+                    VolumeSlider.Value =
+                        volume * 100.0;
+                })
             {
                 Owner = this
             };
@@ -852,9 +871,70 @@ public partial class MainWindow : Window
 
         await RestoreYandexAuthenticationAsync();
 
+        await LoadDefaultPlaylistOnStartupAsync();
+
         await RestoreTwitchAuthenticationAsync();
 
         UpdateMainMusicUi();
+    }
+
+    private async Task LoadDefaultPlaylistOnStartupAsync()
+    {
+        if (!_playbackSettings.LoadDefaultPlaylistOnStartup ||
+            string.IsNullOrWhiteSpace(
+                _playbackSettings.DefaultPlaylistUrl))
+        {
+            return;
+        }
+
+        if (!_yandexAuthService.IsAuthenticated)
+        {
+            FileLogger.Info(
+                "Автозагрузка плейлиста пропущена: Yandex Music не подключён.");
+            return;
+        }
+
+        try
+        {
+            FileLogger.Info(
+                "Загрузка плейлиста по умолчанию при запуске.");
+
+            var album =
+                await _yandexMusicSource.ResolvePlaylistAsync(
+                    _playbackSettings.DefaultPlaylistUrl);
+
+            if (album == null ||
+                album.Tracks.Count == 0)
+            {
+                FileLogger.Info(
+                    "Плейлист по умолчанию не удалось загрузить или он пуст.");
+                return;
+            }
+
+            _mainMusicService.SetAlbum(album);
+
+            var started =
+                await _mainMusicService.PlayAsync();
+
+            if (!started)
+            {
+                FileLogger.Info(
+                    "Плейлист по умолчанию загружен, но первый трек не удалось запустить.");
+                return;
+            }
+
+            UpdatePlaybackUi();
+            UpdatePlaybackModeUi();
+
+            FileLogger.Info(
+                $"Плейлист по умолчанию запущен: {album.Title}. Треков: {album.Tracks.Count}");
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Error(
+                "Не удалось автоматически загрузить плейлист по умолчанию.",
+                ex);
+        }
     }
 
     private async Task RestoreYandexAuthenticationAsync()
