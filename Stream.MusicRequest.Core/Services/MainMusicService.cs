@@ -10,28 +10,17 @@ public class MainMusicService
     private readonly IMusicPlayer _player;
 
     private MusicAlbum? _currentAlbum;
-
     private int _currentTrackIndex = -1;
-
     private bool _isMainMusicActive;
-
     private bool _handlingPlaybackFinished;
-
     private bool _shuffleEnabled;
 
-    private readonly Random _shuffleRandom =
-        new();
-
-    private readonly List<int> _shuffleOrder =
-        new();
-
+    private readonly Random _shuffleRandom = new();
+    private readonly List<int> _shuffleOrder = new();
     private int _shufflePosition;
+    private readonly List<int> _shuffleHistory = new();
 
-    private readonly List<int> _shuffleHistory =
-        new();
-
-    public MainMusicService(
-        IMusicPlayer player)
+    public MainMusicService(IMusicPlayer player)
     {
         _player = player;
 
@@ -42,29 +31,22 @@ public class MainMusicService
             "MainMusicService создан.");
     }
 
-    public MusicAlbum? CurrentAlbum =>
-        _currentAlbum;
+    public MusicAlbum? CurrentAlbum => _currentAlbum;
 
     public Track? CurrentTrack =>
         _currentAlbum == null ||
         _currentTrackIndex < 0 ||
-        _currentTrackIndex >=
-            _currentAlbum.Tracks.Count
+        _currentTrackIndex >= _currentAlbum.Tracks.Count
             ? null
-            : _currentAlbum.Tracks[
-                _currentTrackIndex];
+            : _currentAlbum.Tracks[_currentTrackIndex];
 
-    public int CurrentTrackIndex =>
-        _currentTrackIndex;
+    public int CurrentTrackIndex => _currentTrackIndex;
 
-    public bool IsMainMusicActive =>
-        _isMainMusicActive;
+    public bool IsMainMusicActive => _isMainMusicActive;
 
-    public bool IsShuffleEnabled =>
-        _shuffleEnabled;
+    public bool IsShuffleEnabled => _shuffleEnabled;
 
-    public void SetShuffleEnabled(
-        bool enabled)
+    public void SetShuffleEnabled(bool enabled)
     {
         if (_shuffleEnabled == enabled)
         {
@@ -80,8 +62,7 @@ public class MainMusicService
             _currentAlbum != null &&
             _currentAlbum.Tracks.Count > 1)
         {
-            BuildShuffleOrder(
-                _currentTrackIndex);
+            BuildShuffleOrder(_currentTrackIndex);
         }
 
         FileLogger.Info(
@@ -89,13 +70,11 @@ public class MainMusicService
             $"{(_shuffleEnabled ? "включён" : "выключен")}");
     }
 
-    public void SetAlbum(
-        MusicAlbum album)
+    public void SetAlbum(MusicAlbum album)
     {
         if (album == null)
         {
-            throw new ArgumentNullException(
-                nameof(album));
+            throw new ArgumentNullException(nameof(album));
         }
 
         if (album.Tracks.Count == 0)
@@ -104,14 +83,9 @@ public class MainMusicService
                 "Нельзя установить пустой альбом.");
         }
 
-        _currentAlbum =
-            album;
-
-        _currentTrackIndex =
-            0;
-
-        _isMainMusicActive =
-            false;
+        _currentAlbum = album;
+        _currentTrackIndex = 0;
+        _isMainMusicActive = false;
 
         _shuffleOrder.Clear();
         _shuffleHistory.Clear();
@@ -125,8 +99,7 @@ public class MainMusicService
 
         FileLogger.Info(
             $"Основной источник установлен: " +
-            $"{album.Title}. " +
-            $"Треков: {album.Tracks.Count}");
+            $"{album.Title}. Треков: {album.Tracks.Count}");
     }
 
     public async Task<bool> PlayAsync()
@@ -150,27 +123,20 @@ public class MainMusicService
         }
 
         if (_currentTrackIndex < 0 ||
-            _currentTrackIndex >=
-            _currentAlbum.Tracks.Count)
+            _currentTrackIndex >= _currentAlbum.Tracks.Count)
         {
-            _currentTrackIndex =
-                0;
+            _currentTrackIndex = 0;
         }
 
-        var track =
-            _currentAlbum.Tracks[
-                _currentTrackIndex];
+        var track = _currentAlbum.Tracks[_currentTrackIndex];
 
         FileLogger.Info(
             $"Подготовка основной музыки: " +
             $"{track.Artist} — {track.Title}");
 
-        var playbackUrl =
-            await GetPlaybackUrlAsync(
-                track);
+        var playbackUrl = await GetPlaybackUrlAsync(track);
 
-        if (string.IsNullOrWhiteSpace(
-                playbackUrl))
+        if (string.IsNullOrWhiteSpace(playbackUrl))
         {
             FileLogger.Info(
                 "Не удалось получить прямую " +
@@ -179,17 +145,14 @@ public class MainMusicService
             return false;
         }
 
-        track.SourceUrl =
-            playbackUrl;
+        track.SourceUrl = playbackUrl;
 
         FileLogger.Info(
             "Прямая ссылка на основной трек получена.");
 
-        await _player.PlayAsync(
-            track);
+        await _player.PlayAsync(track);
 
-        _isMainMusicActive =
-            true;
+        _isMainMusicActive = true;
 
         FileLogger.Info(
             $"Основная музыка запущена: " +
@@ -231,8 +194,7 @@ public class MainMusicService
 
         await _player.StopAsync();
 
-        _isMainMusicActive =
-            false;
+        _isMainMusicActive = false;
     }
 
     public async Task NextAsync()
@@ -243,48 +205,37 @@ public class MainMusicService
             return;
         }
 
-        var previousTrackIndex =
-            _currentTrackIndex;
+        var previousTrackIndex = _currentTrackIndex;
 
         if (_shuffleEnabled &&
             _currentAlbum.Tracks.Count > 1)
         {
-            var nextTrackIndex =
-                GetNextShuffleTrackIndex();
+            var nextTrackIndex = GetNextShuffleTrackIndex();
 
-            if (nextTrackIndex !=
-                previousTrackIndex)
+            if (nextTrackIndex != previousTrackIndex)
             {
-                _shuffleHistory.Add(
-                    previousTrackIndex);
+                _shuffleHistory.Add(previousTrackIndex);
             }
 
-            _currentTrackIndex =
-                nextTrackIndex;
+            _currentTrackIndex = nextTrackIndex;
         }
         else
         {
             _currentTrackIndex++;
 
-            if (_currentTrackIndex >=
-                _currentAlbum.Tracks.Count)
+            if (_currentTrackIndex >= _currentAlbum.Tracks.Count)
             {
-                _currentTrackIndex =
-                    0;
+                _currentTrackIndex = 0;
             }
         }
 
-        var trackCount =
-            _currentAlbum.Tracks.Count;
+        var trackCount = _currentAlbum.Tracks.Count;
 
-        for (var attempt = 0;
-             attempt < trackCount;
-             attempt++)
+        for (var attempt = 0; attempt < trackCount; attempt++)
         {
             FileLogger.Info(
                 $"Переход на следующий трек " +
-                $"основной музыки. " +
-                $"Индекс: {_currentTrackIndex}");
+                $"основной музыки. Индекс: {_currentTrackIndex}");
 
             try
             {
@@ -304,29 +255,24 @@ public class MainMusicService
             FileLogger.Info(
                 $"Не удалось запустить трек с индексом " +
                 $"{_currentTrackIndex}. Переход к следующему.");
-            
+
             if (_shuffleEnabled &&
                 _currentAlbum.Tracks.Count > 1)
             {
-                var nextTrackIndex =
-                    GetNextShuffleTrackIndex();
+                var nextTrackIndex = GetNextShuffleTrackIndex();
 
-                if (nextTrackIndex !=
-                    _currentTrackIndex)
+                if (nextTrackIndex != _currentTrackIndex)
                 {
-                    _shuffleHistory.Add(
-                        _currentTrackIndex);
+                    _shuffleHistory.Add(_currentTrackIndex);
                 }
 
-                _currentTrackIndex =
-                    nextTrackIndex;
+                _currentTrackIndex = nextTrackIndex;
             }
             else
             {
                 _currentTrackIndex++;
 
-                if (_currentTrackIndex >=
-                    _currentAlbum.Tracks.Count)
+                if (_currentTrackIndex >= _currentAlbum.Tracks.Count)
                 {
                     _currentTrackIndex = 0;
                 }
@@ -349,8 +295,7 @@ public class MainMusicService
         if (_shuffleEnabled &&
             _shuffleHistory.Count > 0)
         {
-            _currentTrackIndex =
-                _shuffleHistory[^1];
+            _currentTrackIndex = _shuffleHistory[^1];
 
             _shuffleHistory.RemoveAt(
                 _shuffleHistory.Count - 1);
@@ -368,14 +313,12 @@ public class MainMusicService
 
         FileLogger.Info(
             $"Переход на предыдущий трек " +
-            $"основной музыки. " +
-            $"Индекс: {_currentTrackIndex}");
+            $"основной музыки. Индекс: {_currentTrackIndex}");
 
         await PlayAsync();
     }
 
-    public async Task SeekCurrentAsync(
-        TimeSpan position)
+    public async Task SeekCurrentAsync(TimeSpan position)
     {
         if (!_isMainMusicActive)
         {
@@ -386,8 +329,7 @@ public class MainMusicService
             return;
         }
 
-        var duration =
-            _player.GetDuration();
+        var duration = _player.GetDuration();
 
         if (duration <= TimeSpan.Zero)
         {
@@ -409,28 +351,20 @@ public class MainMusicService
             $"Перемотка основной музыки: " +
             $"{clampedPosition} из {duration}");
 
-        await _player.SeekAsync(
-            clampedPosition);
+        await _player.SeekAsync(clampedPosition);
     }
 
     public MainMusicPlaybackState CaptureState()
     {
-        var state =
-            new MainMusicPlaybackState
-            {
-                Album =
-                    _currentAlbum,
-
-                TrackIndex =
-                    _currentTrackIndex,
-
-                Position =
-                    _player.GetPosition(),
-
-                WasPlaying =
-                    _isMainMusicActive &&
-                    _player.IsPlaying
-            };
+        var state = new MainMusicPlaybackState
+        {
+            Album = _currentAlbum,
+            TrackIndex = _currentTrackIndex,
+            Position = _player.GetPosition(),
+            WasPlaying =
+                _isMainMusicActive &&
+                _player.IsPlaying
+        };
 
         FileLogger.Info(
             $"Состояние основной музыки сохранено. " +
@@ -444,32 +378,21 @@ public class MainMusicService
     public async Task<bool> RestoreStateAsync(
         MainMusicPlaybackState? state)
     {
-        if (state == null)
+        if (state == null ||
+            state.Album == null ||
+            state.Album.Tracks.Count == 0)
         {
             return false;
         }
 
-        if (state.Album == null)
-        {
-            return false;
-        }
+        _currentAlbum = state.Album;
 
-        if (state.Album.Tracks.Count == 0)
-        {
-            return false;
-        }
+        _currentTrackIndex = Math.Clamp(
+            state.TrackIndex,
+            0,
+            state.Album.Tracks.Count - 1);
 
-        _currentAlbum =
-            state.Album;
-
-        _currentTrackIndex =
-            Math.Clamp(
-                state.TrackIndex,
-                0,
-                state.Album.Tracks.Count - 1);
-
-        _isMainMusicActive =
-            false;
+        _isMainMusicActive = false;
 
         _shuffleOrder.Clear();
         _shuffleHistory.Clear();
@@ -478,25 +401,20 @@ public class MainMusicService
         if (_shuffleEnabled &&
             state.Album.Tracks.Count > 1)
         {
-            BuildShuffleOrder(
-                _currentTrackIndex);
+            BuildShuffleOrder(_currentTrackIndex);
         }
 
-        var track =
-            _currentAlbum.Tracks[
-                _currentTrackIndex];
+        var track = _currentAlbum.Tracks[_currentTrackIndex];
 
         FileLogger.Info(
             $"Восстановление основной музыки: " +
             $"{track.Artist} — {track.Title}. " +
-            $"Позиция: {state.Position}");
+            $"Позиция: {state.Position}. " +
+            $"WasPlaying: {state.WasPlaying}");
 
-        var playbackUrl =
-            await GetPlaybackUrlAsync(
-                track);
+        var playbackUrl = await GetPlaybackUrlAsync(track);
 
-        if (string.IsNullOrWhiteSpace(
-                playbackUrl))
+        if (string.IsNullOrWhiteSpace(playbackUrl))
         {
             FileLogger.Info(
                 "Не удалось получить прямую ссылку " +
@@ -505,20 +423,26 @@ public class MainMusicService
             return false;
         }
 
-        track.SourceUrl =
-            playbackUrl;
+        track.SourceUrl = playbackUrl;
 
-        await _player.PlayAsync(
-            track);
+        var duration = _player.GetDuration();
 
-        if (state.Position > TimeSpan.Zero)
+        if (state.Position < TimeSpan.Zero)
         {
-            await _player.SeekAsync(
-                state.Position);
+            state.Position = TimeSpan.Zero;
         }
 
-        _isMainMusicActive =
-            true;
+        if (duration > TimeSpan.Zero &&
+            state.Position > duration)
+        {
+            state.Position = duration;
+        }
+
+        await _player.PlayAsync(
+            track,
+            state.Position);
+
+        _isMainMusicActive = true;
 
         if (!state.WasPlaying)
         {
@@ -526,7 +450,9 @@ public class MainMusicService
         }
 
         FileLogger.Info(
-            "Основная музыка успешно восстановлена.");
+            $"Основная музыка успешно восстановлена. " +
+            $"Фактическая позиция после запуска: " +
+            $"{_player.GetPosition()}");
 
         return true;
     }
@@ -536,14 +462,9 @@ public class MainMusicService
         FileLogger.Info(
             "Основной источник очищен.");
 
-        _currentAlbum =
-            null;
-
-        _currentTrackIndex =
-            -1;
-
-        _isMainMusicActive =
-            false;
+        _currentAlbum = null;
+        _currentTrackIndex = -1;
+        _isMainMusicActive = false;
 
         _shuffleOrder.Clear();
         _shuffleHistory.Clear();
@@ -558,11 +479,9 @@ public class MainMusicService
             return _currentTrackIndex;
         }
 
-        if (_shufflePosition >=
-            _shuffleOrder.Count)
+        if (_shufflePosition >= _shuffleOrder.Count)
         {
-            BuildShuffleOrder(
-                _currentTrackIndex);
+            BuildShuffleOrder(_currentTrackIndex);
         }
 
         if (_shuffleOrder.Count == 0)
@@ -570,12 +489,10 @@ public class MainMusicService
             return _currentTrackIndex;
         }
 
-        return _shuffleOrder[
-            _shufflePosition++];
+        return _shuffleOrder[_shufflePosition++];
     }
 
-    private void BuildShuffleOrder(
-        int excludedTrackIndex)
+    private void BuildShuffleOrder(int excludedTrackIndex)
     {
         _shuffleOrder.Clear();
         _shufflePosition = 0;
@@ -599,8 +516,7 @@ public class MainMusicService
              index > 0;
              index--)
         {
-            var swapIndex =
-                _shuffleRandom.Next(index + 1);
+            var swapIndex = _shuffleRandom.Next(index + 1);
 
             (_shuffleOrder[index],
              _shuffleOrder[swapIndex]) =
@@ -609,8 +525,7 @@ public class MainMusicService
         }
     }
 
-    private async Task<string?> GetPlaybackUrlAsync(
-        Track track)
+    private async Task<string?> GetPlaybackUrlAsync(Track track)
     {
         if (_currentAlbum?.Source
             is not IPlayableMusicSource playableSource)
@@ -626,8 +541,7 @@ public class MainMusicService
             $"Получение прямой ссылки через источник: " +
             $"{playableSource.Name}");
 
-        return await playableSource.GetPlaybackUrlAsync(
-            track);
+        return await playableSource.GetPlaybackUrlAsync(track);
     }
 
     private async void Player_PlaybackFinished(
@@ -644,8 +558,7 @@ public class MainMusicService
             return;
         }
 
-        _handlingPlaybackFinished =
-            true;
+        _handlingPlaybackFinished = true;
 
         try
         {
@@ -653,8 +566,7 @@ public class MainMusicService
                 "Основной трек завершён. " +
                 "Запуск следующего трека.");
 
-            _isMainMusicActive =
-                false;
+            _isMainMusicActive = false;
 
             await NextAsync();
         }
@@ -667,8 +579,7 @@ public class MainMusicService
         }
         finally
         {
-            _handlingPlaybackFinished =
-                false;
+            _handlingPlaybackFinished = false;
         }
     }
 }
