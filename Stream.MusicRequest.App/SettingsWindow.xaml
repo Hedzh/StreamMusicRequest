@@ -1446,6 +1446,10 @@
 
                         </Border>
 
+
+
+                    </StackPanel>
+
                     <StackPanel x:Name="ChangelogPage"
                                 Visibility="Collapsed">
 
@@ -1569,8 +1573,6 @@
                                            Style="{StaticResource FieldDescription}"/>
                             </StackPanel>
                         </Border>
-
-                    </StackPanel>
 
                     </StackPanel>
 
