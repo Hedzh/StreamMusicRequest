@@ -26,6 +26,10 @@ public class TwitchService : ITwitchService
 
     private bool _connectionInProgress;
 
+    private CancellationTokenSource? _monitorCancellation;
+    private Task? _monitorTask;
+    private readonly SemaphoreSlim _reconnectLock = new(1, 1);
+
     public event EventHandler<
         TwitchRewardActionReceivedEventArgs>?
         RewardActionReceived;
@@ -61,6 +65,9 @@ public class TwitchService : ITwitchService
 
         _eventSubClient.RewardRedemptionReceived +=
             EventSubClient_RewardRedemptionReceived;
+
+        _eventSubClient.Disconnected +=
+            EventSubClient_Disconnected;
     }
 
     public async Task ConnectAsync(
@@ -109,6 +116,8 @@ public class TwitchService : ITwitchService
 
             await _subscriptionReady.Task.WaitAsync(
                 cancellationToken);
+
+            StartConnectionMonitor();
         }
         finally
         {
@@ -119,6 +128,11 @@ public class TwitchService : ITwitchService
 
     public async Task DisconnectAsync()
     {
+        _monitorCancellation?.Cancel();
+        _monitorCancellation?.Dispose();
+        _monitorCancellation = null;
+        _monitorTask = null;
+
         _connectionCancellation?.Cancel();
 
         _connectionCancellation?.Dispose();
@@ -140,6 +154,49 @@ public class TwitchService : ITwitchService
             false;
     }
 
+    private void StartConnectionMonitor()
+    {
+        if (_monitorTask != null && !_monitorTask.IsCompleted) return;
+        _monitorCancellation?.Cancel();
+        _monitorCancellation?.Dispose();
+        _monitorCancellation = new CancellationTokenSource();
+        _monitorTask = MonitorConnectionAsync(_monitorCancellation.Token);
+    }
+
+    private async Task MonitorConnectionAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromMinutes(60), cancellationToken);
+                if (cancellationToken.IsCancellationRequested) return;
+                await RecoverConnectionAsync(cancellationToken);
+            }
+        }
+        catch (OperationCanceledException) { }
+        catch { }
+    }
+
+    private void EventSubClient_Disconnected(object? sender, EventArgs e)
+    {
+        _isConnected = false;
+        _ = RecoverConnectionAsync(CancellationToken.None);
+    }
+
+    private async Task RecoverConnectionAsync(CancellationToken cancellationToken)
+    {
+        await _reconnectLock.WaitAsync(cancellationToken);
+        try
+        {
+            if (_isConnected || _connectionInProgress) return;
+            var accessToken = await _authService.GetValidAccessTokenAsync(cancellationToken);
+            if (string.IsNullOrWhiteSpace(accessToken)) return;
+            await ConnectAsync(cancellationToken);
+        }
+        catch { }
+        finally { _reconnectLock.Release(); }
+    }
     private async Task ValidateRewardsAsync(
         string accessToken,
         string broadcasterId,
