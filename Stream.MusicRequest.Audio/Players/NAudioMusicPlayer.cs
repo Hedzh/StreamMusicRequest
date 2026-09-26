@@ -174,14 +174,7 @@ public class NAudioMusicPlayer :
         }
     }
 
-}
-
-    public Task PauseAsync()
-    {
-        return PauseCoreAsync();
-    }
-
-    private async Task PauseCoreAsync()
+    public async Task PauseAsync()
     {
         await _operationGate.WaitAsync().ConfigureAwait(false);
 
@@ -201,14 +194,7 @@ public class NAudioMusicPlayer :
         }
     }
 
-}
-
-    public Task ResumeAsync()
-    {
-        return ResumeCoreAsync();
-    }
-
-    private async Task ResumeCoreAsync()
+    public async Task ResumeAsync()
     {
         await _operationGate.WaitAsync().ConfigureAwait(false);
 
@@ -228,14 +214,7 @@ public class NAudioMusicPlayer :
         }
     }
 
-}
-
-    public Task StopAsync()
-    {
-        return StopCoreAsync();
-    }
-
-    private async Task StopCoreAsync()
+    public async Task StopAsync()
     {
         await _operationGate.WaitAsync().ConfigureAwait(false);
 
@@ -255,14 +234,7 @@ public class NAudioMusicPlayer :
         }
     }
 
-}
-
-    public Task SkipAsync()
-    {
-        return SkipCoreAsync();
-    }
-
-    private async Task SkipCoreAsync()
+    public async Task SkipAsync()
     {
         await _operationGate.WaitAsync().ConfigureAwait(false);
 
@@ -282,15 +254,7 @@ public class NAudioMusicPlayer :
         }
     }
 
-}
-
-    public Task SeekAsync(
-        TimeSpan position)
-    {
-        return SeekCoreAsync(position);
-    }
-
-    private async Task SeekCoreAsync(
+    public async Task SeekAsync(
         TimeSpan position)
     {
         await _operationGate.WaitAsync().ConfigureAwait(false);
@@ -419,8 +383,6 @@ public class NAudioMusicPlayer :
         }
     }
 
-}
-
     public void SetVolume(
         float volume)
     {
@@ -538,13 +500,6 @@ public class NAudioMusicPlayer :
                         _audioReader;
 
                     if (reader == null)
-                    {
-                        return;
-                    }
-
-                    if (!ReferenceEquals(
-                            reader,
-                            _audioReader))
                     {
                         return;
                     }
