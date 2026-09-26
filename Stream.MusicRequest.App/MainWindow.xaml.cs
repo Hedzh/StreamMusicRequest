@@ -47,6 +47,8 @@ public partial class MainWindow : Window
 
     private bool _isSeeking;
 
+    private bool _isMainMusicLoading;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -1311,6 +1313,11 @@ public partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        if (_isMainMusicLoading)
+        {
+            return;
+        }
+
         var url =
             MainMusicUrlTextBox.Text.Trim();
 
@@ -1327,6 +1334,12 @@ public partial class MainWindow : Window
 
         var viewerModeWasActive =
             _playbackController.IsViewerModeActive;
+
+        _isMainMusicLoading = true;
+        SetMainMusicButton.IsEnabled = false;
+
+        Stream.MusicRequest.Core.Diagnostics.FileLogger.Info(
+            $"Начата загрузка основной музыки: {url}");
 
         try
         {
@@ -1386,6 +1399,9 @@ public partial class MainWindow : Window
 
             UpdateMainMusicUi();
 
+            Stream.MusicRequest.Core.Diagnostics.FileLogger.Info(
+                $"Основная музыка загружена: {album.Title}; треков: {album.Tracks.Count}");
+
             if (viewerModeWasActive)
             {
                 UpdatePlaybackUi();
@@ -1443,11 +1459,20 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
+            Stream.MusicRequest.Core.Diagnostics.FileLogger.Error(
+                "Не удалось загрузить основную музыку.",
+                ex);
+
             MessageBox.Show(
                 $"Не удалось загрузить основную музыку.\n\n{ex.Message}",
                 "Ошибка основной музыки",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
+        }
+        finally
+        {
+            _isMainMusicLoading = false;
+            SetMainMusicButton.IsEnabled = true;
         }
     }
 
