@@ -22,7 +22,11 @@ public partial class SettingsWindow : Window
 
     private readonly ObsSettingsStorage _obsSettingsStorage;
 
+    private readonly PlaybackSettingsStorage _playbackSettingsStorage;
+
     private ObsSettings _obsSettings = new();
+
+    private PlaybackSettings _playbackSettings = new();
 
     public SettingsWindow(
         AppServices appServices)
@@ -43,6 +47,10 @@ public partial class SettingsWindow : Window
 
         _obsSettingsStorage =
             new ObsSettingsStorage(
+                settingsDirectory);
+
+        _playbackSettingsStorage =
+            new PlaybackSettingsStorage(
                 settingsDirectory);
 
         _pages =
@@ -80,6 +88,7 @@ public partial class SettingsWindow : Window
 
         UpdateYandexUi();
         LoadObsSettingsUi();
+        LoadPlaybackSettingsUi();
 
         _ = UpdateTwitchUiAsync();
         _ = LoadTwitchRewardSettingsUiAsync();
@@ -594,6 +603,214 @@ public partial class SettingsWindow : Window
                 MessageBoxImage.Error);
 
             await UpdateTwitchUiAsync();
+        }
+    }
+
+    // ============================================================
+    // PLAYBACK
+    // ============================================================
+
+    private void LoadPlaybackSettingsUi()
+    {
+        _playbackSettings =
+            _playbackSettingsStorage.Load();
+
+        PlaybackSettingsVolumeSlider.Value =
+            _playbackSettings.Volume * 100.0;
+
+        PlaybackSettingsVolumeText.Text =
+            $"{PlaybackSettingsVolumeSlider.Value:0}%";
+
+        DefaultPlaylistUrlTextBox.Text =
+            _playbackSettings.DefaultPlaylistUrl;
+
+        LoadDefaultPlaylistOnStartupCheckBox.IsChecked =
+            _playbackSettings.LoadDefaultPlaylistOnStartup;
+
+        DefaultPlaylistStatusText.Text =
+            string.IsNullOrWhiteSpace(
+                _playbackSettings.DefaultPlaylistUrl)
+                ? string.Empty
+                : "Сохранённая ссылка загружена из настроек.";
+    }
+
+    private void PlaybackSettingsVolumeSlider_ValueChanged(
+        object sender,
+        RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!_isInitialized)
+        {
+            return;
+        }
+
+        var volume =
+            Math.Clamp(
+                PlaybackSettingsVolumeSlider.Value / 100.0,
+                0.0,
+                1.0);
+
+        PlaybackSettingsVolumeText.Text =
+            $"{PlaybackSettingsVolumeSlider.Value:0}%";
+
+        _appServices.PlaybackVolumeChanged?.Invoke(
+            this,
+            (float)volume);
+    }
+
+    private void DefaultPlaylistClearButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        DefaultPlaylistUrlTextBox.Clear();
+        LoadDefaultPlaylistOnStartupCheckBox.IsChecked = false;
+        DefaultPlaylistStatusText.Text = string.Empty;
+    }
+
+    private async void DefaultPlaylistCheckButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var url =
+            DefaultPlaylistUrlTextBox.Text.Trim();
+
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            DefaultPlaylistStatusText.Text =
+                "Ссылка не указана.";
+            return;
+        }
+
+        if (!_appServices.YandexAuthService.IsAuthenticated)
+        {
+            DefaultPlaylistStatusText.Text =
+                "Сначала подключите Yandex Music.";
+            return;
+        }
+
+        try
+        {
+            var source =
+                new Stream.MusicRequest.Yandex.Sources.YandexMusicSource(
+                    new YandexMusic.YandexMusicClient());
+
+            DefaultPlaylistStatusText.Text =
+                "Проверка ссылки...";
+
+            if (!source.CanHandlePlaylistUrl(url))
+            {
+                DefaultPlaylistStatusText.Text =
+                    "Это не ссылка на плейлист Yandex Music.";
+                return;
+            }
+
+            DefaultPlaylistStatusText.Text =
+                "Ссылка распознана как плейлист Yandex Music.";
+        }
+        catch (Exception ex)
+        {
+            DefaultPlaylistStatusText.Text =
+                $"Ошибка проверки: {ex.Message}";
+        }
+    }
+
+    private async void PlaybackSettingsSaveButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var url =
+            DefaultPlaylistUrlTextBox.Text.Trim();
+
+        if (!string.IsNullOrWhiteSpace(url) &&
+            !_appServices.YandexAuthService.IsAuthenticated)
+        {
+            MessageBox.Show(
+                this,
+                "Для сохранения плейлиста по умолчанию сначала подключите Yandex Music.",
+                "Воспроизведение",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(url))
+        {
+            var source =
+                new Stream.MusicRequest.Yandex.Sources.YandexMusicSource(
+                    new YandexMusic.YandexMusicClient());
+
+            if (!source.CanHandlePlaylistUrl(url))
+            {
+                MessageBox.Show(
+                    this,
+                    "Указана некорректная ссылка на плейлист Yandex Music.",
+                    "Воспроизведение",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+        }
+
+        _playbackSettings =
+            new PlaybackSettings
+            {
+                Volume =
+                    (float)Math.Clamp(
+                        PlaybackSettingsVolumeSlider.Value / 100.0,
+                        0.0,
+                        1.0),
+
+                DefaultPlaylistUrl = url,
+
+                LoadDefaultPlaylistOnStartup =
+                    LoadDefaultPlaylistOnStartupCheckBox.IsChecked == true
+                    && !string.IsNullOrWhiteSpace(url)
+            };
+
+        await _playbackSettingsStorage
+            .SaveAsync(_playbackSettings);
+
+        DefaultPlaylistStatusText.Text =
+            "Настройки сохранены.";
+
+        MessageBox.Show(
+            this,
+            "Настройки воспроизведения сохранены.",
+            "Воспроизведение",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
+    private void OpenLogsButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        try
+        {
+            var logsDirectory =
+                Path.Combine(
+                    Environment.GetFolderPath(
+                        Environment.SpecialFolder.LocalApplicationData),
+                    "StreamMusicRequest",
+                    "Logs");
+
+            Directory.CreateDirectory(
+                logsDirectory);
+
+            Process.Start(
+                new ProcessStartInfo
+                {
+                    FileName = logsDirectory,
+                    UseShellExecute = true
+                });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                this,
+                $"Не удалось открыть папку логов.\n\n{ex.Message}",
+                "Логи",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
     }
 
