@@ -1,3 +1,4 @@
+using Stream.MusicRequest.Core.Diagnostics;
 using Stream.MusicRequest.Twitch.EventSub;
 using Stream.MusicRequest.Twitch.Models;
 
@@ -181,6 +182,9 @@ public class TwitchService : ITwitchService
     private void EventSubClient_Disconnected(object? sender, EventArgs e)
     {
         _isConnected = false;
+
+        FileLogger.Info("Twitch EventSub: соединение потеряно, запускается восстановление.");
+
         _ = RecoverConnectionAsync(CancellationToken.None);
     }
 
@@ -193,8 +197,15 @@ public class TwitchService : ITwitchService
             var accessToken = await _authService.GetValidAccessTokenAsync(cancellationToken);
             if (string.IsNullOrWhiteSpace(accessToken)) return;
             await ConnectAsync(cancellationToken);
+
+            FileLogger.Info("Twitch EventSub: соединение успешно восстановлено.");
         }
-        catch { }
+        catch (Exception ex)
+        {
+            FileLogger.Error(
+                "Twitch EventSub: не удалось восстановить соединение.",
+                ex);
+        }
         finally { _reconnectLock.Release(); }
     }
     private async Task ValidateRewardsAsync(
