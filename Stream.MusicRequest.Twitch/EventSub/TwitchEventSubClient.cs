@@ -16,7 +16,15 @@ public class TwitchEventSubClient
 
     private TaskCompletionSource<string>? _sessionReady;
 
+    private string? _reconnectUrl;
+    private bool _intentionalDisconnect;
+
+    public bool IsConnected =>
+        _webSocket?.State == WebSocketState.Open;
+
     public event EventHandler<TwitchEventSubWelcomeMessage>? Connected;
+
+    public event EventHandler? Disconnected;
 
     public event EventHandler<TwitchRewardRedemption>?
         RewardRedemptionReceived;
@@ -36,6 +44,14 @@ public class TwitchEventSubClient
                 "EventSub уже подключён, но Session ID ещё не готов.");
         }
 
+        var endpoint =
+            string.IsNullOrWhiteSpace(_reconnectUrl)
+                ? EventSubUrl
+                : _reconnectUrl;
+
+        _reconnectUrl = null;
+        _intentionalDisconnect = false;
+
         _webSocket =
             new ClientWebSocket();
 
@@ -44,7 +60,7 @@ public class TwitchEventSubClient
                 TaskCreationOptions.RunContinuationsAsynchronously);
 
         await _webSocket.ConnectAsync(
-            new Uri(EventSubUrl),
+            new Uri(endpoint),
             cancellationToken);
 
         _receiveTask =
@@ -69,6 +85,8 @@ public class TwitchEventSubClient
 
     public async Task DisconnectAsync()
     {
+        _intentionalDisconnect = true;
+
         var webSocket =
             _webSocket;
 
@@ -167,6 +185,13 @@ public class TwitchEventSubClient
         {
             _sessionReady?.TrySetException(
                 ex);
+        }
+        finally
+        {
+            if (!_intentionalDisconnect)
+            {
+                Disconnected?.Invoke(this, EventArgs.Empty);
+            }
         }
     }
 
@@ -341,8 +366,62 @@ public class TwitchEventSubClient
     private void ProcessReconnect(
         JsonElement root)
     {
-        // Обработку автоматического
-        // переподключения сделаем отдельным
-        // блоком после базовой реализации.
+        if (!root.TryGetProperty("payload", out var payload) ||
+            !payload.TryGetProperty("session", out var session) ||
+            !session.TryGetProperty("reconnect_url", out var reconnectUrlElement))
+        {
+            return;
+        }
+
+        var reconnectUrl = reconnectUrlElement.GetString();
+
+        if (string.IsNullOrWhiteSpace(reconnectUrl))
+        {
+            return;
+        }
+
+        _reconnectUrl = reconnectUrl;
+        _ = CloseForReconnectAsync();
+    }
+
+    private async Task CloseForReconnectAsync()
+    {
+        _intentionalDisconnect = true;
+
+        var webSocket = _webSocket;
+
+        if (webSocket == null)
+        {
+            _intentionalDisconnect = false;
+            Disconnected?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        try
+        {
+            if (webSocket.State == WebSocketState.Open)
+            {
+                await webSocket.CloseAsync(
+                    WebSocketCloseStatus.NormalClosure,
+                    "Reconnect",
+                    CancellationToken.None);
+            }
+        }
+        catch
+        {
+        }
+        finally
+        {
+            _intentionalDisconnect = false;
+
+            if (ReferenceEquals(_webSocket, webSocket))
+            {
+                _webSocket = null;
+            }
+
+            webSocket.Dispose();
+
+            Disconnected?.Invoke(this, EventArgs.Empty);
+        }
     }
 }
