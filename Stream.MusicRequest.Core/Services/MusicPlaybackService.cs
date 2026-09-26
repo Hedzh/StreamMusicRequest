@@ -13,6 +13,9 @@ public class MusicPlaybackService
 
     private bool _isPlaying;
 
+    private readonly SemaphoreSlim _operationGate =
+        new(1, 1);
+
     public event EventHandler? QueuePlaybackFinished;
 
     public MusicPlaybackService(
@@ -30,6 +33,20 @@ public class MusicPlaybackService
     }
 
     public async Task<bool> StartNextAsync()
+    {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
+            return await StartNextCoreAsync().ConfigureAwait(false);
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
+    }
+
+    private async Task<bool> StartNextCoreAsync()
     {
         FileLogger.Info(
             $"StartNextAsync вызван. " +
@@ -69,7 +86,7 @@ public class MusicPlaybackService
                 "У элемента нет Track. " +
                 "Переход к следующему.");
 
-            return await StartNextAsync();
+            return await StartNextCoreAsync();
         }
 
         if (item.Source is not IPlayableMusicSource playableSource)
@@ -78,7 +95,7 @@ public class MusicPlaybackService
                 "Источник не поддерживает воспроизведение. " +
                 "Переход к следующему.");
 
-            return await StartNextAsync();
+            return await StartNextCoreAsync();
         }
 
         FileLogger.Info(
@@ -96,7 +113,7 @@ public class MusicPlaybackService
                 "Прямая ссылка не получена. " +
                 "Переход к следующему.");
 
-            return await StartNextAsync();
+            return await StartNextCoreAsync();
         }
 
         FileLogger.Info(
@@ -134,10 +151,15 @@ public class MusicPlaybackService
 
             throw;
         }
+    
     }
 
     public async Task PauseAsync()
     {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         if (!_isPlaying)
         {
             FileLogger.Info(
@@ -153,10 +175,20 @@ public class MusicPlaybackService
 
         FileLogger.Info(
             "Воспроизведение поставлено на паузу.");
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     public async Task ResumeAsync()
     {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         if (!_isPlaying)
         {
             FileLogger.Info(
@@ -172,10 +204,20 @@ public class MusicPlaybackService
 
         FileLogger.Info(
             "Воспроизведение продолжено.");
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     public async Task StopAsync()
     {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         FileLogger.Info(
             "MusicPlaybackService.StopAsync вызван.");
 
@@ -186,10 +228,20 @@ public class MusicPlaybackService
 
         FileLogger.Info(
             "Воспроизведение остановлено.");
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     public async Task SkipAsync()
     {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         FileLogger.Info(
             "MusicPlaybackService.SkipAsync вызван.");
 
@@ -202,12 +254,22 @@ public class MusicPlaybackService
             "Текущий трек пропущен. " +
             "Попытка запуска следующего.");
 
-        await StartNextAsync();
+        await StartNextCoreAsync();
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     public async Task SeekAsync(
         TimeSpan position)
     {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
         if (!_isPlaying)
         {
             return;
@@ -215,6 +277,12 @@ public class MusicPlaybackService
 
         await _player.SeekAsync(
             position);
+    
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
     }
 
     public bool IsPlaying =>
@@ -243,33 +311,56 @@ public class MusicPlaybackService
         object? sender,
         EventArgs e)
     {
-        FileLogger.Info(
-            "Получено событие PlaybackFinished " +
-            "от музыкального плеера.");
+        if (!_isPlaying)
+        {
+            FileLogger.Info(
+                "PlaybackFinished относится не к активному " +
+                "треку очереди зрителей. Событие проигнорировано.");
 
-        _isPlaying =
-            false;
+            return;
+        }
+
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
+            if (!_isPlaying)
+            {
+                return;
+            }
+
+            FileLogger.Info(
+                "Получено событие PlaybackFinished " +
+                "от музыкального плеера.");
+
+            _isPlaying =
+                false;
 
         FileLogger.Info(
             $"Перед запуском следующего: " +
             $"QueueCount: {_queue.Count}");
 
-        try
-        {
-            var started =
-                await StartNextAsync();
+            try
+            {
+                var started =
+                    await StartNextCoreAsync();
 
-            FileLogger.Info(
-                $"Попытка автоматического запуска " +
-                "следующего трека завершена. " +
-                $"Started: {started}");
+                FileLogger.Info(
+                    $"Попытка автоматического запуска " +
+                    "следующего трека завершена. " +
+                    $"Started: {started}");
+            }
+            catch (Exception ex)
+            {
+                FileLogger.Error(
+                    "Ошибка автоматического запуска " +
+                    "следующего трека.",
+                    ex);
+            }
         }
-        catch (Exception ex)
+        finally
         {
-            FileLogger.Error(
-                "Ошибка автоматического запуска " +
-                "следующего трека.",
-                ex);
+            _operationGate.Release();
         }
     }
 
