@@ -187,6 +187,12 @@ public partial class MainWindow : Window
         _appServices.TwitchService.RewardActionReceived +=
             TwitchService_RewardActionReceived;
 
+        _appServices.TwitchService.ConnectionStateChanged +=
+            TwitchService_ConnectionStateChanged;
+
+        _appServices.TwitchService.AuthenticationRequired +=
+            TwitchService_AuthenticationRequired;
+
         _playbackUiTimer =
             new DispatcherTimer
             {
@@ -443,6 +449,63 @@ public partial class MainWindow : Window
                 return;
             }
         }
+    }
+
+    private void TwitchService_ConnectionStateChanged(
+        object? sender,
+        bool isConnected)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(
+                new Action(
+                    () => TwitchService_ConnectionStateChanged(
+                        sender,
+                        isConnected)));
+
+            return;
+        }
+
+        if (isConnected)
+        {
+            TwitchStatusText.Text =
+                "Подключено";
+
+            SetTwitchStatusVisual(true);
+        }
+        else
+        {
+            TwitchStatusText.Text =
+                "Соединение потеряно";
+
+            SetTwitchStatusVisual(false);
+        }
+    }
+
+    private void TwitchService_AuthenticationRequired(
+        object? sender,
+        EventArgs e)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(
+                new Action(
+                    () => TwitchService_AuthenticationRequired(
+                        sender,
+                        e)));
+
+            return;
+        }
+
+        SetTwitchDisconnectedUi();
+
+        MessageBox.Show(
+            "Соединение с Twitch было потеряно, а сохранённая OAuth-сессия больше не действительна.\n\n" +
+            "Автоматически восстановить подключение не удалось. " +
+            "Пожалуйста, войдите в Twitch заново через настройки.",
+            "Twitch — требуется повторная авторизация",
+            MessageBoxButton.OK,
+            MessageBoxImage.Warning);
     }
 
     private void PlaybackUiTimer_Tick(
@@ -1664,6 +1727,12 @@ public partial class MainWindow : Window
 
         _appServices.TwitchService.RewardActionReceived -=
             TwitchService_RewardActionReceived;
+
+        _appServices.TwitchService.ConnectionStateChanged -=
+            TwitchService_ConnectionStateChanged;
+
+        _appServices.TwitchService.AuthenticationRequired -=
+            TwitchService_AuthenticationRequired;
 
         CloseTwitchAuthorizationWindow();
 
