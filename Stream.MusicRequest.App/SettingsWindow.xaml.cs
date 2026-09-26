@@ -62,6 +62,11 @@ public partial class SettingsWindow : Window
                 TwitchAuthService_AuthenticationStateChanged;
 
         _appServices
+            .TwitchService
+            .ConnectionStateChanged +=
+                TwitchService_ConnectionStateChanged;
+
+        _appServices
             .YandexAuthService
             .AuthenticationStateChanged +=
                 YandexAuthService_AuthenticationStateChanged;
