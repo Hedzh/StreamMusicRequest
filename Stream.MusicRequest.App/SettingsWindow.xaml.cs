@@ -316,6 +316,49 @@ public partial class SettingsWindow : Window
     // TWITCH
     // ============================================================
 
+    private void TwitchService_ConnectionStateChanged(
+        object? sender,
+        bool isConnected)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(
+                new Action(
+                    () => TwitchService_ConnectionStateChanged(
+                        sender,
+                        isConnected)));
+
+            return;
+        }
+
+        if (isConnected)
+        {
+            TwitchStatusIndicator.Fill =
+                FindResource("SuccessBrush")
+                as Brush;
+
+            TwitchStatusText.Text =
+                "Подключен";
+
+            TwitchStatusText.Foreground =
+                FindResource("SuccessBrush")
+                as Brush;
+        }
+        else
+        {
+            TwitchStatusIndicator.Fill =
+                FindResource("TextMuted")
+                as Brush;
+
+            TwitchStatusText.Text =
+                "Соединение потеряно";
+
+            TwitchStatusText.Foreground =
+                FindResource("TextMuted")
+                as Brush;
+        }
+    }
+
     private void TwitchAuthService_AuthenticationStateChanged(
         object? sender,
         bool isAuthenticated)
@@ -1097,6 +1140,11 @@ public partial class SettingsWindow : Window
             .TwitchAuthService
             .AuthenticationStateChanged -=
                 TwitchAuthService_AuthenticationStateChanged;
+
+        _appServices
+            .TwitchService
+            .ConnectionStateChanged -=
+                TwitchService_ConnectionStateChanged;
 
         Closed -=
             SettingsWindow_Closed;
