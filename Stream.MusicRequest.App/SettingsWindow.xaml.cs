@@ -74,7 +74,8 @@ public partial class SettingsWindow : Window
             TwitchRewardsPage,
             DonationAlertsPage,
             PlaybackPage,
-            ObsPage
+            ObsPage,
+            ChangelogPage
         ];
 
         _appServices
