@@ -24,6 +24,9 @@ public class TwitchAuthService
     private const string DeviceGrantType =
         "urn:ietf:params:oauth:grant-type:device_code";
 
+    private static readonly TimeSpan TokenValidationTimeout =
+        TimeSpan.FromSeconds(15);
+
     private readonly HttpClient _httpClient;
     private readonly TwitchSettings _settings;
     private readonly TwitchAuthStorage _storage;
@@ -327,10 +330,17 @@ public class TwitchAuthService
                 "Bearer",
                 accessToken);
 
+        using var timeoutCancellation =
+            CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken);
+
+        timeoutCancellation.CancelAfter(
+            TokenValidationTimeout);
+
         using var response =
             await _httpClient.SendAsync(
                 request,
-                cancellationToken);
+                timeoutCancellation.Token);
 
         if (response.IsSuccessStatusCode)
         {
