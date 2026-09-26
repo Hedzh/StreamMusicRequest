@@ -184,8 +184,6 @@ public class NAudioMusicPlayer :
             "PauseAsync вызван.");
 
         _outputDevice?.Pause();
-
-        return Task.CompletedTask;
     
         }
         finally
@@ -204,8 +202,6 @@ public class NAudioMusicPlayer :
             "ResumeAsync вызван.");
 
         _outputDevice?.Play();
-
-        return Task.CompletedTask;
     
         }
         finally
@@ -224,8 +220,6 @@ public class NAudioMusicPlayer :
             "StopAsync вызван.");
 
         StopPlayback();
-
-        return Task.CompletedTask;
     
         }
         finally
@@ -244,8 +238,6 @@ public class NAudioMusicPlayer :
             "SkipAsync вызван.");
 
         StopPlayback();
-
-        return Task.CompletedTask;
     
         }
         finally
@@ -266,7 +258,6 @@ public class NAudioMusicPlayer :
 
         if (reader == null)
         {
-            return Task.CompletedTask;
         }
 
         var duration =
@@ -274,7 +265,6 @@ public class NAudioMusicPlayer :
 
         if (duration <= TimeSpan.Zero)
         {
-            return Task.CompletedTask;
         }
 
         var clampedPosition =
@@ -373,8 +363,6 @@ public class NAudioMusicPlayer :
 
             throw;
         }
-
-        return Task.CompletedTask;
     
         }
         finally
