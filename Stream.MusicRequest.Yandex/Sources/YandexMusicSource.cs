@@ -3,6 +3,7 @@ using YandexTrack = YandexMusic.Models.Tracks.Track;
 using YandexTrackShort = YandexMusic.Models.Tracks.TrackShort;
 using CoreTrack = Stream.MusicRequest.Core.Models.Track;
 using Stream.MusicRequest.Core.Models;
+using Stream.MusicRequest.Core.Diagnostics;
 using Stream.MusicRequest.Core.Sources;
 
 namespace Stream.MusicRequest.Yandex.Sources;
@@ -207,10 +208,7 @@ public class YandexMusicSource :
                     url,
 
                 Source =
-                    this,
-
-                CoverUrl =
-                    yandexAlbum.CoverUri
+                    this
             };
 
         if (yandexAlbum.Artists.Count > 0)
@@ -279,10 +277,7 @@ public class YandexMusicSource :
                     url,
 
                 Source =
-                    this,
-
-                CoverUrl =
-                    yandexPlaylist.OgImage
+                    this
             };
 
         foreach (var trackShort in
@@ -317,8 +312,40 @@ public class YandexMusicSource :
             return null;
         }
 
-        return await _client.Tracks.GetDirectLinkAsync(
-            track.Id);
+        const int maxAttempts = 3;
+
+        for (var attempt = 1;
+             attempt <= maxAttempts;
+             attempt++)
+        {
+            try
+            {
+                return await _client.Tracks.GetDirectLinkAsync(
+                    track.Id);
+            }
+            catch (Exception ex)
+            {
+                FileLogger.Info(
+                    $"Не удалось получить прямую ссылку " +
+                    $"Yandex Music для трека {track.Id}. " +
+                    $"Попытка {attempt}/{maxAttempts}: " +
+                    $"{ex.Message}");
+
+                if (attempt >= maxAttempts)
+                {
+                    FileLogger.Info(
+                        $"Трек {track.Id} будет пропущен " +
+                        "из-за недоступности прямой ссылки.");
+
+                    return null;
+                }
+
+                await Task.Delay(
+                    TimeSpan.FromMilliseconds(750));
+            }
+        }
+
+        return null;
     }
 
     private async Task<YandexTrack?> ResolvePlaylistTrackAsync(
@@ -369,10 +396,6 @@ public class YandexMusicSource :
             Duration =
                 TimeSpan.FromMilliseconds(
                     yandexTrack.DurationMs),
-
-            CoverUrl =
-                yandexTrack.CoverUri,
-
             SourceUrl =
                 null
         };
