@@ -286,9 +286,19 @@ public class MainMusicService
                 $"основной музыки. " +
                 $"Индекс: {_currentTrackIndex}");
 
-            if (await PlayAsync())
+            try
             {
-                return;
+                if (await PlayAsync())
+                {
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                FileLogger.Error(
+                    $"Ошибка запуска трека с индексом " +
+                    $"{_currentTrackIndex}. Трек будет пропущен.",
+                    ex);
             }
 
             FileLogger.Info(
