@@ -274,12 +274,58 @@ public class MainMusicService
             }
         }
 
-        FileLogger.Info(
-            $"Переход на следующий трек " +
-            $"основной музыки. " +
-            $"Индекс: {_currentTrackIndex}");
+        var trackCount =
+            _currentAlbum.Tracks.Count;
 
-        await PlayAsync();
+        for (var attempt = 0;
+             attempt < trackCount;
+             attempt++)
+        {
+            FileLogger.Info(
+                $"Переход на следующий трек " +
+                $"основной музыки. " +
+                $"Индекс: {_currentTrackIndex}");
+
+            if (await PlayAsync())
+            {
+                return;
+            }
+
+            FileLogger.Info(
+                $"Не удалось запустить трек с индексом " +
+                $"{_currentTrackIndex}. Переход к следующему.");
+            
+            if (_shuffleEnabled &&
+                _currentAlbum.Tracks.Count > 1)
+            {
+                var nextTrackIndex =
+                    GetNextShuffleTrackIndex();
+
+                if (nextTrackIndex !=
+                    _currentTrackIndex)
+                {
+                    _shuffleHistory.Add(
+                        _currentTrackIndex);
+                }
+
+                _currentTrackIndex =
+                    nextTrackIndex;
+            }
+            else
+            {
+                _currentTrackIndex++;
+
+                if (_currentTrackIndex >=
+                    _currentAlbum.Tracks.Count)
+                {
+                    _currentTrackIndex = 0;
+                }
+            }
+        }
+
+        FileLogger.Error(
+            "Не удалось запустить ни один трек " +
+            "основной музыки.");
     }
 
     public async Task PreviousAsync()
