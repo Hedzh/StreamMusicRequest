@@ -504,6 +504,10 @@
                         <TextBlock Text="OBS / Виджет"/>
                     </ListBoxItem>
 
+                    <ListBoxItem>
+                        <TextBlock Text="История изменений"/>
+                    </ListBoxItem>
+
                 </ListBox>
 
                 <Border Grid.Row="2"
@@ -1441,6 +1445,132 @@
                             </StackPanel>
 
                         </Border>
+
+                    <StackPanel x:Name="ChangelogPage"
+                                Visibility="Collapsed">
+
+                        <TextBlock Text="История изменений"
+                                   Style="{StaticResource PageTitle}"/>
+
+                        <TextBlock Text="История реализованных функций, исправлений и изменений Stream Music Request."
+                                   Style="{StaticResource PageDescription}"
+                                   Margin="0,0,0,20"/>
+
+                        <Border Style="{StaticResource SettingsCard}">
+                            <StackPanel>
+                                <TextBlock Text="1.1.0 — 26.09.2026"
+                                           FontSize="20"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource AccentBrush}"/>
+                                <TextBlock Text="Текущая версия"
+                                           FontSize="12"
+                                           Foreground="{StaticResource TextMuted}"
+                                           Margin="0,4,0,16"/>
+
+                                <TextBlock Text="Добавлено"
+                                           Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="• Интеграция с OBS: локальный HTTP-виджет с информацией о текущем треке и локальный HTTP-аудиопоток для использования в OBS."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Настройки воспроизведения: отдельный раздел для громкости, плейлиста по умолчанию и автоматической загрузки плейлиста при запуске."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Сохранение громкости между запусками приложения."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Проверка и сохранение ссылки на плейлист Yandex Music."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Кнопка «Открыть папку логов» в настройках."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Синхронизация состояния подключения Twitch между главным окном и настройками."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Автоматическое восстановление подключения Twitch после временного разрыва."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Уведомление пользователя, если сохранённая Twitch OAuth-сессия больше не может быть восстановлена и требуется повторный вход."
+                                           Style="{StaticResource FieldDescription}"/>
+
+                                <TextBlock Text="Улучшено"
+                                           Style="{StaticResource SectionTitle}"
+                                           Margin="0,20,0,12"/>
+                                <TextBlock Text="• Операции воспроизведения музыки сериализованы, чтобы исключить гонки при быстрых переходах между треками."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Основная музыка автоматически пропускает треки, запуск которых завершился ошибкой."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Получение прямой ссылки Yandex Music повторяет временно неудачные запросы."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Настройки воспроизведения вынесены в отдельный раздел."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Привязки Twitch Channel Points остаются ручными: приложение не создаёт награды автоматически."
+                                           Style="{StaticResource FieldDescription}"/>
+
+                                <TextBlock Text="Исправлено"
+                                           Style="{StaticResource SectionTitle}"
+                                           Margin="0,20,0,12"/>
+                                <TextBlock Text="• Восстановление Twitch EventSub после длительного периода бездействия."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Потеря первого музыкального заказа Twitch сразу после запуска приложения."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Устаревшие события завершения воспроизведения при быстрых переходах между треками."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Ошибки запуска Media Foundation больше не останавливают последовательность основной музыки."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Удалена неиспользуемая загрузка обложек треков и соответствующий интерфейс."
+                                           Style="{StaticResource FieldDescription}"/>
+
+                                <TextBlock Text="Примечания"
+                                           Style="{StaticResource SectionTitle}"
+                                           Margin="0,20,0,12"/>
+                                <TextBlock Text="• Donation Alerts пока не входит в эту версию и будет реализован на следующем этапе."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Временные тестовые проекты и файлы разработки пока сохранены до завершения интеграции Donation Alerts."
+                                           Style="{StaticResource FieldDescription}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource SettingsCard}">
+                            <StackPanel>
+                                <TextBlock Text="1.0.0 — базовая версия"
+                                           FontSize="20"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource AccentBrush}"/>
+                                <TextBlock Text="Первая рабочая версия проекта"
+                                           FontSize="12"
+                                           Foreground="{StaticResource TextMuted}"
+                                           Margin="0,4,0,16"/>
+
+                                <TextBlock Text="Реализовано"
+                                           Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="• Базовое WPF-приложение на .NET с разделением на Core, Twitch, Yandex, Audio, Infrastructure и App."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Авторизация Twitch через OAuth/device flow с сохранением авторизации."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Получение текущего Twitch-пользователя и работа с Channel Points."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Ручная привязка существующих Twitch-наград к действиям приложения."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Награда «Заказ музыки» с вводом ссылки на трек."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Награда «Пропустить трек» для переключения текущего трека."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Авторизация Yandex Music и получение музыкальных данных."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Загрузка альбомов и плейлистов Yandex Music как основной музыки."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Проверка ссылок Yandex Music для пользовательских запросов."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Очередь пользовательских запросов с последовательным воспроизведением."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Переключение между основной музыкой и музыкой, заказанной зрителями."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Воспроизведение аудио через NAudio и Media Foundation."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Управление громкостью и базовыми командами воспроизведения."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Логирование работы приложения в локальный app.log."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Базовая система настроек и отдельные настройки Twitch/Yandex."
+                                           Style="{StaticResource FieldDescription}"/>
+                            </StackPanel>
+                        </Border>
+
+                    </StackPanel>
 
                     </StackPanel>
 
