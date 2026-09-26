@@ -258,6 +258,8 @@ public class NAudioMusicPlayer :
 
         if (reader == null)
         {
+            throw new InvalidOperationException(
+                "Невозможно переместить позицию: аудиопоток не загружен.");
         }
 
         var duration =
@@ -265,6 +267,8 @@ public class NAudioMusicPlayer :
 
         if (duration <= TimeSpan.Zero)
         {
+            throw new InvalidOperationException(
+                "Невозможно переместить позицию: длительность трека неизвестна.");
         }
 
         var clampedPosition =
