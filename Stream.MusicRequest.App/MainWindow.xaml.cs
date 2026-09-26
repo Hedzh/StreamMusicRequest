@@ -3,7 +3,6 @@ using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Stream.MusicRequest.Audio.Players;
 using Stream.MusicRequest.Core.Diagnostics;
@@ -496,16 +495,6 @@ public partial class MainWindow : Window
 
             SetPlaybackButtonText(
                 "▶");
-
-            CurrentCoverImage.Source =
-                null;
-
-            CurrentCoverImage.Visibility =
-                Visibility.Collapsed;
-
-            CoverPlaceholder.Visibility =
-                Visibility.Visible;
-
             return;
         }
 
@@ -532,10 +521,6 @@ public partial class MainWindow : Window
                 track.Album)
                 ? "Без альбома"
                 : track.Album;
-
-        UpdateCurrentCover(
-            track.CoverUrl);
-
         var duration =
             _musicPlayer.GetDuration();
 
@@ -572,64 +557,6 @@ public partial class MainWindow : Window
             _musicPlayer.IsPlaying
                 ? "Ⅱ"
                 : "▶");
-    }
-
-    private void UpdateCurrentCover(
-        string? coverUrl)
-    {
-        if (string.IsNullOrWhiteSpace(coverUrl))
-        {
-            CurrentCoverImage.Source =
-                null;
-
-            CurrentCoverImage.Visibility =
-                Visibility.Collapsed;
-
-            CoverPlaceholder.Visibility =
-                Visibility.Visible;
-
-            return;
-        }
-
-        try
-        {
-            var bitmap =
-                new BitmapImage();
-
-            bitmap.BeginInit();
-            bitmap.UriSource =
-                new Uri(
-                    coverUrl,
-                    UriKind.Absolute);
-            bitmap.CacheOption =
-                BitmapCacheOption.OnLoad;
-            bitmap.EndInit();
-            bitmap.Freeze();
-
-            CurrentCoverImage.Source =
-                bitmap;
-
-            CurrentCoverImage.Visibility =
-                Visibility.Visible;
-
-            CoverPlaceholder.Visibility =
-                Visibility.Collapsed;
-        }
-        catch (Exception ex)
-        {
-            CurrentCoverImage.Source =
-                null;
-
-            CurrentCoverImage.Visibility =
-                Visibility.Collapsed;
-
-            CoverPlaceholder.Visibility =
-                Visibility.Visible;
-
-            Stream.MusicRequest.Core.Diagnostics.FileLogger.Error(
-                "Не удалось загрузить обложку текущего трека.",
-                ex);
-        }
     }
 
     private void ShuffleMainMusicButton_Click(
