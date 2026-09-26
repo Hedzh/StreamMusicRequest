@@ -31,6 +31,10 @@ public class TwitchService : ITwitchService
     private Task? _monitorTask;
     private readonly SemaphoreSlim _reconnectLock = new(1, 1);
 
+    public event EventHandler<bool>? ConnectionStateChanged;
+
+    public event EventHandler? AuthenticationRequired;
+
     public event EventHandler<
         TwitchRewardActionReceivedEventArgs>?
         RewardActionReceived;
@@ -151,8 +155,7 @@ public class TwitchService : ITwitchService
         _currentUser =
             null;
 
-        _isConnected =
-            false;
+        SetConnectionState(false);
     }
 
     private void StartConnectionMonitor()
@@ -181,7 +184,7 @@ public class TwitchService : ITwitchService
 
     private void EventSubClient_Disconnected(object? sender, EventArgs e)
     {
-        _isConnected = false;
+        SetConnectionState(false);
 
         FileLogger.Info("Twitch EventSub: соединение потеряно, запускается восстановление.");
 
@@ -191,22 +194,90 @@ public class TwitchService : ITwitchService
     private async Task RecoverConnectionAsync(CancellationToken cancellationToken)
     {
         await _reconnectLock.WaitAsync(cancellationToken);
+
         try
         {
-            if (_isConnected || _connectionInProgress) return;
-            var accessToken = await _authService.GetValidAccessTokenAsync(cancellationToken);
-            if (string.IsNullOrWhiteSpace(accessToken)) return;
-            await ConnectAsync(cancellationToken);
+            if (_isConnected || _connectionInProgress)
+            {
+                return;
+            }
 
-            FileLogger.Info("Twitch EventSub: соединение успешно восстановлено.");
+            var attempt = 0;
+
+            while (!cancellationToken.IsCancellationRequested &&
+                   !_isConnected)
+            {
+                attempt++;
+
+                try
+                {
+                    var accessToken =
+                        await _authService.GetValidAccessTokenAsync(
+                            cancellationToken);
+
+                    if (string.IsNullOrWhiteSpace(accessToken))
+                    {
+                        FileLogger.Error(
+                            "Twitch EventSub: OAuth-сессия больше не действительна. " +
+                            "Требуется повторная авторизация.");
+
+                        AuthenticationRequired?.Invoke(
+                            this,
+                            EventArgs.Empty);
+
+                        return;
+                    }
+
+                    await ConnectAsync(cancellationToken);
+
+                    if (_isConnected)
+                    {
+                        FileLogger.Info(
+                            $"Twitch EventSub: соединение успешно восстановлено с попытки {attempt}.");
+
+                        return;
+                    }
+                }
+                catch (OperationCanceledException)
+                    when (!cancellationToken.IsCancellationRequested)
+                {
+                    FileLogger.Error(
+                        $"Twitch EventSub: попытка восстановления {attempt} прервана таймаутом.");
+                }
+                catch (Exception ex)
+                {
+                    FileLogger.Error(
+                        $"Twitch EventSub: попытка восстановления {attempt} завершилась ошибкой.",
+                        ex);
+                }
+
+                await Task.Delay(
+                    TimeSpan.FromSeconds(30),
+                    cancellationToken);
+            }
         }
-        catch (Exception ex)
+        catch (OperationCanceledException)
         {
-            FileLogger.Error(
-                "Twitch EventSub: не удалось восстановить соединение.",
-                ex);
+            // Ожидаемая отмена при завершении приложения.
         }
-        finally { _reconnectLock.Release(); }
+        finally
+        {
+            _reconnectLock.Release();
+        }
+    }
+
+    private void SetConnectionState(bool isConnected)
+    {
+        if (_isConnected == isConnected)
+        {
+            return;
+        }
+
+        _isConnected = isConnected;
+
+        ConnectionStateChanged?.Invoke(
+            this,
+            isConnected);
     }
     private async Task ValidateRewardsAsync(
         string accessToken,
@@ -258,16 +329,14 @@ public class TwitchService : ITwitchService
             await RegisterSubscriptionsAsync(
                 message);
 
-            _isConnected =
-                true;
+            SetConnectionState(true);
 
             _subscriptionReady?.TrySetResult(
                 true);
         }
         catch (Exception ex)
         {
-            _isConnected =
-                false;
+            SetConnectionState(false);
 
             _subscriptionReady?.TrySetException(
                 ex);
