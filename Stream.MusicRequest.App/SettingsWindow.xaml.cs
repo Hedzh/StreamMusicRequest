@@ -5,12 +5,15 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using Stream.MusicRequest.Infrastructure.Storage;
 using Stream.MusicRequest.Twitch.Models;
+using Stream.MusicRequest.Yandex.Sources;
 
 namespace Stream.MusicRequest.App;
 
 public partial class SettingsWindow : Window
 {
     private readonly AppServices _appServices;
+    private readonly YandexMusicSource _yandexMusicSource;
+    private readonly Action<float>? _setPlaybackVolume;
 
     private readonly StackPanel[] _pages;
 
@@ -29,7 +32,9 @@ public partial class SettingsWindow : Window
     private PlaybackSettings _playbackSettings = new();
 
     public SettingsWindow(
-        AppServices appServices)
+        AppServices appServices,
+        YandexMusicSource yandexMusicSource,
+        Action<float>? setPlaybackVolume = null)
     {
         InitializeComponent();
 
@@ -37,6 +42,14 @@ public partial class SettingsWindow : Window
             appServices
             ?? throw new ArgumentNullException(
                 nameof(appServices));
+
+        _yandexMusicSource =
+            yandexMusicSource
+            ?? throw new ArgumentNullException(
+                nameof(yandexMusicSource));
+
+        _setPlaybackVolume =
+            setPlaybackVolume;
 
         var settingsDirectory =
             Path.Combine(
@@ -652,8 +665,7 @@ public partial class SettingsWindow : Window
         PlaybackSettingsVolumeText.Text =
             $"{PlaybackSettingsVolumeSlider.Value:0}%";
 
-        _appServices.PlaybackVolumeChanged?.Invoke(
-            this,
+        _setPlaybackVolume?.Invoke(
             (float)volume);
     }
 
@@ -666,7 +678,7 @@ public partial class SettingsWindow : Window
         DefaultPlaylistStatusText.Text = string.Empty;
     }
 
-    private async void DefaultPlaylistCheckButton_Click(
+    private void DefaultPlaylistCheckButton_Click(
         object sender,
         RoutedEventArgs e)
     {
@@ -689,14 +701,10 @@ public partial class SettingsWindow : Window
 
         try
         {
-            var source =
-                new Stream.MusicRequest.Yandex.Sources.YandexMusicSource(
-                    new YandexMusic.YandexMusicClient());
-
             DefaultPlaylistStatusText.Text =
                 "Проверка ссылки...";
 
-            if (!source.CanHandlePlaylistUrl(url))
+            if (!_yandexMusicSource.CanHandlePlaylistUrl(url))
             {
                 DefaultPlaylistStatusText.Text =
                     "Это не ссылка на плейлист Yandex Music.";
@@ -734,11 +742,7 @@ public partial class SettingsWindow : Window
 
         if (!string.IsNullOrWhiteSpace(url))
         {
-            var source =
-                new Stream.MusicRequest.Yandex.Sources.YandexMusicSource(
-                    new YandexMusic.YandexMusicClient());
-
-            if (!source.CanHandlePlaylistUrl(url))
+            if (!_yandexMusicSource.CanHandlePlaylistUrl(url))
             {
                 MessageBox.Show(
                     this,
