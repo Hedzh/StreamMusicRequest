@@ -412,8 +412,6 @@ public class TwitchEventSubClient
         }
         finally
         {
-            _intentionalDisconnect = false;
-
             if (ReferenceEquals(_webSocket, webSocket))
             {
                 _webSocket = null;
