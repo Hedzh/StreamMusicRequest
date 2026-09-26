@@ -17,8 +17,7 @@ public class NAudioMusicPlayer :
             16,
             2);
 
-    private readonly LocalAudioStreamServer
-        _audioStreamServer;
+    private readonly LocalAudioStreamServer _audioStreamServer;
 
     private WaveOut? _outputDevice;
     private MediaFoundationReader? _audioReader;
@@ -26,11 +25,9 @@ public class NAudioMusicPlayer :
     private TeeWaveProvider? _streamingProvider;
     private Track? _currentTrack;
 
-    private CancellationTokenSource?
-        _playbackMonitorCancellation;
+    private CancellationTokenSource? _playbackMonitorCancellation;
 
-    private readonly SemaphoreSlim _operationGate =
-        new(1, 1);
+    private readonly SemaphoreSlim _operationGate = new(1, 1);
 
     private bool _manualStop;
     private bool _playbackFinishedRaised;
@@ -54,9 +51,7 @@ public class NAudioMusicPlayer :
                 obsBindAddress,
                 obsAudioPort);
 
-        _audioStreamServer.SetFormat(
-            OutputFormat);
-
+        _audioStreamServer.SetFormat(OutputFormat);
         _audioStreamServer.Start();
 
         FileLogger.Info(
@@ -64,35 +59,49 @@ public class NAudioMusicPlayer :
             $"{ObsAudioUrl}");
     }
 
+    public async Task PlayAsync(Track track)
+    {
+        await PlayAsync(track, TimeSpan.Zero, false)
+            .ConfigureAwait(false);
+    }
+
     public async Task PlayAsync(
-        Track track)
+        Track track,
+        TimeSpan startPosition)
+    {
+        await PlayAsync(track, startPosition, true)
+            .ConfigureAwait(false);
+    }
+
+    private async Task PlayAsync(
+        Track track,
+        TimeSpan startPosition,
+        bool useStartPosition)
     {
         await _operationGate.WaitAsync().ConfigureAwait(false);
 
         try
         {
-        if (string.IsNullOrWhiteSpace(
-                track.SourceUrl))
-        {
-            throw new ArgumentException(
-                "У трека не указана ссылка на аудиопоток.",
-                nameof(track));
-        }
+            if (string.IsNullOrWhiteSpace(track.SourceUrl))
+            {
+                throw new ArgumentException(
+                    "У трека не указана ссылка на аудиопоток.",
+                    nameof(track));
+            }
 
-        FileLogger.Info(
-            $"PlayAsync: подготовка трека " +
-            $"{track.Artist} — {track.Title}");
+            FileLogger.Info(
+                $"PlayAsync: подготовка трека " +
+                $"{track.Artist} — {track.Title}");
 
-        StopPlayback();
+            StopPlayback();
 
-        _manualStop = false;
-        _playbackFinishedRaised = false;
-        _currentTrack = track;
+            _manualStop = false;
+            _playbackFinishedRaised = false;
+            _currentTrack = track;
 
-        try
-        {
-            await Task.Run(
-                () =>
+            try
+            {
+                await Task.Run(() =>
                 {
                     FileLogger.Info(
                         "Создание MediaFoundationReader.");
@@ -104,6 +113,33 @@ public class NAudioMusicPlayer :
                     FileLogger.Info(
                         $"MediaFoundationReader создан. " +
                         $"Duration: {reader.TotalTime}");
+
+                    var effectivePosition = TimeSpan.Zero;
+
+                    if (useStartPosition)
+                    {
+                        effectivePosition =
+                            startPosition < TimeSpan.Zero
+                                ? TimeSpan.Zero
+                                : startPosition > reader.TotalTime
+                                    ? reader.TotalTime
+                                    : startPosition;
+
+                        FileLogger.Info(
+                            $"Начальная позиция восстановления: " +
+                            $"{effectivePosition}.");
+
+                        if (effectivePosition > TimeSpan.Zero)
+                        {
+                            reader.CurrentTime =
+                                effectivePosition;
+
+                            FileLogger.Info(
+                                $"Позиция MediaFoundationReader " +
+                                $"установлена до запуска WaveOut: " +
+                                $"{reader.CurrentTime}");
+                        }
+                    }
 
                     var resampler =
                         new MediaFoundationResampler(
@@ -118,55 +154,47 @@ public class NAudioMusicPlayer :
                             resampler,
                             _audioStreamServer);
 
-                    var output =
-                        new WaveOut();
+                    var output = new WaveOut();
 
                     output.PlaybackStopped +=
                         Output_PlaybackStopped;
 
-                    output.Init(
-                        streamingProvider);
+                    output.Init(streamingProvider);
+                    output.Volume = _volume;
 
-                    output.Volume =
-                        _volume;
-
-                    _audioReader =
-                        reader;
-
-                    _resampler =
-                        resampler;
-
-                    _streamingProvider =
-                        streamingProvider;
-
-                    _outputDevice =
-                        output;
+                    _audioReader = reader;
+                    _resampler = resampler;
+                    _streamingProvider = streamingProvider;
+                    _outputDevice = output;
 
                     FileLogger.Info(
-                        "WaveOut инициализирован. " +
+                        $"WaveOut инициализирован. " +
+                        $"Фактическая позиция перед запуском: " +
+                        $"{reader.CurrentTime}. " +
                         "Запуск воспроизведения.");
 
                     output.Play();
 
                     FileLogger.Info(
-                        "WaveOut.Play() выполнен.");
+                        $"WaveOut.Play() выполнен. " +
+                        $"Фактическая позиция после запуска: " +
+                        $"{reader.CurrentTime}");
 
                     StartPlaybackMonitor();
                 });
-        }
-        catch (Exception ex)
-        {
-            _manualStop = true;
+            }
+            catch (Exception ex)
+            {
+                _manualStop = true;
 
-            FileLogger.Error(
-                "Ошибка запуска воспроизведения.",
-                ex);
+                FileLogger.Error(
+                    "Ошибка запуска воспроизведения.",
+                    ex);
 
-            StopPlayback();
+                StopPlayback();
 
-            throw;
-        }
-    
+                throw;
+            }
         }
         finally
         {
@@ -180,11 +208,8 @@ public class NAudioMusicPlayer :
 
         try
         {
-        FileLogger.Info(
-            "PauseAsync вызван.");
-
-        _outputDevice?.Pause();
-    
+            FileLogger.Info("PauseAsync вызван.");
+            _outputDevice?.Pause();
         }
         finally
         {
@@ -198,11 +223,8 @@ public class NAudioMusicPlayer :
 
         try
         {
-        FileLogger.Info(
-            "ResumeAsync вызван.");
-
-        _outputDevice?.Play();
-    
+            FileLogger.Info("ResumeAsync вызван.");
+            _outputDevice?.Play();
         }
         finally
         {
@@ -216,11 +238,8 @@ public class NAudioMusicPlayer :
 
         try
         {
-        FileLogger.Info(
-            "StopAsync вызван.");
-
-        StopPlayback();
-    
+            FileLogger.Info("StopAsync вызван.");
+            StopPlayback();
         }
         finally
         {
@@ -234,11 +253,8 @@ public class NAudioMusicPlayer :
 
         try
         {
-        FileLogger.Info(
-            "SkipAsync вызван.");
-
-        StopPlayback();
-    
+            FileLogger.Info("SkipAsync вызван.");
+            StopPlayback();
         }
         finally
         {
@@ -246,128 +262,111 @@ public class NAudioMusicPlayer :
         }
     }
 
-    public async Task SeekAsync(
-        TimeSpan position)
+    public async Task SeekAsync(TimeSpan position)
     {
         await _operationGate.WaitAsync().ConfigureAwait(false);
 
         try
         {
-        var reader =
-            _audioReader;
+            var reader = _audioReader;
 
-        if (reader == null)
-        {
-            throw new InvalidOperationException(
-                "Невозможно переместить позицию: аудиопоток не загружен.");
-        }
-
-        var duration =
-            reader.TotalTime;
-
-        if (duration <= TimeSpan.Zero)
-        {
-            throw new InvalidOperationException(
-                "Невозможно переместить позицию: длительность трека неизвестна.");
-        }
-
-        var clampedPosition =
-            position < TimeSpan.Zero
-                ? TimeSpan.Zero
-                : position > duration
-                    ? duration
-                    : position;
-
-        var wasPlaying =
-            IsPlaying;
-
-        FileLogger.Info(
-            $"SeekAsync: перемещение на " +
-            $"{clampedPosition} из {duration}.");
-
-        try
-        {
-            _manualStop =
-                true;
-
-            _playbackMonitorCancellation?.Cancel();
-            _playbackMonitorCancellation?.Dispose();
-            _playbackMonitorCancellation = null;
-
-            if (_outputDevice != null)
+            if (reader == null)
             {
-                _outputDevice.PlaybackStopped -=
+                throw new InvalidOperationException(
+                    "Невозможно переместить позицию: " +
+                    "аудиопоток не загружен.");
+            }
+
+            var duration = reader.TotalTime;
+
+            if (duration <= TimeSpan.Zero)
+            {
+                throw new InvalidOperationException(
+                    "Невозможно переместить позицию: " +
+                    "длительность трека неизвестна.");
+            }
+
+            var clampedPosition =
+                position < TimeSpan.Zero
+                    ? TimeSpan.Zero
+                    : position > duration
+                        ? duration
+                        : position;
+
+            var wasPlaying = IsPlaying;
+
+            FileLogger.Info(
+                $"SeekAsync: перемещение на " +
+                $"{clampedPosition} из {duration}.");
+
+            try
+            {
+                _manualStop = true;
+
+                _playbackMonitorCancellation?.Cancel();
+                _playbackMonitorCancellation?.Dispose();
+                _playbackMonitorCancellation = null;
+
+                if (_outputDevice != null)
+                {
+                    _outputDevice.PlaybackStopped -=
+                        Output_PlaybackStopped;
+
+                    _outputDevice.Stop();
+                    _outputDevice.Dispose();
+                    _outputDevice = null;
+                }
+
+                _resampler?.Dispose();
+                _resampler = null;
+                _streamingProvider = null;
+
+                reader.CurrentTime = clampedPosition;
+
+                var resampler =
+                    new MediaFoundationResampler(
+                        reader,
+                        OutputFormat)
+                    {
+                        ResamplerQuality = 60
+                    };
+
+                var streamingProvider =
+                    new TeeWaveProvider(
+                        resampler,
+                        _audioStreamServer);
+
+                var output = new WaveOut();
+
+                output.PlaybackStopped +=
                     Output_PlaybackStopped;
 
-                _outputDevice.Stop();
-                _outputDevice.Dispose();
-                _outputDevice = null;
-            }
+                output.Init(streamingProvider);
+                output.Volume = _volume;
 
-            _resampler?.Dispose();
-            _resampler = null;
-            _streamingProvider = null;
+                _resampler = resampler;
+                _streamingProvider = streamingProvider;
+                _outputDevice = output;
 
-            reader.CurrentTime =
-                clampedPosition;
+                _manualStop = false;
 
-            var resampler =
-                new MediaFoundationResampler(
-                    reader,
-                    OutputFormat)
+                if (wasPlaying)
                 {
-                    ResamplerQuality = 60
-                };
+                    output.Play();
+                }
 
-            var streamingProvider =
-                new TeeWaveProvider(
-                    resampler,
-                    _audioStreamServer);
-
-            var output =
-                new WaveOut();
-
-            output.PlaybackStopped +=
-                Output_PlaybackStopped;
-
-            output.Init(
-                streamingProvider);
-
-            output.Volume =
-                _volume;
-
-            _resampler =
-                resampler;
-
-            _streamingProvider =
-                streamingProvider;
-
-            _outputDevice =
-                output;
-
-            _manualStop =
-                false;
-
-            if (wasPlaying)
-            {
-                output.Play();
+                StartPlaybackMonitor();
             }
+            catch (Exception ex)
+            {
+                FileLogger.Error(
+                    "Ошибка перемещения позиции " +
+                    "воспроизведения.",
+                    ex);
 
-            StartPlaybackMonitor();
-        }
-        catch (Exception ex)
-        {
-            FileLogger.Error(
-                "Ошибка перемещения позиции " +
-                "воспроизведения.",
-                ex);
-
-            _manualStop =
-                true;
-
-            throw;
-        }
-    
+                _manualStop = true;
+                throw;
+            }
         }
         finally
         {
@@ -375,57 +374,39 @@ public class NAudioMusicPlayer :
         }
     }
 
-    public void SetVolume(
-        float volume)
+    public void SetVolume(float volume)
     {
-        _volume =
-            Math.Clamp(
-                volume,
-                0.0f,
-                1.0f);
+        _volume = Math.Clamp(volume, 0.0f, 1.0f);
 
         if (_outputDevice != null)
         {
-            _outputDevice.Volume =
-                _volume;
+            _outputDevice.Volume = _volume;
         }
 
         FileLogger.Info(
             $"Громкость установлена: {_volume:0.00}");
     }
 
-    public Track? GetCurrentTrack()
-    {
-        return _currentTrack;
-    }
+    public Track? GetCurrentTrack() => _currentTrack;
 
-    public TimeSpan GetPosition()
-    {
-        return _audioReader?.CurrentTime
-               ?? TimeSpan.Zero;
-    }
+    public TimeSpan GetPosition() =>
+        _audioReader?.CurrentTime ?? TimeSpan.Zero;
 
-    public TimeSpan GetDuration()
-    {
-        return _audioReader?.TotalTime
-               ?? TimeSpan.Zero;
-    }
+    public TimeSpan GetDuration() =>
+        _audioReader?.TotalTime ?? TimeSpan.Zero;
 
     public async ValueTask DisposeAsync()
     {
         FileLogger.Info(
             "DisposeAsync NAudioMusicPlayer.");
 
-        await _operationGate
-            .WaitAsync()
-            .ConfigureAwait(false);
+        await _operationGate.WaitAsync().ConfigureAwait(false);
 
         try
         {
             StopPlayback();
 
-            await _audioStreamServer
-                .DisposeAsync()
+            await _audioStreamServer.DisposeAsync()
                 .ConfigureAwait(false);
         }
         finally
@@ -436,8 +417,7 @@ public class NAudioMusicPlayer :
 
     public void Dispose()
     {
-        FileLogger.Info(
-            "Dispose NAudioMusicPlayer.");
+        FileLogger.Info("Dispose NAudioMusicPlayer.");
 
         _operationGate.Wait();
 
@@ -464,97 +444,84 @@ public class NAudioMusicPlayer :
         var cancellationToken =
             _playbackMonitorCancellation.Token;
 
-        _ = Task.Run(
-            async () =>
+        _ = Task.Run(async () =>
+        {
+            FileLogger.Info(
+                "Монитор окончания трека запущен.");
+
+            while (!cancellationToken.IsCancellationRequested)
             {
-                FileLogger.Info(
-                    "Монитор окончания трека запущен.");
-
-                while (!cancellationToken.IsCancellationRequested)
+                try
                 {
-                    try
-                    {
-                        await Task.Delay(
-                            500,
-                            cancellationToken);
-                    }
-                    catch (OperationCanceledException)
-                    {
-                        return;
-                    }
-
-                    if (cancellationToken.IsCancellationRequested)
-                    {
-                        return;
-                    }
-
-                    var reader =
-                        _audioReader;
-
-                    if (reader == null)
-                    {
-                        return;
-                    }
-
-                    TimeSpan position;
-                    TimeSpan duration;
-
-                    try
-                    {
-                        position =
-                            reader.CurrentTime;
-
-                        duration =
-                            reader.TotalTime;
-                    }
-                    catch (Exception ex)
-                    {
-                        FileLogger.Error(
-                            "Не удалось получить позицию " +
-                            "или длительность трека.",
-                            ex);
-
-                        return;
-                    }
-
-                    if (duration <= TimeSpan.Zero)
-                    {
-                        continue;
-                    }
-
-                    if (position >= duration)
-                    {
-                        FileLogger.Info(
-                            $"Монитор обнаружил окончание трека. " +
-                            $"Position: {position}, " +
-                            $"Duration: {duration}");
-
-                        RaisePlaybackFinished();
-
-                        return;
-                    }
-
-                    if (duration - position <=
-                        TimeSpan.FromSeconds(1))
-                    {
-                        FileLogger.Info(
-                            $"Трек находится менее чем в секунде " +
-                            $"от окончания. " +
-                            $"Position: {position}, " +
-                            $"Duration: {duration}");
-                    }
+                    await Task.Delay(500, cancellationToken);
                 }
-            },
-            cancellationToken);
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                var reader = _audioReader;
+
+                if (reader == null)
+                {
+                    return;
+                }
+
+                TimeSpan position;
+                TimeSpan duration;
+
+                try
+                {
+                    position = reader.CurrentTime;
+                    duration = reader.TotalTime;
+                }
+                catch (Exception ex)
+                {
+                    FileLogger.Error(
+                        "Не удалось получить позицию " +
+                        "или длительность трека.",
+                        ex);
+
+                    return;
+                }
+
+                if (duration <= TimeSpan.Zero)
+                {
+                    continue;
+                }
+
+                if (position >= duration)
+                {
+                    FileLogger.Info(
+                        $"Монитор обнаружил окончание трека. " +
+                        $"Position: {position}, " +
+                        $"Duration: {duration}");
+
+                    RaisePlaybackFinished();
+                    return;
+                }
+
+                if (duration - position <= TimeSpan.FromSeconds(1))
+                {
+                    FileLogger.Info(
+                        $"Трек находится менее чем в секунде " +
+                        $"от окончания. Position: {position}, " +
+                        $"Duration: {duration}");
+                }
+            }
+        }, cancellationToken);
     }
 
     private void Output_PlaybackStopped(
         object? sender,
         StoppedEventArgs e)
     {
-        if (!ReferenceEquals(
-                sender,
-                _outputDevice))
+        if (!ReferenceEquals(sender, _outputDevice))
         {
             FileLogger.Info(
                 "PlaybackStopped получен от устаревшего " +
@@ -609,8 +576,7 @@ public class NAudioMusicPlayer :
 
     private void StopPlayback()
     {
-        FileLogger.Info(
-            "StopPlayback вызван.");
+        FileLogger.Info("StopPlayback вызван.");
 
         _manualStop = true;
 
@@ -654,12 +620,10 @@ public class NAudioMusicPlayer :
         _currentTrack = null;
         _playbackFinishedRaised = false;
 
-        FileLogger.Info(
-            "StopPlayback завершён.");
+        FileLogger.Info("StopPlayback завершён.");
     }
 
-    private sealed class TeeWaveProvider :
-        IWaveProvider
+    private sealed class TeeWaveProvider : IWaveProvider
     {
         private readonly IWaveProvider _source;
         private readonly LocalAudioStreamServer _server;
@@ -668,15 +632,11 @@ public class NAudioMusicPlayer :
             IWaveProvider source,
             LocalAudioStreamServer server)
         {
-            _source =
-                source;
-
-            _server =
-                server;
+            _source = source;
+            _server = server;
         }
 
-        public WaveFormat WaveFormat =>
-            _source.WaveFormat;
+        public WaveFormat WaveFormat => _source.WaveFormat;
 
         public int Read(
             byte[] buffer,
@@ -685,32 +645,24 @@ public class NAudioMusicPlayer :
         {
             var bytesRead =
                 _source.Read(
-                    buffer.AsSpan(
-                        offset,
-                        count));
+                    buffer.AsSpan(offset, count));
 
             if (bytesRead > 0)
             {
                 _server.Publish(
-                    buffer.AsSpan(
-                        offset,
-                        bytesRead));
+                    buffer.AsSpan(offset, bytesRead));
             }
 
             return bytesRead;
         }
 
-        public int Read(
-            Span<byte> buffer)
+        public int Read(Span<byte> buffer)
         {
-            var bytesRead =
-                _source.Read(
-                    buffer);
+            var bytesRead = _source.Read(buffer);
 
             if (bytesRead > 0)
             {
-                _server.Publish(
-                    buffer[..bytesRead]);
+                _server.Publish(buffer[..bytesRead]);
             }
 
             return bytesRead;
