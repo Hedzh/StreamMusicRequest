@@ -345,7 +345,7 @@ try
         Console.WriteLine(
             "Refresh Token в этом режиме не используется.");
 
-        var user =
+        var implicitUser =
             await client.GetCurrentUserAsync(
                 implicitToken);
 
@@ -354,13 +354,13 @@ try
             "Donation Alerts пользователь:");
 
         Console.WriteLine(
-            $"ID: {user.Id}");
+            $"ID: {implicitUser.Id}");
 
         Console.WriteLine(
-            $"Code: {user.Code}");
+            $"Code: {implicitUser.Code}");
 
         Console.WriteLine(
-            $"Name: {user.Name}");
+            $"Name: {implicitUser.Name}");
 
         Console.WriteLine(
             $"Socket connection token получен: " +
@@ -369,7 +369,7 @@ try
         await RunDonationWebSocketAsync(
             client,
             implicitToken,
-            user,
+            implicitUser,
             cancellationSource.Token);
 
         return;
