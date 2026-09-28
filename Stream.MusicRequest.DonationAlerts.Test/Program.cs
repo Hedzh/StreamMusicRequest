@@ -89,26 +89,65 @@ Console.WriteLine(
     $"Redirect URI: {settings.RedirectUri}");
 
 Console.WriteLine();
-Console.WriteLine(
-    "Введите Client Secret Donation Alerts.");
-Console.WriteLine(
-    "Он НЕ сохраняется в Git и используется только");
-Console.WriteLine(
-    "для OAuth/refresh во время этого теста.");
+Console.WriteLine("Выберите режим OAuth-теста:");
+Console.WriteLine("  1 — Authorization Code (текущий рабочий тест)");
+Console.WriteLine("  2 — Implicit Grant (без Client Secret)");
+Console.WriteLine();
+Console.Write("Режим: ");
 
-Console.Write(
-    "Client Secret: ");
+var oauthMode = Console.ReadLine()?.Trim();
 
-var clientSecret =
-    ReadSecret();
-
-if (string.IsNullOrWhiteSpace(
-        clientSecret))
+if (oauthMode is not ("1" or "2"))
 {
-    Console.WriteLine(
-        "Client Secret не указан.");
-
+    Console.WriteLine("Неизвестный режим.");
     return;
+}
+
+var useImplicitGrant =
+    oauthMode == "2";
+
+string clientSecret = string.Empty;
+
+if (!useImplicitGrant)
+{
+    Console.WriteLine();
+    Console.WriteLine(
+        "Введите Client Secret Donation Alerts.");
+    Console.WriteLine(
+        "Он НЕ сохраняется в Git и используется только");
+    Console.WriteLine(
+        "для OAuth/refresh во время этого теста.");
+
+    Console.Write(
+        "Client Secret: ");
+
+    clientSecret =
+        ReadSecret();
+
+    if (string.IsNullOrWhiteSpace(
+            clientSecret))
+    {
+        Console.WriteLine(
+            "Client Secret не указан.");
+
+        return;
+    }
+}
+else
+{
+    Console.WriteLine();
+    Console.WriteLine(
+        "Режим Implicit Grant: Client Secret не требуется.");
+
+    Console.WriteLine(
+        "Перед тестом выполняется выход из локальной сохранённой");
+    Console.WriteLine(
+        "Donation Alerts авторизации (токены будут удалены из DPAPI).");
+
+    await new DonationAlertsTestTokenStorage().ClearAsync();
+
+    Console.WriteLine(
+        "Локальная сессия сброшена.");
 }
 
 using var httpClient =
@@ -146,7 +185,8 @@ try
         refreshToken) =
         await storage.LoadAsync();
 
-    if (!string.IsNullOrWhiteSpace(
+    if (!useImplicitGrant &&
+        !string.IsNullOrWhiteSpace(
             accessToken) &&
         !string.IsNullOrWhiteSpace(
             refreshToken))
@@ -251,11 +291,14 @@ try
         client.BuildAuthorizationUrl(
             settings.ClientId,
             settings.RedirectUri,
-            settings.Scopes);
+            settings.Scopes,
+            useImplicitGrant ? "token" : "code");
 
     Console.WriteLine();
     Console.WriteLine(
-        "Запрашиваем OAuth Donation Alerts.");
+        useImplicitGrant
+            ? "Запрашиваем OAuth Donation Alerts через Implicit Grant."
+            : "Запрашиваем OAuth Donation Alerts.");
 
     Console.WriteLine();
     Console.WriteLine(
@@ -284,7 +327,53 @@ try
 
     Console.WriteLine();
     Console.WriteLine(
-        "Ожидаем callback от Donation Alerts...");
+        useImplicitGrant
+            ? "Ожидаем возврат из браузера и получение Access Token..."
+            : "Ожидаем callback от Donation Alerts...");
+
+    if (useImplicitGrant)
+    {
+        var implicitToken =
+            await WaitForImplicitAccessTokenAsync(
+                redirectUri,
+                cancellationSource.Token);
+
+        Console.WriteLine();
+        Console.WriteLine(
+            "Access Token получен через Implicit Grant.");
+
+        Console.WriteLine(
+            "Refresh Token в этом режиме не используется.");
+
+        var user =
+            await client.GetCurrentUserAsync(
+                implicitToken);
+
+        Console.WriteLine();
+        Console.WriteLine(
+            "Donation Alerts пользователь:");
+
+        Console.WriteLine(
+            $"ID: {user.Id}");
+
+        Console.WriteLine(
+            $"Code: {user.Code}");
+
+        Console.WriteLine(
+            $"Name: {user.Name}");
+
+        Console.WriteLine(
+            $"Socket connection token получен: " +
+            $"{(!string.IsNullOrWhiteSpace(user.SocketConnectionToken) ? "ДА" : "НЕТ")}");
+
+        await RunDonationWebSocketAsync(
+            client,
+            implicitToken,
+            user,
+            cancellationSource.Token);
+
+        return;
+    }
 
     var code =
         await WaitForAuthorizationCodeAsync(
@@ -377,6 +466,255 @@ static async Task RunDonationWebSocketAsync(
         accessToken,
         user,
         cancellationToken);
+}
+
+static async Task<string> WaitForImplicitAccessTokenAsync(
+    Uri redirectUri,
+    CancellationToken cancellationToken)
+{
+    var port =
+        redirectUri.Port;
+
+    var listener =
+        new System.Net.Sockets.TcpListener(
+            IPAddress.Loopback,
+            port);
+
+    listener.Start();
+
+    try
+    {
+        while (true)
+        {
+            var tcpClient =
+                await listener.AcceptTcpClientAsync(
+                    cancellationToken);
+
+            await using var stream =
+                tcpClient.GetStream();
+
+            var buffer =
+                new byte[16 * 1024];
+
+            var count =
+                await stream.ReadAsync(
+                    buffer.AsMemory(),
+                    cancellationToken);
+
+            var requestText =
+                Encoding.UTF8.GetString(
+                    buffer,
+                    0,
+                    count);
+
+            var firstLine =
+                requestText
+                    .Split(
+                        new[]
+                        {
+                            "\r\n",
+                            "\n"
+                        },
+                        StringSplitOptions.RemoveEmptyEntries)
+                    .FirstOrDefault();
+
+            if (string.IsNullOrWhiteSpace(firstLine))
+            {
+                continue;
+            }
+
+            var parts =
+                firstLine.Split(
+                    ' ',
+                    StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length < 2)
+            {
+                continue;
+            }
+
+            var requestTarget =
+                parts[1];
+
+            if (requestTarget.StartsWith("/callback", StringComparison.OrdinalIgnoreCase) &&
+                requestTarget.Contains("?"))
+            {
+                var callbackUri =
+                    new Uri(
+                        new Uri(
+                            $"http://127.0.0.1:{port}"),
+                        requestTarget);
+
+                var error =
+                    GetQueryParameter(
+                        callbackUri,
+                        "error");
+
+                if (!string.IsNullOrWhiteSpace(error))
+                {
+                    throw new InvalidOperationException(
+                        $"Donation Alerts OAuth returned error '{error}': " +
+                        GetQueryParameter(callbackUri, "error_description"));
+                }
+            }
+
+            var body =
+                """
+                <!doctype html>
+                <html>
+                <head><meta charset="utf-8"><title>Donation Alerts</title></head>
+                <body>
+                <h2>Donation Alerts authorization</h2>
+                <p>Передача токена тестовой программе...</p>
+                <script>
+                (() => {
+                    const hash = window.location.hash.substring(1);
+                    const params = new URLSearchParams(hash);
+                    const token = params.get('access_token');
+                    const error = params.get('error');
+                    const errorDescription = params.get('error_description');
+
+                    const form = new URLSearchParams();
+                    if (token) form.set('access_token', token);
+                    if (error) form.set('error', error);
+                    if (errorDescription) form.set('error_description', errorDescription);
+
+                    fetch('/callback', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                        body: form.toString()
+                    }).then(() => {
+                        document.body.innerHTML =
+                            '<h2>Готово</h2><p>Вернитесь в окно StreamMusicRequest.</p>';
+                    }).catch(() => {
+                        document.body.innerHTML =
+                            '<h2>Ошибка</h2><p>Не удалось передать результат в тестовую программу.</p>';
+                    });
+                })();
+                </script>
+                </body>
+                </html>
+                """;
+
+            if (requestText.StartsWith("POST ", StringComparison.OrdinalIgnoreCase))
+            {
+                var separator =
+                    requestText.IndexOf("\r\n\r\n", StringComparison.Ordinal);
+
+                if (separator >= 0)
+                {
+                    var formBody =
+                        requestText[(separator + 4)..];
+
+                    var token =
+                        GetFormParameter(
+                            formBody,
+                            "access_token");
+
+                    var error =
+                        GetFormParameter(
+                            formBody,
+                            "error");
+
+                    var errorDescription =
+                        GetFormParameter(
+                            formBody,
+                            "error_description");
+
+                    var responseBody =
+                        "<html><body><h2>OK</h2></body></html>";
+
+                    await WriteHttpResponseAsync(
+                        stream,
+                        responseBody,
+                        cancellationToken);
+
+                    if (!string.IsNullOrWhiteSpace(error))
+                    {
+                        throw new InvalidOperationException(
+                            $"Donation Alerts OAuth returned error '{error}': {errorDescription}");
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(token))
+                    {
+                        return token;
+                    }
+                }
+
+                continue;
+            }
+
+            await WriteHttpResponseAsync(
+                stream,
+                body,
+                cancellationToken);
+        }
+    }
+    finally
+    {
+        listener.Stop();
+    }
+}
+
+static async Task WriteHttpResponseAsync(
+    System.Net.Sockets.NetworkStream stream,
+    string body,
+    CancellationToken cancellationToken)
+{
+    var bodyBytes =
+        Encoding.UTF8.GetBytes(body);
+
+    var response =
+        $"HTTP/1.1 200 OK\r\n" +
+        "Content-Type: text/html; charset=utf-8\r\n" +
+        $"Content-Length: {bodyBytes.Length}\r\n" +
+        "Connection: close\r\n" +
+        "\r\n";
+
+    await stream.WriteAsync(
+        Encoding.ASCII.GetBytes(response),
+        cancellationToken);
+
+    await stream.WriteAsync(
+        bodyBytes,
+        cancellationToken);
+}
+
+static string? GetFormParameter(
+    string form,
+    string name)
+{
+    foreach (var pair in form.Split(
+                 '&',
+                 StringSplitOptions.RemoveEmptyEntries))
+    {
+        var parts =
+            pair.Split(
+                '=',
+                2);
+
+        if (parts.Length != 2)
+        {
+            continue;
+        }
+
+        var key =
+            Uri.UnescapeDataString(
+                parts[0].Replace("+", " "));
+
+        if (!string.Equals(
+                key,
+                name,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            continue;
+        }
+
+        return Uri.UnescapeDataString(
+            parts[1].Replace("+", " "));
+    }
+
+    return null;
 }
 
 static async Task<string> WaitForAuthorizationCodeAsync(
