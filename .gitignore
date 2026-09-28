@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Donation Alerts local test configuration
+donationalerts.testsettings.json
