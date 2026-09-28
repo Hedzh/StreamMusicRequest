@@ -31,14 +31,15 @@ public sealed class DonationAlertsClient
     public string BuildAuthorizationUrl(
         string clientId,
         string redirectUri,
-        IEnumerable<string> scopes)
+        IEnumerable<string> scopes,
+        string responseType = "code")
     {
         var query =
             new Dictionary<string, string>
             {
                 ["client_id"] = clientId,
                 ["redirect_uri"] = redirectUri,
-                ["response_type"] = "code",
+                ["response_type"] = responseType,
                 ["scope"] = string.Join(" ", scopes)
             };
 
