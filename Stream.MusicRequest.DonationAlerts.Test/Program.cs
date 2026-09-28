@@ -192,8 +192,7 @@ try
                     await client.RefreshTokenAsync(
                         settings.ClientId,
                         clientSecret,
-                        refreshToken,
-                        settings.Scopes);
+                        refreshToken);
 
                 await storage.SaveAsync(
                     refreshed.AccessToken,
