@@ -1,7 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\\Stream.MusicRequest.Infrastructure\\Stream.MusicRequest.Infrastructure.csproj" />
+    <ProjectReference Include="..\Stream.MusicRequest.Infrastructure\Stream.MusicRequest.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="donationalerts.testsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <PropertyGroup>
