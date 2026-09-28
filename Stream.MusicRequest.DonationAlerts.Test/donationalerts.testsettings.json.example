@@ -1,0 +1,8 @@
+{
+  "ClientId": "PUT_YOUR_DONATION_ALERTS_CLIENT_ID_HERE",
+  "RedirectUri": "http://127.0.0.1:17865/callback/",
+  "Scopes": [
+    "oauth-user-show",
+    "oauth-donation-subscribe"
+  ]
+}
