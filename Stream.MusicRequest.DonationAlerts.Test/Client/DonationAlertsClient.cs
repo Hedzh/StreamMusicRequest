@@ -2,6 +2,7 @@ using System.Net.Http.Headers;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Stream.MusicRequest.DonationAlerts.Test.Client;
 
@@ -38,19 +39,16 @@ public sealed class DonationAlertsClient
                 ["client_id"] = clientId,
                 ["redirect_uri"] = redirectUri,
                 ["response_type"] = "code",
-                ["scope"] = string.Join(
-                    " ",
-                    scopes)
+                ["scope"] = string.Join(" ", scopes)
             };
 
-        return
-            OAuthAuthorizeUrl +
-            "?" +
-            string.Join(
-                "&",
-                query.Select(
-                    pair =>
-                        $"{Uri.EscapeDataString(pair.Key)}={Uri.EscapeDataString(pair.Value)}"));
+        return OAuthAuthorizeUrl +
+               "?" +
+               string.Join(
+                   "&",
+                   query.Select(
+                       pair =>
+                           $"{Uri.EscapeDataString(pair.Key)}={Uri.EscapeDataString(pair.Value)}"));
     }
 
     public async Task<TokenResponse> ExchangeCodeAsync(
@@ -75,16 +73,14 @@ public sealed class DonationAlertsClient
                     ["code"] = code
                 });
 
-        return
-            await SendJsonAsync<TokenResponse>(
-                request);
+        return await SendJsonAsync<TokenResponse>(
+            request);
     }
 
     public async Task<TokenResponse> RefreshTokenAsync(
         string clientId,
         string clientSecret,
-        string refreshToken,
-        IEnumerable<string> scopes)
+        string refreshToken)
     {
         using var request =
             new HttpRequestMessage(
@@ -98,15 +94,11 @@ public sealed class DonationAlertsClient
                     ["grant_type"] = "refresh_token",
                     ["refresh_token"] = refreshToken,
                     ["client_id"] = clientId,
-                    ["client_secret"] = clientSecret,
-                    ["scope"] = string.Join(
-                        " ",
-                        scopes)
+                    ["client_secret"] = clientSecret
                 });
 
-        return
-            await SendJsonAsync<TokenResponse>(
-                request);
+        return await SendJsonAsync<TokenResponse>(
+            request);
     }
 
     public async Task<DonationAlertsUser> GetCurrentUserAsync(
@@ -118,9 +110,17 @@ public sealed class DonationAlertsClient
                 $"{ApiBaseUrl}/user/oauth",
                 accessToken);
 
-        return
-            await SendJsonAsync<DonationAlertsUser>(
+        var response =
+            await SendJsonAsync<DonationAlertsDataResponse<DonationAlertsUser>>(
                 request);
+
+        if (response.Data == null)
+        {
+            throw new InvalidOperationException(
+                "Donation Alerts /user/oauth не вернул поле data.");
+        }
+
+        return response.Data;
     }
 
     public async Task ConnectToDonationsAsync(
@@ -128,6 +128,13 @@ public sealed class DonationAlertsClient
         DonationAlertsUser user,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(
+                user.SocketConnectionToken))
+        {
+            throw new InvalidOperationException(
+                "Donation Alerts не вернул socket_connection_token.");
+        }
+
         using var socket =
             new ClientWebSocket();
 
@@ -171,12 +178,10 @@ public sealed class DonationAlertsClient
         Console.WriteLine(
             "Ответ Centrifugo на подключение:");
 
-        PrintRawJson(
-            connectResponse);
+        PrintRawJson(connectResponse);
 
         var clientId =
-            ExtractClientId(
-                connectResponse);
+            ExtractClientId(connectResponse);
 
         if (string.IsNullOrWhiteSpace(clientId))
         {
@@ -199,8 +204,7 @@ public sealed class DonationAlertsClient
         Console.WriteLine(
             "Ответ API на подписку:");
 
-        PrintRawJson(
-            subscription);
+        PrintRawJson(subscription);
 
         var channel =
             $"$alerts:donation_{user.Id}";
@@ -210,8 +214,7 @@ public sealed class DonationAlertsClient
                 subscription,
                 channel);
 
-        if (string.IsNullOrWhiteSpace(
-                channelToken))
+        if (string.IsNullOrWhiteSpace(channelToken))
         {
             throw new InvalidOperationException(
                 "Donation Alerts не вернул токен приватного канала.");
@@ -244,8 +247,7 @@ public sealed class DonationAlertsClient
         Console.WriteLine(
             "Ответ Centrifugo на подписку:");
 
-        PrintRawJson(
-            subscribeResponse);
+        PrintRawJson(subscribeResponse);
 
         Console.WriteLine();
         Console.WriteLine(
@@ -260,8 +262,7 @@ public sealed class DonationAlertsClient
             "Для остановки нажми Ctrl+C.");
 
         while (
-            socket.State ==
-            WebSocketState.Open &&
+            socket.State == WebSocketState.Open &&
             !cancellationToken.IsCancellationRequested)
         {
             var message =
@@ -269,8 +270,7 @@ public sealed class DonationAlertsClient
                     socket,
                     cancellationToken);
 
-            if (string.IsNullOrWhiteSpace(
-                    message))
+            if (string.IsNullOrWhiteSpace(message))
             {
                 continue;
             }
@@ -279,8 +279,7 @@ public sealed class DonationAlertsClient
             Console.WriteLine(
                 "========== DONATION ALERT EVENT ==========");
 
-            PrintRawJson(
-                message);
+            PrintRawJson(message);
 
             Console.WriteLine();
             Console.WriteLine(
@@ -308,11 +307,7 @@ public sealed class DonationAlertsClient
                 JsonSerializer.Serialize(
                     new
                     {
-                        channels =
-                            new[]
-                            {
-                                channel
-                            },
+                        channels = new[] { channel },
                         client = clientId
                     }),
                 Encoding.UTF8,
@@ -330,10 +325,9 @@ public sealed class DonationAlertsClient
         if (!response.IsSuccessStatusCode)
         {
             throw new HttpRequestException(
-                $"Centrifugo subscription failed: " +
+                $"Centrifuge subscription failed: " +
                 $"HTTP {(int)response.StatusCode} " +
-                $"{response.StatusCode}. " +
-                content);
+                $"{response.StatusCode}. {content}");
         }
 
         return content;
@@ -343,17 +337,12 @@ public sealed class DonationAlertsClient
         string json)
     {
         using var document =
-            JsonDocument.Parse(
-                json);
+            JsonDocument.Parse(json);
 
-        if (!document.RootElement.TryGetProperty(
+        return document.RootElement.TryGetProperty(
                 "result",
-                out var result))
-        {
-            return null;
-        }
-
-        return result.TryGetProperty(
+                out var result) &&
+            result.TryGetProperty(
                 "client",
                 out var client)
             ? client.GetString()
@@ -365,14 +354,12 @@ public sealed class DonationAlertsClient
         string channel)
     {
         using var document =
-            JsonDocument.Parse(
-                json);
+            JsonDocument.Parse(json);
 
         if (!document.RootElement.TryGetProperty(
                 "channels",
                 out var channels) ||
-            channels.ValueKind !=
-                JsonValueKind.Array)
+            channels.ValueKind != JsonValueKind.Array)
         {
             return null;
         }
@@ -390,9 +377,9 @@ public sealed class DonationAlertsClient
             }
 
             if (string.Equals(
-                    channelProperty.GetString(),
-                    channel,
-                    StringComparison.Ordinal))
+                channelProperty.GetString(),
+                channel,
+                StringComparison.Ordinal))
             {
                 return tokenProperty.GetString();
             }
@@ -423,8 +410,7 @@ public sealed class DonationAlertsClient
         HttpRequestMessage request)
     {
         using var response =
-            await _httpClient.SendAsync(
-                request);
+            await _httpClient.SendAsync(request);
 
         var content =
             await response.Content.ReadAsStringAsync();
@@ -460,12 +446,10 @@ public sealed class DonationAlertsClient
         CancellationToken cancellationToken)
     {
         var bytes =
-            Encoding.UTF8.GetBytes(
-                message);
+            Encoding.UTF8.GetBytes(message);
 
         await socket.SendAsync(
-            new ArraySegment<byte>(
-                bytes),
+            new ArraySegment<byte>(bytes),
             WebSocketMessageType.Text,
             true,
             cancellationToken);
@@ -475,18 +459,14 @@ public sealed class DonationAlertsClient
         ClientWebSocket socket,
         CancellationToken cancellationToken)
     {
-        using var stream =
-            new MemoryStream();
-
-        var buffer =
-            new byte[8192];
+        using var stream = new MemoryStream();
+        var buffer = new byte[8192];
 
         while (true)
         {
             var result =
                 await socket.ReceiveAsync(
-                    new ArraySegment<byte>(
-                        buffer),
+                    new ArraySegment<byte>(buffer),
                     cancellationToken);
 
             if (result.MessageType ==
@@ -503,9 +483,7 @@ public sealed class DonationAlertsClient
             }
 
             await stream.WriteAsync(
-                buffer.AsMemory(
-                    0,
-                    result.Count),
+                buffer.AsMemory(0, result.Count),
                 cancellationToken);
 
             if (result.EndOfMessage)
@@ -524,8 +502,7 @@ public sealed class DonationAlertsClient
         try
         {
             using var document =
-                JsonDocument.Parse(
-                    json);
+                JsonDocument.Parse(json);
 
             Console.WriteLine(
                 JsonSerializer.Serialize(
@@ -537,42 +514,49 @@ public sealed class DonationAlertsClient
         }
         catch
         {
-            Console.WriteLine(
-                json);
+            Console.WriteLine(json);
         }
+    }
+
+    public sealed class DonationAlertsDataResponse<T>
+    {
+        [JsonPropertyName("data")]
+        public T? Data { get; set; }
     }
 
     public sealed class TokenResponse
     {
-        public string TokenType { get; set; } =
-            string.Empty;
+        [JsonPropertyName("token_type")]
+        public string TokenType { get; set; } = string.Empty;
 
-        public string AccessToken { get; set; } =
-            string.Empty;
+        [JsonPropertyName("access_token")]
+        public string AccessToken { get; set; } = string.Empty;
 
+        [JsonPropertyName("expires_in")]
         public long ExpiresIn { get; set; }
 
-        public string RefreshToken { get; set; } =
-            string.Empty;
+        [JsonPropertyName("refresh_token")]
+        public string RefreshToken { get; set; } = string.Empty;
     }
 
     public sealed class DonationAlertsUser
     {
+        [JsonPropertyName("id")]
         public long Id { get; set; }
 
-        public string Code { get; set; } =
-            string.Empty;
+        [JsonPropertyName("code")]
+        public string Code { get; set; } = string.Empty;
 
-        public string Name { get; set; } =
-            string.Empty;
+        [JsonPropertyName("name")]
+        public string Name { get; set; } = string.Empty;
 
-        public string Avatar { get; set; } =
-            string.Empty;
+        [JsonPropertyName("avatar")]
+        public string Avatar { get; set; } = string.Empty;
 
-        public string Email { get; set; } =
-            string.Empty;
+        [JsonPropertyName("email")]
+        public string Email { get; set; } = string.Empty;
 
-        public string SocketConnectionToken { get; set; } =
-            string.Empty;
+        [JsonPropertyName("socket_connection_token")]
+        public string SocketConnectionToken { get; set; } = string.Empty;
     }
 }
