@@ -14,16 +14,12 @@ public sealed class DonationAlertsClient
     private const string OAuthAuthorizeUrl =
         "https://www.donationalerts.com/oauth/authorize";
 
-    private const string OAuthTokenUrl =
-        "https://www.donationalerts.com/oauth/token";
-
     private const string CentrifugoUrl =
         "wss://centrifugo.donationalerts.com/connection/websocket";
 
     private readonly HttpClient _httpClient;
 
-    public DonationAlertsClient(
-        HttpClient httpClient)
+    public DonationAlertsClient(HttpClient httpClient)
     {
         _httpClient = httpClient;
     }
@@ -31,15 +27,14 @@ public sealed class DonationAlertsClient
     public string BuildAuthorizationUrl(
         string clientId,
         string redirectUri,
-        IEnumerable<string> scopes,
-        string responseType = "code")
+        IEnumerable<string> scopes)
     {
         var query =
             new Dictionary<string, string>
             {
                 ["client_id"] = clientId,
                 ["redirect_uri"] = redirectUri,
-                ["response_type"] = responseType,
+                ["response_type"] = "token",
                 ["scope"] = string.Join(" ", scopes)
             };
 
@@ -50,56 +45,6 @@ public sealed class DonationAlertsClient
                    query.Select(
                        pair =>
                            $"{Uri.EscapeDataString(pair.Key)}={Uri.EscapeDataString(pair.Value)}"));
-    }
-
-    public async Task<TokenResponse> ExchangeCodeAsync(
-        string clientId,
-        string clientSecret,
-        string redirectUri,
-        string code)
-    {
-        using var request =
-            new HttpRequestMessage(
-                HttpMethod.Post,
-                OAuthTokenUrl);
-
-        request.Content =
-            new FormUrlEncodedContent(
-                new Dictionary<string, string>
-                {
-                    ["grant_type"] = "authorization_code",
-                    ["client_id"] = clientId,
-                    ["client_secret"] = clientSecret,
-                    ["redirect_uri"] = redirectUri,
-                    ["code"] = code
-                });
-
-        return await SendJsonAsync<TokenResponse>(
-            request);
-    }
-
-    public async Task<TokenResponse> RefreshTokenAsync(
-        string clientId,
-        string clientSecret,
-        string refreshToken)
-    {
-        using var request =
-            new HttpRequestMessage(
-                HttpMethod.Post,
-                OAuthTokenUrl);
-
-        request.Content =
-            new FormUrlEncodedContent(
-                new Dictionary<string, string>
-                {
-                    ["grant_type"] = "refresh_token",
-                    ["refresh_token"] = refreshToken,
-                    ["client_id"] = clientId,
-                    ["client_secret"] = clientSecret
-                });
-
-        return await SendJsonAsync<TokenResponse>(
-            request);
     }
 
     public async Task<DonationAlertsUser> GetCurrentUserAsync(
@@ -334,8 +279,7 @@ public sealed class DonationAlertsClient
         return content;
     }
 
-    private static string? ExtractClientId(
-        string json)
+    private static string? ExtractClientId(string json)
     {
         using var document =
             JsonDocument.Parse(json);
@@ -460,8 +404,11 @@ public sealed class DonationAlertsClient
         ClientWebSocket socket,
         CancellationToken cancellationToken)
     {
-        using var stream = new MemoryStream();
-        var buffer = new byte[8192];
+        using var stream =
+            new MemoryStream();
+
+        var buffer =
+            new byte[8192];
 
         while (true)
         {
@@ -497,8 +444,7 @@ public sealed class DonationAlertsClient
             stream.ToArray());
     }
 
-    private static void PrintRawJson(
-        string json)
+    private static void PrintRawJson(string json)
     {
         try
         {
@@ -523,21 +469,6 @@ public sealed class DonationAlertsClient
     {
         [JsonPropertyName("data")]
         public T? Data { get; set; }
-    }
-
-    public sealed class TokenResponse
-    {
-        [JsonPropertyName("token_type")]
-        public string TokenType { get; set; } = string.Empty;
-
-        [JsonPropertyName("access_token")]
-        public string AccessToken { get; set; } = string.Empty;
-
-        [JsonPropertyName("expires_in")]
-        public long ExpiresIn { get; set; }
-
-        [JsonPropertyName("refresh_token")]
-        public string RefreshToken { get; set; } = string.Empty;
     }
 
     public sealed class DonationAlertsUser
