@@ -364,7 +364,7 @@ try
 
         Console.WriteLine(
             $"Socket connection token получен: " +
-            $"{(!string.IsNullOrWhiteSpace(user.SocketConnectionToken) ? "ДА" : "НЕТ")}");
+            $"{(!string.IsNullOrWhiteSpace(implicitUser.SocketConnectionToken) ? "ДА" : "НЕТ")}");
 
         await RunDonationWebSocketAsync(
             client,
