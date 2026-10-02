@@ -191,6 +191,12 @@ public sealed class DonationAlertsClient
         Console.WriteLine($"Тип сообщения: {donation.MessageType}");
         Console.WriteLine($"Pay-in system: {donation.PayinSystem ?? "null"}");
         Console.WriteLine($"Reason: {donation.Reason}");
+
+        var orderType =
+            _donationOrderClassifier.Classify(donation);
+
+        Console.WriteLine(
+            $"Результат классификации: {GetOrderTypeLabel(orderType)}");
         Console.WriteLine("==========================================");
 
         _logger.Log(
@@ -198,6 +204,9 @@ public sealed class DonationAlertsClient
             $"{donation.Amount} {donation.Currency}, " +
             $"amount_in_user_currency={donation.AmountInUserCurrency}, " +
             $"message=\"{donation.Message}\"");
+
+        _logger.Log(
+            $"Классификация доната #{donation.Id}: {GetOrderTypeLabel(orderType)}");
 
         _logger.LogRaw(
             $"Полный JSON нового доната #{donation.Id}:",
