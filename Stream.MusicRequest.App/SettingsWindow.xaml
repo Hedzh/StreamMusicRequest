@@ -1525,8 +1525,6 @@
                                            Style="{StaticResource FieldDescription}"/>
                                 <TextBlock Text="• Награда «Заказ музыки» с вводом ссылки на трек."
                                            Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Награда «Пропустить трек» для переключения текущего трека."
-                                           Style="{StaticResource FieldDescription}"/>
                                 <TextBlock Text="• Авторизация Yandex Music и получение музыкальных данных."
                                            Style="{StaticResource FieldDescription}"/>
                                 <TextBlock Text="• Загрузка альбомов и плейлистов Yandex Music как основной музыки."
