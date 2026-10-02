@@ -95,6 +95,8 @@ public sealed class DonationAlertsMusicService
         DonationAlertsSettings settings)
     {
         Settings = settings;
+        _classifier.UpdateThresholds(
+            settings.DonationThresholds);
         await _settingsStorage.SaveAsync(settings);
     }
 
