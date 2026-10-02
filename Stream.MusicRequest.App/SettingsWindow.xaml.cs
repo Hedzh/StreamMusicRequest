@@ -1036,18 +1036,6 @@ public partial class SettingsWindow : Window
                             binding.FeatureKey ==
                             Stream.MusicRequest.Twitch.Services.TwitchRewardService.OrderMusicFeatureKey);
 
-            var skipTrackBinding =
-                _appServices.TwitchRewardBindings
-                    .FirstOrDefault(
-                        binding =>
-                            binding.FeatureKey ==
-                            Stream.MusicRequest.Twitch.Services.TwitchRewardService.SkipTrackFeatureKey);
-
-            OrderMusicRewardIdTextBox.Text =
-                orderMusicBinding?.RewardId ?? string.Empty;
-
-                skipTrackBinding?.RewardId ?? string.Empty;
-
             if (string.IsNullOrWhiteSpace(
                     OrderMusicRewardIdTextBox.Text))
             {
@@ -1060,6 +1048,17 @@ public partial class SettingsWindow : Window
                     true);
             }
 
+            if (string.IsNullOrWhiteSpace(
+                    SkipTrackRewardIdTextBox.Text))
+            {
+                ResetSkipTrackRewardDetails();
+            }
+            else
+            {
+                await CheckTwitchRewardAsync(
+                    SkipTrackRewardIdTextBox.Text,
+                    false);
+            }
         }
         catch
         {
@@ -1076,6 +1075,54 @@ public partial class SettingsWindow : Window
             true);
     }
 
+    private async void OrderMusicRewardSaveButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        try
+        {
+            await _appServices
+                .SaveTwitchRewardSettingAsync(
+                    Stream.MusicRequest.Twitch.Services.TwitchRewardService.OrderMusicFeatureKey,
+                    OrderMusicRewardIdTextBox.Text);
+
+            OrderMusicRewardStatusText.Text =
+                "Сохранено";
+
+            OrderMusicRewardStatusText.Foreground =
+                FindResource("SuccessBrush") as Brush;
+        }
+        catch (Exception ex)
+        {
+            SetRewardCheckError(
+                true,
+                $"Ошибка сохранения: {ex.Message}");
+        }
+    }
+
+    private async void OrderMusicRewardClearButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        try
+        {
+            OrderMusicRewardIdTextBox.Clear();
+
+            await _appServices
+                .SaveTwitchRewardSettingAsync(
+                    Stream.MusicRequest.Twitch.Services.TwitchRewardService.OrderMusicFeatureKey,
+                    string.Empty);
+
+            ResetOrderMusicRewardDetails();
+        }
+        catch (Exception ex)
+        {
+            SetRewardCheckError(
+                true,
+                $"Ошибка очистки: {ex.Message}");
+        }
+    }
+
     private void ResetOrderMusicRewardDetails()
     {
         OrderMusicRewardStatusText.Text = "Не проверена";
@@ -1087,17 +1134,12 @@ public partial class SettingsWindow : Window
         OrderMusicRewardEnabledText.Text = "—";
     }
 
-    {
-            FindResource("TextSecondary") as Brush;
-    }
-
     private void SetRewardCheckError(
         bool isOrderMusic,
         string message)
     {
         var statusText =
-            isOrderMusic
-                ? OrderMusicRewardStatusText
+            OrderMusicRewardStatusText;
 
         statusText.Text =
             message;
