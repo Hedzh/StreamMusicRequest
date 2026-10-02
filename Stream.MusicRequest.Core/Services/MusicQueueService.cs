@@ -26,6 +26,26 @@ public class MusicQueueService
         OnQueueChanged();
     }
 
+    public void EnqueueFront(
+        QueueItem item)
+    {
+        if (item == null)
+        {
+            throw new ArgumentNullException(nameof(item));
+        }
+
+        var items = _queue.ToList();
+        _queue.Clear();
+        _queue.Enqueue(item);
+
+        foreach (var queuedItem in items)
+        {
+            _queue.Enqueue(queuedItem);
+        }
+
+        OnQueueChanged();
+    }
+
     public QueueItem? Dequeue()
     {
         if (_queue.Count == 0)
