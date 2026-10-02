@@ -1036,6 +1036,19 @@ public partial class SettingsWindow : Window
                             binding.FeatureKey ==
                             Stream.MusicRequest.Twitch.Services.TwitchRewardService.OrderMusicFeatureKey);
 
+            var skipTrackBinding =
+                _appServices.TwitchRewardBindings
+                    .FirstOrDefault(
+                        binding =>
+                            binding.FeatureKey ==
+                            Stream.MusicRequest.Twitch.Services.TwitchRewardService.SkipTrackFeatureKey);
+
+            OrderMusicRewardIdTextBox.Text =
+                orderMusicBinding?.RewardId ?? string.Empty;
+
+            SkipTrackRewardIdTextBox.Text =
+                skipTrackBinding?.RewardId ?? string.Empty;
+
             if (string.IsNullOrWhiteSpace(
                     OrderMusicRewardIdTextBox.Text))
             {
@@ -1048,6 +1061,17 @@ public partial class SettingsWindow : Window
                     true);
             }
 
+            if (string.IsNullOrWhiteSpace(
+                    SkipTrackRewardIdTextBox.Text))
+            {
+                ResetSkipTrackRewardDetails();
+            }
+            else
+            {
+                await CheckTwitchRewardAsync(
+                    SkipTrackRewardIdTextBox.Text,
+                    false);
+            }
         }
         catch
         {
@@ -1062,6 +1086,155 @@ public partial class SettingsWindow : Window
         await CheckTwitchRewardAsync(
             OrderMusicRewardIdTextBox.Text,
             true);
+    }
+
+    private async void SkipTrackRewardCheckButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await CheckTwitchRewardAsync(
+            SkipTrackRewardIdTextBox.Text,
+            false);
+    }
+
+    private async Task CheckTwitchRewardAsync(
+        string rewardId,
+        bool isOrderMusic)
+    {
+        rewardId = rewardId.Trim();
+
+        if (string.IsNullOrWhiteSpace(rewardId))
+        {
+            SetRewardCheckError(
+                isOrderMusic,
+                "Укажите Reward ID.");
+            return;
+        }
+
+        if (!Guid.TryParse(
+                rewardId,
+                out _))
+        {
+            SetRewardCheckError(
+                isOrderMusic,
+                "Некорректный Reward ID. Используйте ID в формате UUID.");
+            return;
+        }
+
+        var checkButton =
+            isOrderMusic
+                ? FindName("OrderMusicRewardCheckButton") as Button
+                : FindName("SkipTrackRewardCheckButton") as Button;
+
+        try
+        {
+            if (checkButton != null)
+            {
+                checkButton.IsEnabled = false;
+            }
+
+            using var timeoutCts =
+                new CancellationTokenSource(
+                    TimeSpan.FromSeconds(10));
+
+            var token =
+                await _appServices
+                    .TwitchAuthService
+                    .TryRestoreAsync();
+
+            if (token == null ||
+                string.IsNullOrWhiteSpace(token.AccessToken))
+            {
+                SetRewardCheckError(
+                    isOrderMusic,
+                    "Twitch не авторизован.");
+                return;
+            }
+
+            var user =
+                await _appServices
+                    .TwitchApiClient
+                    .GetCurrentUserAsync(
+                        token.AccessToken,
+                        timeoutCts.Token);
+
+            var reward =
+                await _appServices
+                    .TwitchApiClient
+                    .GetCustomRewardAsync(
+                        token.AccessToken,
+                        user.Id,
+                        rewardId,
+                        timeoutCts.Token);
+
+            if (reward == null)
+            {
+                SetRewardCheckError(
+                    isOrderMusic,
+                    "Награда с таким Reward ID не найдена.");
+                return;
+            }
+
+            if (isOrderMusic)
+            {
+                OrderMusicRewardStatusText.Text =
+                    "Найдена";
+
+                OrderMusicRewardStatusText.Foreground =
+                    FindResource("SuccessBrush") as Brush;
+
+                OrderMusicRewardNameText.Text =
+                    reward.Title;
+
+                OrderMusicRewardCostText.Text =
+                    $"{reward.Cost} Channel Points";
+
+                OrderMusicRewardInputText.Text =
+                    reward.IsUserInputRequired ? "Да" : "Нет";
+
+                OrderMusicRewardEnabledText.Text =
+                    reward.IsEnabled ? "Да" : "Нет";
+            }
+            else
+            {
+                SkipTrackRewardStatusText.Text =
+                    "Найдена";
+
+                SkipTrackRewardStatusText.Foreground =
+                    FindResource("SuccessBrush") as Brush;
+
+                SkipTrackRewardNameText.Text =
+                    reward.Title;
+
+                SkipTrackRewardCostText.Text =
+                    $"{reward.Cost} Channel Points";
+
+                SkipTrackRewardInputText.Text =
+                    reward.IsUserInputRequired ? "Да" : "Нет";
+
+                SkipTrackRewardEnabledText.Text =
+                    reward.IsEnabled ? "Да" : "Нет";
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            SetRewardCheckError(
+                isOrderMusic,
+                "Проверка не завершилась за 10 секунд. Проверьте подключение к Twitch.");
+        }
+        catch (Exception ex)
+        {
+            SetRewardCheckError(
+                isOrderMusic,
+                $"Ошибка проверки: {ex.Message}");
+        }
+        finally
+        {
+            if (checkButton != null)
+            {
+                checkButton.IsEnabled = true;
+            }
+        }
     }
 
     private async void OrderMusicRewardSaveButton_Click(
@@ -1089,6 +1262,31 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private async void SkipTrackRewardSaveButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        try
+        {
+            await _appServices
+                .SaveTwitchRewardSettingAsync(
+                    Stream.MusicRequest.Twitch.Services.TwitchRewardService.SkipTrackFeatureKey,
+                    SkipTrackRewardIdTextBox.Text);
+
+            SkipTrackRewardStatusText.Text =
+                "Сохранено";
+
+            SkipTrackRewardStatusText.Foreground =
+                FindResource("SuccessBrush") as Brush;
+        }
+        catch (Exception ex)
+        {
+            SetRewardCheckError(
+                false,
+                $"Ошибка сохранения: {ex.Message}");
+        }
+    }
+
     private async void OrderMusicRewardClearButton_Click(
         object sender,
         RoutedEventArgs e)
@@ -1112,6 +1310,29 @@ public partial class SettingsWindow : Window
         }
     }
 
+    private async void SkipTrackRewardClearButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        try
+        {
+            SkipTrackRewardIdTextBox.Clear();
+
+            await _appServices
+                .SaveTwitchRewardSettingAsync(
+                    Stream.MusicRequest.Twitch.Services.TwitchRewardService.SkipTrackFeatureKey,
+                    string.Empty);
+
+            ResetSkipTrackRewardDetails();
+        }
+        catch (Exception ex)
+        {
+            SetRewardCheckError(
+                false,
+                $"Ошибка очистки: {ex.Message}");
+        }
+    }
+
     private void ResetOrderMusicRewardDetails()
     {
         OrderMusicRewardStatusText.Text = "Не проверена";
@@ -1123,12 +1344,25 @@ public partial class SettingsWindow : Window
         OrderMusicRewardEnabledText.Text = "—";
     }
 
+    private void ResetSkipTrackRewardDetails()
+    {
+        SkipTrackRewardStatusText.Text = "Не проверена";
+        SkipTrackRewardStatusText.Foreground =
+            FindResource("TextSecondary") as Brush;
+        SkipTrackRewardNameText.Text = "—";
+        SkipTrackRewardCostText.Text = "—";
+        SkipTrackRewardInputText.Text = "—";
+        SkipTrackRewardEnabledText.Text = "—";
+    }
+
     private void SetRewardCheckError(
         bool isOrderMusic,
         string message)
     {
         var statusText =
-            OrderMusicRewardStatusText;
+            isOrderMusic
+                ? OrderMusicRewardStatusText
+                : SkipTrackRewardStatusText;
 
         statusText.Text =
             message;
