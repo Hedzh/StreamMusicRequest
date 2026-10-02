@@ -5,6 +5,8 @@ All notable changes to Stream Music Request are documented here.
 ## [1.2.0] - 2026-10-02
 
 ### Added
+- Автоматическое восстановление соединения Donation Alerts после разрыва WebSocket.
+- Экспоненциальная задержка повторных попыток подключения Donation Alerts от 5 до 60 секунд.
 - Donation Alerts production integration for music orders.
 - Donation Alerts authorization restoration on application startup.
 - Donation Alerts normal-priority and SUPER-PRIORITY playback modes.
