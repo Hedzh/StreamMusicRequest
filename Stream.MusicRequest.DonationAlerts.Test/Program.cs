@@ -6,6 +6,7 @@ using Stream.MusicRequest.DonationAlerts.Test.Client;
 using Stream.MusicRequest.DonationAlerts.Test.Logging;
 using Stream.MusicRequest.DonationAlerts.Test.Models;
 using Stream.MusicRequest.DonationAlerts.Test.Storage;
+using Stream.MusicRequest.DonationAlerts.Test.Services;
 
 Console.OutputEncoding = Encoding.UTF8;
 
@@ -58,6 +59,32 @@ if (settings == null ||
     return;
 }
 
+var donationOrderClassifier =
+    new DonationOrderClassifier(
+        settings.DonationThresholds);
+
+Console.WriteLine();
+Console.WriteLine("Пороговые значения донатов:");
+
+if (settings.DonationThresholds.Count == 0)
+{
+    Console.WriteLine("  Не настроены.");
+}
+else
+{
+    foreach (var pair in settings.DonationThresholds.OrderBy(
+                 pair => pair.Key,
+                 StringComparer.OrdinalIgnoreCase))
+    {
+        Console.WriteLine(
+            $"  {pair.Key}: NORMAL >= {pair.Value.Normal}, " +
+            $"SUPER-PRIORITY >= {pair.Value.SuperPriority}");
+    }
+}
+
+logger.Log(
+    $"Загружено валютных настроек: {settings.DonationThresholds.Count}");
+
 if (!Uri.TryCreate(
         settings.RedirectUri,
         UriKind.Absolute,
@@ -109,7 +136,8 @@ var cancellationSource =
 var client =
     new DonationAlertsClient(
         httpClient,
-        logger);
+        logger,
+        donationOrderClassifier);
 
 Console.CancelKeyPress +=
     (_, eventArgs) =>
