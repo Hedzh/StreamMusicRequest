@@ -58,11 +58,6 @@ public partial class SupportAuthorWindow : Window
 
     private void CloseButton_Click(object sender, RoutedEventArgs e)
     {
-        OpenSupportLink();
-    }
-
-    private void CloseButton_Click(object sender, RoutedEventArgs e)
-    {
         Close();
     }
 
