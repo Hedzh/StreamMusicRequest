@@ -4,5 +4,19 @@
   "Scopes": [
     "oauth-user-show",
     "oauth-donation-subscribe"
-  ]
+  ],
+  "DonationThresholds": {
+    "RUB": {
+      "Normal": 100,
+      "SuperPriority": 200
+    },
+    "EUR": {
+      "Normal": 1,
+      "SuperPriority": 2
+    },
+    "USD": {
+      "Normal": 1.5,
+      "SuperPriority": 3
+    }
+  }
 }
