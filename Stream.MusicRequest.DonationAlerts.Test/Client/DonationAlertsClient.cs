@@ -6,6 +6,7 @@ using System.Text.Json.Serialization;
 using Stream.MusicRequest.DonationAlerts.Test.Logging;
 using Stream.MusicRequest.DonationAlerts.Test.Models;
 using Stream.MusicRequest.DonationAlerts.Test.Services;
+using Stream.MusicRequest.Yandex.Sources;
 
 namespace Stream.MusicRequest.DonationAlerts.Test.Client;
 
@@ -63,6 +64,7 @@ public sealed class DonationAlertsClient
     public async Task ConnectToDonationsAsync(
         string accessToken,
         DonationAlertsUser user,
+        YandexMusicSource yandexMusicSource,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(user.SocketConnectionToken))
@@ -156,11 +158,11 @@ public sealed class DonationAlertsClient
                 await ReceiveWebSocketMessageAsync(socket, cancellationToken);
 
             if (!string.IsNullOrWhiteSpace(message))
-                ProcessDonationMessage(message);
+                await ProcessDonationMessageAsync(message, yandexMusicSource);
         }
     }
 
-    private void ProcessDonationMessage(string message)
+    private async Task ProcessDonationMessageAsync(string message, YandexMusicSource yandexMusicSource)
     {
         var donation = TryParseDonation(message);
 
@@ -197,6 +199,14 @@ public sealed class DonationAlertsClient
 
         Console.WriteLine(
             $"Результат классификации: {GetOrderTypeLabel(orderType)}");
+
+        if (orderType != DonationOrderType.Ignore)
+        {
+            await TestYandexMessageAsync(
+                donation,
+                yandexMusicSource);
+        }
+
         Console.WriteLine("==========================================");
 
         _logger.Log(
@@ -211,6 +221,50 @@ public sealed class DonationAlertsClient
         _logger.LogRaw(
             $"Полный JSON нового доната #{donation.Id}:",
             message);
+    }
+
+    private static async Task TestYandexMessageAsync(
+        DonationEvent donation,
+        YandexMusicSource yandexMusicSource)
+    {
+        var message = donation.Message?.Trim();
+
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            Console.WriteLine("Yandex Music: сообщение доната пустое.");
+            return;
+        }
+
+        if (!yandexMusicSource.CanHandleUrl(message))
+        {
+            Console.WriteLine("Yandex Music: сообщение не является ссылкой на отдельный трек.");
+            return;
+        }
+
+        Console.WriteLine("Yandex Music: ссылка распознана как трек. Разрешаем...");
+
+        try
+        {
+            var track =
+                await yandexMusicSource.ResolveTrackAsync(message);
+
+            if (track == null)
+            {
+                Console.WriteLine("Yandex Music: трек не найден или ссылка недействительна.");
+                return;
+            }
+
+            Console.WriteLine(
+                $"Yandex Music: найден трек — {track.Artist} — {track.Title}");
+
+            Console.WriteLine(
+                $"Yandex Music: ID={track.Id}, длительность={track.Duration:mm\:ss}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(
+                $"Yandex Music: ошибка разрешения ссылки: {ex.Message}");
+        }
     }
 
     private static string GetOrderTypeLabel(DonationOrderType orderType)
