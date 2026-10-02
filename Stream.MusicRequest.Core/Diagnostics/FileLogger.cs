@@ -13,11 +13,6 @@ public static class FileLogger
             "StreamMusicRequest",
             "Logs");
 
-    private static readonly string LogFilePath =
-        Path.Combine(
-            LogDirectory,
-            "app.log");
-
     public static void Info(
         string message)
     {
@@ -51,9 +46,16 @@ public static class FileLogger
             Directory.CreateDirectory(
                 LogDirectory);
 
+            var now = DateTime.Now;
+
             var timestamp =
-                DateTime.Now.ToString(
+                now.ToString(
                     "yyyy-MM-dd HH:mm:ss.fff");
+
+            var logFilePath =
+                Path.Combine(
+                    LogDirectory,
+                    $"app-{now:yyyy-MM-dd}.log");
 
             var text =
                 $"[{timestamp}] [{level}] {message}" +
@@ -62,7 +64,7 @@ public static class FileLogger
             lock (SyncRoot)
             {
                 File.AppendAllText(
-                    LogFilePath,
+                    logFilePath,
                     text,
                     Encoding.UTF8);
             }
