@@ -352,9 +352,46 @@
 
                         </Border>
 
+                        <!-- DONATION ALERTS STATUS -->
+
+                        <Border Grid.Column="3"
+                                Background="{StaticResource CardBackground}"
+                                BorderBrush="{StaticResource BorderBrushDark}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="14,8"
+                                Margin="0,0,10,0">
+
+                                <StackPanel Orientation="Horizontal">
+
+                                        <Ellipse x:Name="DonationAlertsStatusIndicator"
+                                                 Width="8"
+                                                 Height="8"
+                                                 Fill="{StaticResource TextMuted}"
+                                                 VerticalAlignment="Center"/>
+
+                                        <StackPanel Margin="8,0,0,0">
+
+                                                <TextBlock Text="Donation Alerts"
+                                                           FontSize="11"
+                                                           Foreground="{StaticResource TextMuted}"/>
+
+                                                <TextBlock x:Name="DonationAlertsStatusText"
+                                                           Text="Не подключено"
+                                                           FontSize="12"
+                                                           FontWeight="SemiBold"
+                                                           Foreground="{StaticResource TextMuted}"
+                                                           Margin="0,1,0,0"/>
+
+                                        </StackPanel>
+
+                                </StackPanel>
+
+                        </Border>
+
                         <!-- SETTINGS -->
 
-                        <Button Grid.Column="3"
+                        <Button Grid.Column="4"
                                 Content="⚙"
                                 Style="{StaticResource IconButton}"
                                 ToolTip="Настройки"
