@@ -4,9 +4,15 @@ namespace Stream.MusicRequest.DonationAlerts.Services;
 
 public sealed class DonationOrderClassifier
 {
-    private readonly IReadOnlyDictionary<string, DonationThresholdSettings> _thresholds;
+    private IReadOnlyDictionary<string, DonationThresholdSettings> _thresholds;
 
     public DonationOrderClassifier(
+        IReadOnlyDictionary<string, DonationThresholdSettings> thresholds)
+    {
+        _thresholds = thresholds;
+    }
+
+    public void UpdateThresholds(
         IReadOnlyDictionary<string, DonationThresholdSettings> thresholds)
     {
         _thresholds = thresholds;
