@@ -31,6 +31,8 @@ public class TwitchService : ITwitchService
     private Task? _monitorTask;
     private readonly SemaphoreSlim _reconnectLock = new(1, 1);
 
+    public TwitchUser? CurrentUser => _currentUser;
+
     public event EventHandler<bool>? ConnectionStateChanged;
 
     public event EventHandler? AuthenticationRequired;
