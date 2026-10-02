@@ -80,6 +80,51 @@ public class MusicQueueService
         return true;
     }
 
+    public bool PromoteByPriority(string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId) ||
+            _queue.Count == 0)
+        {
+            return false;
+        }
+
+        var items = _queue.ToList();
+
+        var item =
+            items.FirstOrDefault(
+                candidate =>
+                    candidate.Id.Equals(
+                        itemId,
+                        StringComparison.Ordinal));
+
+        if (item == null)
+        {
+            return false;
+        }
+
+        items.Remove(item);
+
+        var insertIndex = 0;
+
+        while (insertIndex < items.Count &&
+               items[insertIndex].QueuePriority >= item.QueuePriority)
+        {
+            insertIndex++;
+        }
+
+        items.Insert(insertIndex, item);
+
+        _queue.Clear();
+
+        foreach (var queuedItem in items)
+        {
+            _queue.Enqueue(queuedItem);
+        }
+
+        OnQueueChanged();
+        return true;
+    }
+
     public QueueItem? Dequeue()
     {
         if (_queue.Count == 0)
