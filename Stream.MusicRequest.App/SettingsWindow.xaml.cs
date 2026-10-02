@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using Stream.MusicRequest.DonationAlerts.Models;
 using Stream.MusicRequest.Infrastructure.Storage;
 using Stream.MusicRequest.Twitch.Models;
 using Stream.MusicRequest.Yandex.Sources;
@@ -89,6 +90,11 @@ public partial class SettingsWindow : Window
                 TwitchService_ConnectionStateChanged;
 
         _appServices
+            .DonationAlertsMusicService
+            .ConnectionStateChanged +=
+                DonationAlertsMusicService_ConnectionStateChanged;
+
+        _appServices
             .YandexAuthService
             .AuthenticationStateChanged +=
                 YandexAuthService_AuthenticationStateChanged;
@@ -106,6 +112,7 @@ public partial class SettingsWindow : Window
 
         _ = UpdateTwitchUiAsync();
         _ = LoadTwitchRewardSettingsUiAsync();
+        LoadDonationAlertsSettingsUi();
 
         Closed +=
             SettingsWindow_Closed;
@@ -343,6 +350,23 @@ public partial class SettingsWindow : Window
     // ============================================================
     // TWITCH
     // ============================================================
+
+    private void DonationAlertsMusicService_ConnectionStateChanged(
+        object? sender,
+        bool isConnected)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(
+                new Action(
+                    () => DonationAlertsMusicService_ConnectionStateChanged(
+                        sender,
+                        isConnected)));
+            return;
+        }
+
+        UpdateDonationAlertsConnectionUi();
+    }
 
     private void TwitchService_ConnectionStateChanged(
         object? sender,
@@ -1348,6 +1372,287 @@ public partial class SettingsWindow : Window
     }
 
     // ============================================================
+    // DONATION ALERTS
+    // ============================================================
+
+    private void LoadDonationAlertsSettingsUi()
+    {
+        var settings =
+            _appServices.DonationAlertsMusicService.Settings;
+
+        DonationAlertsMusicOrdersCheckBox.IsChecked =
+            settings.MusicOrdersEnabled;
+
+        SetDonationThresholdUi(
+            settings.DonationThresholds,
+            "RUB",
+            DonationAlertsRubNormalTextBox,
+            DonationAlertsRubSuperTextBox);
+
+        SetDonationThresholdUi(
+            settings.DonationThresholds,
+            "EUR",
+            DonationAlertsEurNormalTextBox,
+            DonationAlertsEurSuperTextBox);
+
+        SetDonationThresholdUi(
+            settings.DonationThresholds,
+            "USD",
+            DonationAlertsUsdNormalTextBox,
+            DonationAlertsUsdSuperTextBox);
+
+        UpdateDonationAlertsConnectionUi();
+    }
+
+    private static void SetDonationThresholdUi(
+        IReadOnlyDictionary<string, DonationThresholdSettings> thresholds,
+        string currency,
+        TextBox normalTextBox,
+        TextBox superTextBox)
+    {
+        if (thresholds.TryGetValue(currency, out var threshold))
+        {
+            normalTextBox.Text =
+                threshold.Normal.ToString(
+                    System.Globalization.CultureInfo.InvariantCulture);
+
+            superTextBox.Text =
+                threshold.SuperPriority.ToString(
+                    System.Globalization.CultureInfo.InvariantCulture);
+        }
+        else
+        {
+            normalTextBox.Clear();
+            superTextBox.Clear();
+        }
+    }
+
+    private void UpdateDonationAlertsConnectionUi()
+    {
+        var service =
+            _appServices.DonationAlertsMusicService;
+
+        if (service.IsConnected &&
+            service.CurrentUser != null)
+        {
+            DonationAlertsStatusIndicator.Fill =
+                FindResource("SuccessBrush") as Brush;
+
+            DonationAlertsStatusText.Text =
+                "Подключен";
+
+            DonationAlertsStatusText.Foreground =
+                FindResource("SuccessBrush") as Brush;
+
+            DonationAlertsUserText.Text =
+                $"Аккаунт: {service.CurrentUser.Name} ({service.CurrentUser.Code})";
+
+            DonationAlertsConnectButton.IsEnabled =
+                false;
+
+            DonationAlertsLogoutButton.IsEnabled =
+                true;
+        }
+        else if (service.CurrentUser != null)
+        {
+            DonationAlertsStatusIndicator.Fill =
+                FindResource("AccentBrush") as Brush;
+
+            DonationAlertsStatusText.Text =
+                "Авторизован";
+
+            DonationAlertsStatusText.Foreground =
+                FindResource("AccentBrush") as Brush;
+
+            DonationAlertsUserText.Text =
+                $"Аккаунт: {service.CurrentUser.Name} ({service.CurrentUser.Code})";
+
+            DonationAlertsConnectButton.IsEnabled =
+                true;
+
+            DonationAlertsLogoutButton.IsEnabled =
+                true;
+        }
+        else
+        {
+            DonationAlertsStatusIndicator.Fill =
+                FindResource("TextMuted") as Brush;
+
+            DonationAlertsStatusText.Text =
+                "Не подключен";
+
+            DonationAlertsStatusText.Foreground =
+                FindResource("TextMuted") as Brush;
+
+            DonationAlertsUserText.Text =
+                "Авторизация Donation Alerts не выполнена.";
+
+            DonationAlertsConnectButton.IsEnabled =
+                true;
+
+            DonationAlertsLogoutButton.IsEnabled =
+                false;
+        }
+    }
+
+    private void DonationAlertsSettingsChanged(
+        object sender,
+        RoutedEventArgs e)
+    {
+        // Значение сохраняется общей кнопкой.
+    }
+
+    private async void DonationAlertsConnectButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        try
+        {
+            DonationAlertsConnectButton.IsEnabled = false;
+            DonationAlertsStatusText.Text = "Ожидание авторизации...";
+
+            await _appServices
+                .DonationAlertsMusicService
+                .AuthorizeAndConnectAsync();
+
+            UpdateDonationAlertsConnectionUi();
+        }
+        catch (Exception ex)
+        {
+            UpdateDonationAlertsConnectionUi();
+
+            MessageBox.Show(
+                this,
+                $"Не удалось подключить Donation Alerts.\n\n{ex.Message}",
+                "Donation Alerts",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    private async void DonationAlertsLogoutButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        try
+        {
+            await _appServices
+                .DonationAlertsMusicService
+                .LogoutAsync();
+
+            UpdateDonationAlertsConnectionUi();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                this,
+                $"Не удалось отключить Donation Alerts.\n\n{ex.Message}",
+                "Donation Alerts",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    private async void DonationAlertsSaveButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        try
+        {
+            var settings =
+                _appServices
+                    .DonationAlertsMusicService
+                    .Settings;
+
+            settings.MusicOrdersEnabled =
+                DonationAlertsMusicOrdersCheckBox.IsChecked == true;
+
+            settings.DonationThresholds =
+                new Dictionary<string, DonationThresholdSettings>(
+                    StringComparer.OrdinalIgnoreCase)
+                {
+                    ["RUB"] = ParseDonationThreshold(
+                        "RUB",
+                        DonationAlertsRubNormalTextBox.Text,
+                        DonationAlertsRubSuperTextBox.Text),
+
+                    ["EUR"] = ParseDonationThreshold(
+                        "EUR",
+                        DonationAlertsEurNormalTextBox.Text,
+                        DonationAlertsEurSuperTextBox.Text),
+
+                    ["USD"] = ParseDonationThreshold(
+                        "USD",
+                        DonationAlertsUsdNormalTextBox.Text,
+                        DonationAlertsUsdSuperTextBox.Text)
+                };
+
+            await _appServices
+                .DonationAlertsMusicService
+                .SaveSettingsAsync(settings);
+
+            MessageBox.Show(
+                this,
+                "Настройки Donation Alerts сохранены.",
+                "Donation Alerts",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(
+                this,
+                ex.Message,
+                "Donation Alerts",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+    }
+
+    private static DonationThresholdSettings ParseDonationThreshold(
+        string currency,
+        string normalText,
+        string superText)
+    {
+        if (!TryParseDonationAmount(normalText, out var normal) ||
+            !TryParseDonationAmount(superText, out var superPriority))
+        {
+            throw new InvalidOperationException(
+                $"Для {currency} укажите оба порога.");
+        }
+
+        if (normal <= 0 ||
+            superPriority <= normal)
+        {
+            throw new InvalidOperationException(
+                $"Для {currency} SUPER-PRIORITY должен быть больше обычного порога.");
+        }
+
+        return new DonationThresholdSettings
+        {
+            Normal = normal,
+            SuperPriority = superPriority
+        };
+    }
+
+    private static bool TryParseDonationAmount(
+        string text,
+        out decimal value)
+    {
+        return decimal.TryParse(
+                   text.Trim(),
+                   System.Globalization.NumberStyles.Number,
+                   System.Globalization.CultureInfo.InvariantCulture,
+                   out value)
+               ||
+               decimal.TryParse(
+                   text.Trim(),
+                   System.Globalization.NumberStyles.Number,
+                   System.Globalization.CultureInfo.CurrentCulture,
+                   out value);
+    }
+
+    // ============================================================
     // WINDOW
     // ============================================================
 
@@ -1372,6 +1677,11 @@ public partial class SettingsWindow : Window
             .TwitchService
             .ConnectionStateChanged -=
                 TwitchService_ConnectionStateChanged;
+
+        _appServices
+            .DonationAlertsMusicService
+            .ConnectionStateChanged -=
+                DonationAlertsMusicService_ConnectionStateChanged;
 
         Closed -=
             SettingsWindow_Closed;
