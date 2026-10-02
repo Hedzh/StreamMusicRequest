@@ -258,7 +258,7 @@ public sealed class DonationAlertsClient
                 $"Yandex Music: найден трек — {track.Artist} — {track.Title}");
 
             Console.WriteLine(
-                $"Yandex Music: ID={track.Id}, длительность={track.Duration:mm\:ss}");
+                $"Yandex Music: ID={track.Id}, длительность={track.Duration:mm\\:ss}");
         }
         catch (Exception ex)
         {
