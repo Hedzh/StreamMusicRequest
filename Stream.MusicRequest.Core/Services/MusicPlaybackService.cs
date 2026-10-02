@@ -14,6 +14,8 @@ public class MusicPlaybackService
     private bool _isPlaying;
     private QueueItem? _currentItem;
 
+    public bool AutoAdvanceEnabled { get; set; } = true;
+
     private readonly SemaphoreSlim _operationGate =
         new(1, 1);
 
@@ -363,9 +365,18 @@ public class MusicPlaybackService
 
             _currentItem = null;
 
-        FileLogger.Info(
-            $"Перед запуском следующего: " +
-            $"QueueCount: {_queue.Count}");
+            FileLogger.Info(
+                $"Перед запуском следующего: " +
+                $"QueueCount: {_queue.Count}");
+
+            if (!AutoAdvanceEnabled)
+            {
+                FileLogger.Info(
+                    "Автоматический запуск следующего трека очереди временно отключён контроллером.");
+
+                RaiseQueuePlaybackFinished();
+                return;
+            }
 
             try
             {
