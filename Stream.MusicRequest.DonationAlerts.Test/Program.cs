@@ -3,10 +3,16 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using Stream.MusicRequest.DonationAlerts.Test.Client;
+using Stream.MusicRequest.DonationAlerts.Test.Logging;
 using Stream.MusicRequest.DonationAlerts.Test.Models;
 using Stream.MusicRequest.DonationAlerts.Test.Storage;
 
 Console.OutputEncoding = Encoding.UTF8;
+
+using var logger =
+    new DonationAlertsTestLogger();
+
+logger.Log("=== Donation Alerts Integration Laboratory запущена ===");
 
 Console.WriteLine("==============================================");
 Console.WriteLine(" Donation Alerts Integration Laboratory");
@@ -26,6 +32,10 @@ if (!File.Exists(settingsPath))
     Console.WriteLine("Скопируй donationalerts.testsettings.json.example");
     Console.WriteLine("в donationalerts.testsettings.json и укажи");
     Console.WriteLine("ClientId и RedirectUri.");
+
+    logger.Log(
+        $"Файл настройки не найден: {settingsPath}");
+
     return;
 }
 
@@ -41,6 +51,10 @@ if (settings == null ||
     string.IsNullOrWhiteSpace(settings.ClientId))
 {
     Console.WriteLine("В настройках не указан ClientId.");
+
+    logger.Log(
+        "В настройках не указан ClientId.");
+
     return;
 }
 
@@ -60,6 +74,10 @@ if (!Uri.TryCreate(
     Console.WriteLine(
         "RedirectUri должен быть локальным HTTP URI вида:");
     Console.WriteLine("http://127.0.0.1:17865/callback/");
+
+    logger.Log(
+        $"Некорректный RedirectUri: {settings.RedirectUri}");
+
     return;
 }
 
@@ -70,20 +88,28 @@ Console.WriteLine("Donation Alerts используется только чер�
 Console.WriteLine("Client Secret не требуется и не используется.");
 Console.WriteLine();
 
+logger.Log(
+    $"Redirect URI: {settings.RedirectUri}");
+
+logger.Log(
+    "Donation Alerts используется только через Implicit Grant.");
+
 using var httpClient =
     new HttpClient
     {
         Timeout = TimeSpan.FromSeconds(30)
     };
 
-var client =
-    new DonationAlertsClient(httpClient);
-
 var storage =
     new DonationAlertsTestTokenStorage();
 
 var cancellationSource =
     new CancellationTokenSource();
+
+var client =
+    new DonationAlertsClient(
+        httpClient,
+        logger);
 
 Console.CancelKeyPress +=
     (_, eventArgs) =>
@@ -93,6 +119,9 @@ Console.CancelKeyPress +=
 
         Console.WriteLine();
         Console.WriteLine("Останавливаем тест...");
+
+        logger.Log(
+            "Получен Ctrl+C. Останавливаем тест.");
     };
 
 try
@@ -105,6 +134,9 @@ try
         Console.WriteLine(
             "Сохранённая Implicit Grant авторизация найдена.");
 
+        logger.Log(
+            "Сохранённая Implicit Grant авторизация найдена.");
+
         try
         {
             var savedUser =
@@ -114,6 +146,10 @@ try
             Console.WriteLine(
                 "Сохранённый Access Token действителен.");
             Console.WriteLine(
+                $"Пользователь: {savedUser.Name} ({savedUser.Code}), ID {savedUser.Id}");
+
+            logger.Log(
+                $"Сохранённый Access Token действителен. " +
                 $"Пользователь: {savedUser.Name} ({savedUser.Code}), ID {savedUser.Id}");
 
             await RunDonationWebSocketAsync(
@@ -138,12 +174,21 @@ try
             Console.WriteLine(
                 "Локальная авторизация будет сброшена.");
 
+            logger.Log(
+                $"Сохранённый Access Token не прошёл проверку: {ex.Message}");
+
             await storage.ClearAsync();
+
+            logger.Log(
+                "Сохранённый Access Token удалён из локального хранилища.");
         }
     }
     else
     {
         Console.WriteLine(
+            "Сохранённой Implicit Grant авторизации нет.");
+
+        logger.Log(
             "Сохранённой Implicit Grant авторизации нет.");
     }
 
@@ -158,6 +203,9 @@ catch (OperationCanceledException)
 {
     Console.WriteLine();
     Console.WriteLine("Тест остановлен.");
+
+    logger.Log(
+        "Тест остановлен.");
 }
 catch (Exception ex)
 {
@@ -166,10 +214,19 @@ catch (Exception ex)
     Console.WriteLine(ex.Message);
     Console.WriteLine();
     Console.WriteLine(ex);
+
+    logger.Log(
+        $"ОШИБКА: {ex}");
+
+    logger.Log(
+        "=== Donation Alerts Integration Laboratory завершена с ошибкой ===");
 }
 finally
 {
     cancellationSource.Dispose();
+
+    logger.Log(
+        "=== Donation Alerts Integration Laboratory завершена ===");
 }
 
 static async Task AuthorizeAndRunAsync(
