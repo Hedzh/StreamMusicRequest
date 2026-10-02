@@ -65,10 +65,10 @@
                     Background="White"
                     Padding="10"
                     CornerRadius="8">
-                <Image Source="/Stream.MusicRequest.App;component/Assets/dalink-qr-code.png"
-                       Width="260"
+                <Image Width="260"
                        Height="260"
-                       Stretch="Uniform"/>
+                       Stretch="Uniform"
+                       Source="{Binding QrCodeImage}"/>
             </Border>
 
             <TextBlock Grid.Row="3"
