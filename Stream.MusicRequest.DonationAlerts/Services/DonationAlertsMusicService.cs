@@ -148,7 +148,7 @@ public sealed class DonationAlertsMusicService
             }
 
             var request =
-                new MusicRequest
+                new Stream.MusicRequest.Core.Requests.MusicRequest
                 {
                     Id = $"donation-{donation.Id}",
                     ViewerName = donation.Username,
