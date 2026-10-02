@@ -12,6 +12,7 @@ public class MusicPlaybackService
     private readonly IMusicPlayer _player;
 
     private bool _isPlaying;
+    private QueueItem? _currentItem;
 
     private readonly SemaphoreSlim _operationGate =
         new(1, 1);
@@ -125,6 +126,8 @@ public class MusicPlaybackService
         _isPlaying =
             true;
 
+        _currentItem = item;
+
         try
         {
             FileLogger.Info(
@@ -132,8 +135,22 @@ public class MusicPlaybackService
                 $"{item.Track.Artist} — " +
                 $"{item.Track.Title}");
 
-            await _player.PlayAsync(
-                item.Track);
+            if (item.ResumePosition > TimeSpan.Zero)
+            {
+                await _player.PlayAsync(
+                    item.Track,
+                    item.ResumePosition);
+            }
+            else
+            {
+                await _player.PlayAsync(
+                    item.Track);
+            }
+
+            if (!item.ResumePlayback)
+            {
+                item.ResumePlayback = true;
+            }
 
             FileLogger.Info(
                 "PlayAsync плеера завершён успешно.");
@@ -144,6 +161,8 @@ public class MusicPlaybackService
         {
             _isPlaying =
                 false;
+
+            _currentItem = null;
 
             FileLogger.Error(
                 "Ошибка запуска плеера.",
@@ -226,6 +245,8 @@ public class MusicPlaybackService
         _isPlaying =
             false;
 
+        _currentItem = null;
+
         FileLogger.Info(
             "Воспроизведение остановлено.");
     
@@ -249,6 +270,8 @@ public class MusicPlaybackService
 
         _isPlaying =
             false;
+
+        _currentItem = null;
 
         FileLogger.Info(
             "Текущий трек пропущен. " +
@@ -291,6 +314,8 @@ public class MusicPlaybackService
 
     public bool HasCurrentTrack =>
         _player.GetCurrentTrack() != null;
+
+    public QueueItem? CurrentItem => _currentItem;
 
     public Track? GetCurrentTrack()
     {
@@ -335,6 +360,8 @@ public class MusicPlaybackService
 
             _isPlaying =
                 false;
+
+            _currentItem = null;
 
         FileLogger.Info(
             $"Перед запуском следующего: " +
