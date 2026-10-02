@@ -344,6 +344,16 @@ public partial class MainWindow : Window
         }
     }
 
+    private void SupportAuthorButton_Click(object sender, RoutedEventArgs e)
+    {
+        var window = new SupportAuthorWindow
+        {
+            Owner = this
+        };
+
+        window.ShowDialog();
+    }
+
     private async void PlaybackToggleButton_Click(
         object sender,
         RoutedEventArgs e)
