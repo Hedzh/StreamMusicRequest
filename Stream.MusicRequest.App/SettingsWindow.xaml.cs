@@ -1048,17 +1048,6 @@ public partial class SettingsWindow : Window
                     true);
             }
 
-            if (string.IsNullOrWhiteSpace(
-                    SkipTrackRewardIdTextBox.Text))
-            {
-                ResetSkipTrackRewardDetails();
-            }
-            else
-            {
-                await CheckTwitchRewardAsync(
-                    SkipTrackRewardIdTextBox.Text,
-                    false);
-            }
         }
         catch
         {
