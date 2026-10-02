@@ -175,6 +175,12 @@ public sealed class DonationAlertsMusicService
                 return;
             }
 
+            result.Item.Track!.RequestSource = "Donation Alerts";
+            result.Item.Track.RequestMode =
+                orderType == DonationOrderType.Normal
+                    ? "Обычный"
+                    : "SUPER-PRIORITY";
+
             if (orderType == DonationOrderType.Normal)
             {
                 await _playbackController
