@@ -899,6 +899,10 @@ public partial class MainWindow : Window
 
         await RestoreTwitchAuthenticationAsync();
 
+        await _appServices
+            .DonationAlertsMusicService
+            .RestoreAuthorizationAsync();
+
         UpdateMainMusicUi();
     }
 
