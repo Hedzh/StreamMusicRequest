@@ -191,7 +191,10 @@ public partial class MainWindow : Window
                 _yandexAuthService,
                 _twitchAuthService,
                 _twitchApiClient,
-                twitchRewardSettingsStorage);
+                twitchRewardSettingsStorage,
+                _playbackController,
+                _requestService,
+                _yandexMusicSource);
 
         _appServices.TwitchService.RewardActionReceived +=
             TwitchService_RewardActionReceived;
@@ -201,6 +204,9 @@ public partial class MainWindow : Window
 
         _appServices.TwitchService.AuthenticationRequired +=
             TwitchService_AuthenticationRequired;
+
+        _appServices.DonationAlertsMusicService.ConnectionStateChanged +=
+            DonationAlertsMusicService_ConnectionStateChanged;
 
         _playbackUiTimer =
             new DispatcherTimer
@@ -492,6 +498,24 @@ public partial class MainWindow : Window
 
             SetTwitchStatusVisual(false);
         }
+    }
+
+    private void DonationAlertsMusicService_ConnectionStateChanged(
+        object? sender,
+        bool isConnected)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(
+                new Action(
+                    () => DonationAlertsMusicService_ConnectionStateChanged(
+                        sender,
+                        isConnected)));
+            return;
+        }
+
+        FileLogger.Info(
+            $"Donation Alerts: состояние соединения изменено: {(isConnected ? "подключено" : "отключено")}.");
     }
 
     private void TwitchService_AuthenticationRequired(
