@@ -1534,7 +1534,9 @@
 
                                 <TextBlock Text="Добавлено"
                                            Style="{StaticResource SectionTitle}"/>
-                                <TextBlock Text="• Индикатор состояния интернет-соединения в главном окне с автоматической проверкой при запуске и периодическим обновлением."<TextBlock Text="• Полноценная интеграция Donation Alerts для музыкальных заказов."
+                                <TextBlock Text="• Индикатор состояния интернет-соединения в главном окне с автоматической проверкой при запуске и периодическим обновлением."
+                                           Style="{StaticResource FieldDescription}"/>
+                                 <TextBlock Text="• Полноценная интеграция Donation Alerts для музыкальных заказов."
                                            Style="{StaticResource FieldDescription}"/>
                                 <TextBlock Text="• Восстановление авторизации Donation Alerts при запуске приложения."
                                            Style="{StaticResource FieldDescription}"/>
