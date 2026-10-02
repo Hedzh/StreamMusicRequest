@@ -79,58 +79,214 @@ public sealed class DonationAlertsClient
         if (string.IsNullOrWhiteSpace(token))
             throw new InvalidOperationException("Donation Alerts не авторизован.");
 
-        var user = await GetCurrentUserAsync(token, cancellationToken);
-        CurrentUser = user;
         await DisconnectAsync();
 
-        _connectionCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        _connectionCts =
+            CancellationTokenSource.CreateLinkedTokenSource(
+                cancellationToken);
+
         var ct = _connectionCts.Token;
-        _socket = new ClientWebSocket { Options = { KeepAliveInterval = TimeSpan.FromSeconds(20) } };
 
         try
         {
-            await _socket.ConnectAsync(new Uri(CentrifugoUrl), ct);
+            var reconnectDelay = TimeSpan.FromSeconds(5);
 
-            var connect = JsonSerializer.Serialize(new
+            while (!ct.IsCancellationRequested)
             {
-                @params = new { token = user.SocketConnectionToken },
-                id = 1
-            });
-            await SendAsync(connect, ct);
+                try
+                {
+                    var user =
+                        await GetCurrentUserAsync(
+                            token,
+                            ct);
 
-            var connectResponse = await ReceiveAsync(ct);
-            var clientId = ExtractClientId(connectResponse)
-                ?? throw new InvalidOperationException("Donation Alerts не вернул Centrifugo Client ID.");
+                    CurrentUser = user;
 
-            var channel = $"$alerts:donation_{user.Id}";
-            var subscription = await SubscribeAsync(token, clientId, user.Id, ct);
-            var channelToken = ExtractChannelToken(subscription, channel)
-                ?? throw new InvalidOperationException("Donation Alerts не вернул токен приватного канала.");
+                    await ConnectOnceAsync(
+                        token,
+                        user,
+                        ct);
 
-            var subscribe = JsonSerializer.Serialize(new
-            {
-                @params = new { channel, token = channelToken },
-                method = 1,
-                id = 2
-            });
-            await SendAsync(subscribe, ct);
-            await ReceiveAsync(ct);
+                    reconnectDelay =
+                        TimeSpan.FromSeconds(5);
+                }
+                catch (OperationCanceledException)
+                    when (ct.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (Exception)
+                {
+                    SetConnectionState(false);
 
-            ConnectionStateChanged?.Invoke(this, true);
+                    if (ct.IsCancellationRequested)
+                        break;
 
-            while (_socket.State == WebSocketState.Open && !ct.IsCancellationRequested)
-            {
-                var message = await ReceiveAsync(ct);
-                var donation = TryParseDonation(message);
+                    await Task.Delay(
+                        reconnectDelay,
+                        ct);
 
-                if (donation != null && _processedDonationIds.Add(donation.Id))
-                    DonationReceived?.Invoke(this, donation);
+                    reconnectDelay =
+                        TimeSpan.FromSeconds(
+                            Math.Min(
+                                reconnectDelay.TotalSeconds * 2,
+                                60));
+                }
             }
         }
         finally
         {
-            ConnectionStateChanged?.Invoke(this, false);
+            SetConnectionState(false);
+            DisposeSocket();
+
+            _connectionCts?.Dispose();
+            _connectionCts = null;
         }
+    }
+
+    private async Task ConnectOnceAsync(
+        string token,
+        DonationAlertsUser user,
+        CancellationToken cancellationToken)
+    {
+        _socket =
+            new ClientWebSocket
+            {
+                Options =
+                {
+                    KeepAliveInterval =
+                        TimeSpan.FromSeconds(20)
+                }
+            };
+
+        try
+        {
+            await _socket.ConnectAsync(
+                new Uri(CentrifugoUrl),
+                cancellationToken);
+
+            var connect =
+                JsonSerializer.Serialize(
+                    new
+                    {
+                        @params =
+                            new
+                            {
+                                token =
+                                    user.SocketConnectionToken
+                            },
+                        id = 1
+                    });
+
+            await SendAsync(
+                connect,
+                cancellationToken);
+
+            var connectResponse =
+                await ReceiveAsync(
+                    cancellationToken);
+
+            var clientId =
+                ExtractClientId(
+                    connectResponse)
+                ?? throw new InvalidOperationException(
+                    "Donation Alerts не вернул Centrifugo Client ID.");
+
+            var channel =
+                $"$alerts:donation_{user.Id}";
+
+            var subscription =
+                await SubscribeAsync(
+                    token,
+                    clientId,
+                    user.Id,
+                    cancellationToken);
+
+            var channelToken =
+                ExtractChannelToken(
+                    subscription,
+                    channel)
+                ?? throw new InvalidOperationException(
+                    "Donation Alerts не вернул токен приватного канала.");
+
+            var subscribe =
+                JsonSerializer.Serialize(
+                    new
+                    {
+                        @params =
+                            new
+                            {
+                                channel,
+                                token = channelToken
+                            },
+                        method = 1,
+                        id = 2
+                    });
+
+            await SendAsync(
+                subscribe,
+                cancellationToken);
+
+            await ReceiveAsync(
+                cancellationToken);
+
+            SetConnectionState(true);
+
+            while (
+                _socket.State == WebSocketState.Open &&
+                !cancellationToken.IsCancellationRequested)
+            {
+                var message =
+                    await ReceiveAsync(
+                        cancellationToken);
+
+                var donation =
+                    TryParseDonation(message);
+
+                if (donation != null &&
+                    _processedDonationIds.Add(donation.Id))
+                {
+                    DonationReceived?.Invoke(
+                        this,
+                        donation);
+                }
+            }
+
+            throw new WebSocketException(
+                "Donation Alerts Centrifugo завершила соединение.");
+        }
+        finally
+        {
+            SetConnectionState(false);
+            DisposeSocket();
+        }
+    }
+
+    private void SetConnectionState(
+        bool isConnected)
+    {
+        if (IsConnected == isConnected)
+            return;
+
+        ConnectionStateChanged?.Invoke(
+            this,
+            isConnected);
+    }
+
+    private void DisposeSocket()
+    {
+        if (_socket == null)
+            return;
+
+        try
+        {
+            _socket.Dispose();
+        }
+        catch
+        {
+        }
+
+        _socket = null;
     }
 
     public async Task DisconnectAsync()
@@ -142,17 +298,21 @@ public sealed class DonationAlertsClient
             try
             {
                 if (_socket.State == WebSocketState.Open)
-                    await _socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Disconnect", CancellationToken.None);
+                {
+                    await _socket.CloseAsync(
+                        WebSocketCloseStatus.NormalClosure,
+                        "Disconnect",
+                        CancellationToken.None);
+                }
             }
-            catch { }
+            catch
+            {
+            }
 
-            _socket.Dispose();
-            _socket = null;
+            DisposeSocket();
         }
 
-        _connectionCts?.Dispose();
-        _connectionCts = null;
-        ConnectionStateChanged?.Invoke(this, false);
+        SetConnectionState(false);
     }
 
     public async Task LogoutAsync()
