@@ -17,4 +17,8 @@ public class Track
     public string? SourceUrl { get; set; }
 
     public string? RequestedBy { get; set; }
+
+    public string RequestSource { get; set; } = "Twitch";
+
+    public string RequestMode { get; set; } = "Обычный";
 }
