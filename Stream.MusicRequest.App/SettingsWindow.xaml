@@ -1042,79 +1042,140 @@
                         <TextBlock Text="Donation Alerts"
                                    Style="{StaticResource PageTitle}"/>
 
-                        <TextBlock Text="Подключение Donation Alerts и обработка музыкальных заказов из сообщений донатов."
+                        <TextBlock Text="Подключение Donation Alerts и музыкальные заказы из сообщений донатов."
                                    Style="{StaticResource PageDescription}"
                                    Margin="0,0,0,20"/>
 
                         <Border Style="{StaticResource SettingsCard}">
-
                             <Grid>
-
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
                                 <StackPanel>
-
                                     <TextBlock Text="Подключение"
                                                Style="{StaticResource SectionTitle}"/>
 
                                     <StackPanel Orientation="Horizontal">
-
-                                        <Ellipse Width="9"
+                                        <Ellipse x:Name="DonationAlertsStatusIndicator"
+                                                 Width="9"
                                                  Height="9"
-                                                 Fill="{StaticResource SuccessBrush}"
+                                                 Fill="{StaticResource TextMuted}"
                                                  VerticalAlignment="Center"/>
 
-                                        <TextBlock Text="Подключен"
-                                                   Foreground="{StaticResource SuccessBrush}"
+                                        <TextBlock x:Name="DonationAlertsStatusText"
+                                                   Text="Не подключен"
+                                                   Foreground="{StaticResource TextMuted}"
                                                    FontWeight="SemiBold"
                                                    Margin="8,0,0,0"/>
-
                                     </StackPanel>
 
-                                    <TextBlock Text="Donation Alerts может передавать приложению сообщения донатов."
+                                    <TextBlock x:Name="DonationAlertsUserText"
+                                               Text="—"
                                                Style="{StaticResource FieldDescription}"
-                                               Margin="0,9,0,0"/>
-
+                                               Margin="0,8,0,0"/>
                                 </StackPanel>
 
-                                <Button Grid.Column="1"
-                                        Content="Подключить"
-                                        Style="{StaticResource AccentButton}"
-                                        Width="120"
-                                        VerticalAlignment="Center"/>
+                                <StackPanel Grid.Column="1"
+                                            Orientation="Horizontal"
+                                            VerticalAlignment="Center">
+                                    <Button x:Name="DonationAlertsConnectButton"
+                                            Content="Подключить"
+                                            Style="{StaticResource AccentButton}"
+                                            Width="120"
+                                            Click="DonationAlertsConnectButton_Click"/>
 
+                                    <Button x:Name="DonationAlertsLogoutButton"
+                                            Content="Отключить"
+                                            Width="120"
+                                            Margin="8,0,0,0"
+                                            Click="DonationAlertsLogoutButton_Click"/>
+                                </StackPanel>
                             </Grid>
-
                         </Border>
 
                         <Border Style="{StaticResource SettingsCard}">
-
                             <StackPanel>
-
                                 <TextBlock Text="Музыкальные заказы"
                                            Style="{StaticResource SectionTitle}"/>
 
-                                <CheckBox Content="Разрешить заказы музыки через Donation Alerts"
-                                          IsChecked="True"
-                                          Style="{StaticResource SettingsCheckBox}"/>
+                                <CheckBox x:Name="DonationAlertsMusicOrdersCheckBox"
+                                          Content="Разрешить заказы музыки через Donation Alerts"
+                                          Style="{StaticResource SettingsCheckBox}"
+                                          Checked="DonationAlertsSettingsChanged"
+                                          Unchecked="DonationAlertsSettingsChanged"/>
 
-                                <TextBlock Text="Если сообщение доната содержит ссылку на поддерживаемый музыкальный трек или альбом, приложение сможет добавить его в очередь."
+                                <TextBlock Text="В сообщении доната должна находиться ссылка на отдельный трек Yandex Music."
                                            Style="{StaticResource FieldDescription}"
                                            Margin="0,3,0,14"/>
 
-                                <TextBlock Text="Минимальная сумма доната"
+                                <TextBlock Text="RUB"
                                            Style="{StaticResource FieldTitle}"/>
 
-                                <TextBox Text="100"
-                                         Style="{StaticResource InputBox}"
-                                         Width="150"
-                                         HorizontalAlignment="Left"/>
+                                <Grid Margin="0,4,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="140"/>
+                                        <ColumnDefinition Width="140"/>
+                                    </Grid.ColumnDefinitions>
 
+                                    <TextBox x:Name="DonationAlertsRubNormalTextBox"
+                                             Style="{StaticResource InputBox}"
+                                             ToolTip="Минимум для обычного заказа"/>
+
+                                    <TextBox x:Name="DonationAlertsRubSuperTextBox"
+                                             Grid.Column="1"
+                                             Margin="10,0,0,0"
+                                             Style="{StaticResource InputBox}"
+                                             ToolTip="Порог SUPER-PRIORITY"/>
+                                </Grid>
+
+                                <TextBlock Text="EUR"
+                                           Style="{StaticResource FieldTitle}"/>
+
+                                <Grid Margin="0,4,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="140"/>
+                                        <ColumnDefinition Width="140"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBox x:Name="DonationAlertsEurNormalTextBox"
+                                             Style="{StaticResource InputBox}"/>
+
+                                    <TextBox x:Name="DonationAlertsEurSuperTextBox"
+                                             Grid.Column="1"
+                                             Margin="10,0,0,0"
+                                             Style="{StaticResource InputBox}"/>
+                                </Grid>
+
+                                <TextBlock Text="USD"
+                                           Style="{StaticResource FieldTitle}"/>
+
+                                <Grid Margin="0,4,0,14">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="140"/>
+                                        <ColumnDefinition Width="140"/>
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBox x:Name="DonationAlertsUsdNormalTextBox"
+                                             Style="{StaticResource InputBox}"/>
+
+                                    <TextBox x:Name="DonationAlertsUsdSuperTextBox"
+                                             Grid.Column="1"
+                                             Margin="10,0,0,0"
+                                             Style="{StaticResource InputBox}"/>
+                                </Grid>
+
+                                <TextBlock Text="Первое поле — минимальная сумма обычного заказа. Второе — порог SUPER-PRIORITY. Ниже первого порога донат игнорируется."
+                                           Style="{StaticResource FieldDescription}"/>
+
+                                <Button Content="Сохранить настройки Donation Alerts"
+                                        Style="{StaticResource AccentButton}"
+                                        Width="250"
+                                        HorizontalAlignment="Left"
+                                        Margin="0,14,0,0"
+                                        Click="DonationAlertsSaveButton_Click"/>
                             </StackPanel>
-
                         </Border>
 
                     </StackPanel>
