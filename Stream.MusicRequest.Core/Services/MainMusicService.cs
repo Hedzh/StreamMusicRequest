@@ -15,6 +15,10 @@ public class MainMusicService
     private bool _handlingPlaybackFinished;
     private bool _shuffleEnabled;
 
+    public bool AutoAdvanceEnabled { get; set; } = true;
+
+    public event EventHandler? PlaybackFinished;
+
     private readonly Random _shuffleRandom = new();
     private readonly List<int> _shuffleOrder = new();
     private int _shufflePosition;
@@ -567,6 +571,18 @@ public class MainMusicService
                 "Запуск следующего трека.");
 
             _isMainMusicActive = false;
+
+            PlaybackFinished?.Invoke(
+                this,
+                EventArgs.Empty);
+
+            if (!AutoAdvanceEnabled)
+            {
+                FileLogger.Info(
+                    "Автоматический переход основной музыки временно отключён контроллером.");
+
+                return;
+            }
 
             await NextAsync();
         }
