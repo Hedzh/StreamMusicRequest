@@ -74,6 +74,12 @@ public class MusicRequestService
         track.RequestedBy =
             request.ViewerName;
 
+        track.RequestSource =
+            "Twitch";
+
+        track.RequestMode =
+            "Обычный";
+
         var item =
             new QueueItem
             {
