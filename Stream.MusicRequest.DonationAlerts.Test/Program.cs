@@ -7,6 +7,8 @@ using Stream.MusicRequest.DonationAlerts.Test.Logging;
 using Stream.MusicRequest.DonationAlerts.Test.Models;
 using Stream.MusicRequest.DonationAlerts.Test.Storage;
 using Stream.MusicRequest.DonationAlerts.Test.Services;
+using Stream.MusicRequest.Yandex.Sources;
+using YandexMusic;
 
 Console.OutputEncoding = Encoding.UTF8;
 
@@ -62,6 +64,13 @@ if (settings == null ||
 var donationOrderClassifier =
     new DonationOrderClassifier(
         settings.DonationThresholds);
+
+var yandexClient =
+    new YandexMusicClient();
+
+var yandexMusicSource =
+    new YandexMusicSource(
+        yandexClient);
 
 Console.WriteLine();
 Console.WriteLine("Пороговые значения донатов:");
@@ -184,6 +193,7 @@ try
                 client,
                 accessToken,
                 savedUser,
+                yandexMusicSource,
                 cancellationSource.Token);
 
             return;
@@ -324,6 +334,7 @@ static async Task AuthorizeAndRunAsync(
         client,
         accessToken,
         user,
+        yandexMusicSource,
         cancellationToken);
 }
 
@@ -344,6 +355,7 @@ static async Task RunDonationWebSocketAsync(
     DonationAlertsClient client,
     string accessToken,
     DonationAlertsClient.DonationAlertsUser user,
+    YandexMusicSource yandexMusicSource,
     CancellationToken cancellationToken)
 {
     Console.WriteLine();
@@ -353,6 +365,7 @@ static async Task RunDonationWebSocketAsync(
     await client.ConnectToDonationsAsync(
         accessToken,
         user,
+        yandexMusicSource,
         cancellationToken);
 }
 
