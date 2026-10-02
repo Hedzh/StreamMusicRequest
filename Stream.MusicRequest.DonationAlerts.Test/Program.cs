@@ -235,6 +235,7 @@ try
         storage,
         settings,
         redirectUri,
+        yandexMusicSource,
         cancellationSource.Token);
 }
 catch (OperationCanceledException)
@@ -272,6 +273,7 @@ static async Task AuthorizeAndRunAsync(
     DonationAlertsTestTokenStorage storage,
     DonationAlertsTestSettings settings,
     Uri redirectUri,
+    YandexMusicSource yandexMusicSource,
     CancellationToken cancellationToken)
 {
     var authorizationUrl =
