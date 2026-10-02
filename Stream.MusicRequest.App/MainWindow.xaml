@@ -1007,22 +1007,6 @@
 
                                 </StackPanel>
 
-                                <!-- SKIP -->
-
-                                <StackPanel Grid.Column="1"
-                                            VerticalAlignment="Center"
-                                            Margin="30,0,30,0">
-
-                                        <TextBlock Text="ПРОПУСТИТЬ ТРЕК"
-                                                   Style="{StaticResource SmallLabel}"/>
-
-                                        <TextBlock Text="Twitch Reward"
-                                                   FontSize="11"
-                                                   Foreground="{StaticResource TextMuted}"
-                                                   Margin="0,5,0,0"/>
-
-                                </StackPanel>
-
                                 <!-- VERSION -->
 
                                 <StackPanel Grid.Column="3"
