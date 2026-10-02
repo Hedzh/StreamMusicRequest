@@ -32,8 +32,8 @@ public class MusicPlaybackController
         _viewerMusic.QueuePlaybackFinished +=
             ViewerMusic_QueuePlaybackFinished;
 
-        _mainMusic.PlaybackFinished +=
-            MainMusic_PlaybackFinished;
+        _mainMusic.PlaybackFinishedAsync +=
+            MainMusic_PlaybackFinishedAsync;
 
         FileLogger.Info(
             "MusicPlaybackController создан.");
@@ -416,9 +416,7 @@ public class MusicPlaybackController
         }
     }
 
-    private async void MainMusic_PlaybackFinished(
-        object? sender,
-        EventArgs e)
+    private async Task MainMusic_PlaybackFinishedAsync()
     {
         try
         {
