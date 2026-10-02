@@ -5,6 +5,8 @@ All notable changes to Stream Music Request are documented here.
 ## [1.2.0] - 2026-10-02
 
 ### Added
+- Индикатор состояния интернет-соединения в главном окне.
+- Проверка интернет-соединения при запуске приложения и периодический контроль состояния сети.
 - Donation Alerts production integration for music orders.
 - Donation Alerts authorization restoration on application startup.
 - Donation Alerts normal-priority and SUPER-PRIORITY playback modes.
@@ -13,6 +15,7 @@ All notable changes to Stream Music Request are documented here.
 - Persistent Twitch connection state with the current Twitch display name shown in the main window.
 
 ### Improved
+- Статус интернет-соединения автоматически обновляется при восстановлении или потере сети.
 - Multiple SUPER-PRIORITY donations are now processed sequentially instead of being rejected while another SUPER-PRIORITY order is playing.
 - A failed playback startup no longer stops the viewer queue; the failed track is skipped and the next queued item is attempted.
 - Main window status text is kept synchronized with the actual Twitch and Donation Alerts services.
