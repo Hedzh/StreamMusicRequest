@@ -983,17 +983,6 @@
                                         <ColumnDefinition Width="Auto"/>
                                 </Grid.ColumnDefinitions>
 
-                                <!-- MUSIC REQUEST -->
-
-                                <StackPanel VerticalAlignment="Center">
-
-                                        <TextBlock Text="ЗАКАЗ МУЗЫКИ"
-                                                   Style="{StaticResource SmallLabel}"/>
-
-                                        
-
-                                </StackPanel>
-
                                 <!-- VERSION -->
 
                                 <StackPanel Grid.Column="3"
