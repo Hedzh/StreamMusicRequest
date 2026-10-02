@@ -14,4 +14,8 @@ public class QueueItem
     public IMusicSource? Source { get; set; }
 
     public DateTime AddedAt { get; set; } = DateTime.UtcNow;
+
+    public TimeSpan ResumePosition { get; set; }
+
+    public bool ResumePlayback { get; set; }
 }
