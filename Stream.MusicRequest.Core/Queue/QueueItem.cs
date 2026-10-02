@@ -18,4 +18,6 @@ public class QueueItem
     public TimeSpan ResumePosition { get; set; }
 
     public bool ResumePlayback { get; set; }
+
+    public int QueuePriority { get; set; }
 }
