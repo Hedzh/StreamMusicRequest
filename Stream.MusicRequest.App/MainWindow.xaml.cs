@@ -521,6 +521,8 @@ public partial class MainWindow : Window
             return;
         }
 
+        UpdateDonationAlertsStatusUi();
+
         FileLogger.Info(
             $"Donation Alerts: состояние соединения изменено: {(isConnected ? "подключено" : "отключено")}.");
     }
@@ -933,7 +935,12 @@ public partial class MainWindow : Window
             };
 
         settingsWindow.ShowDialog();
-    }
+
+        UpdateConnectionStatus(
+            _yandexAuthService.IsAuthenticated,
+            _appServices.TwitchService.IsConnected);
+
+        UpdateDonationAlertsStatusUi();
 
     private async void MainWindow_Loaded(
         object sender,
@@ -952,6 +959,7 @@ public partial class MainWindow : Window
             .DonationAlertsMusicService
             .RestoreAuthorizationAsync();
 
+        UpdateDonationAlertsStatusUi();
         UpdateMainMusicUi();
     }
 
