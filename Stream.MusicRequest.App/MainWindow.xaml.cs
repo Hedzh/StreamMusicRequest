@@ -45,6 +45,8 @@ public partial class MainWindow : Window
     private DeviceAuthorizationWindow? _twitchAuthorizationWindow;
 
     private readonly DispatcherTimer _playbackUiTimer;
+    private readonly DispatcherTimer _internetCheckTimer;
+    private readonly Stream.MusicRequest.Infrastructure.Services.InternetConnectionService _internetConnectionService;
 
     private bool _isSeeking;
 
@@ -208,6 +210,21 @@ public partial class MainWindow : Window
         _appServices.DonationAlertsMusicService.ConnectionStateChanged +=
             DonationAlertsMusicService_ConnectionStateChanged;
 
+        _internetConnectionService =
+            new Stream.MusicRequest.Infrastructure.Services.InternetConnectionService();
+
+        _internetConnectionService.ConnectionStateChanged +=
+            InternetConnectionService_ConnectionStateChanged;
+
+        _internetCheckTimer =
+            new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(15)
+            };
+
+        _internetCheckTimer.Tick +=
+            InternetCheckTimer_Tick;
+
         _playbackUiTimer =
             new DispatcherTimer
             {
@@ -235,6 +252,7 @@ public partial class MainWindow : Window
             twitchAuthenticated: false);
 
         UpdateDonationAlertsStatusUi();
+        UpdateInternetStatusUi(null);
 
         Loaded +=
             MainWindow_ControlsLoaded;
@@ -956,6 +974,9 @@ public partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        await _internetConnectionService.CheckConnectionAsync();
+        _internetCheckTimer.Start();
+
         await _appServices
             .LoadTwitchRewardSettingsAsync();
 
@@ -971,6 +992,60 @@ public partial class MainWindow : Window
 
         UpdateDonationAlertsStatusUi();
         UpdateMainMusicUi();
+    }
+
+    private async void InternetCheckTimer_Tick(
+        object? sender,
+        EventArgs e)
+    {
+        await _internetConnectionService.CheckConnectionAsync();
+    }
+
+    private void InternetConnectionService_ConnectionStateChanged(
+        object? sender,
+        bool? isConnected)
+    {
+        UpdateInternetStatusUi(isConnected);
+    }
+
+    private void UpdateInternetStatusUi(bool? isConnected)
+    {
+        if (isConnected == true)
+        {
+            InternetStatusIndicator.Fill =
+                FindResource("SuccessBrush") as Brush;
+
+            InternetStatusText.Text =
+                "Интернет подключен";
+
+            InternetStatusText.Foreground =
+                FindResource("SuccessBrush") as Brush;
+
+            return;
+        }
+
+        if (isConnected == false)
+        {
+            InternetStatusIndicator.Fill =
+                FindResource("WarningBrush") as Brush;
+
+            InternetStatusText.Text =
+                "Нет подключения к интернету";
+
+            InternetStatusText.Foreground =
+                FindResource("WarningBrush") as Brush;
+
+            return;
+        }
+
+        InternetStatusIndicator.Fill =
+            FindResource("TextMuted") as Brush;
+
+        InternetStatusText.Text =
+            "Проверка подключения...";
+
+        InternetStatusText.Foreground =
+            FindResource("TextSecondary") as Brush;
     }
 
     private async Task LoadDefaultPlaylistOnStartupAsync()
@@ -1923,6 +1998,12 @@ public partial class MainWindow : Window
         EventArgs e)
     {
         _playbackUiTimer.Stop();
+        _internetCheckTimer.Stop();
+
+        _internetConnectionService.ConnectionStateChanged -=
+            InternetConnectionService_ConnectionStateChanged;
+
+        _internetConnectionService.Dispose();
 
         _yandexAuthService.AuthenticationStateChanged -=
             YandexAuthService_AuthenticationStateChanged;
