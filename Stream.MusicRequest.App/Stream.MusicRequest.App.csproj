@@ -14,6 +14,7 @@
     <ProjectReference Include="..\Stream.MusicRequest.Infrastructure\Stream.MusicRequest.Infrastructure.csproj" />
     <ProjectReference Include="..\Stream.MusicRequest.Twitch\Stream.MusicRequest.Twitch.csproj" />
     <ProjectReference Include="..\Stream.MusicRequest.Audio\Stream.MusicRequest.Audio.csproj" />
+    <ProjectReference Include="..\Stream.MusicRequest.DonationAlerts\Stream.MusicRequest.DonationAlerts.csproj" />
   </ItemGroup>
 
 </Project>
