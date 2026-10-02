@@ -254,8 +254,8 @@ public class MusicPlaybackController
 
                 if (_priorityResumeViewerItem != null)
                 {
-                    _queue.PromoteToFront(
-                        _priorityResumeViewerItem.Id);
+                    _queue.EnqueueFront(
+                        _priorityResumeViewerItem);
                 }
 
                 _queue.PromoteToFront(item.Id);
@@ -477,7 +477,7 @@ public class MusicPlaybackController
                     var item = _priorityResumeViewerItem;
                     _priorityResumeViewerItem = null;
 
-                    _queue.PromoteToFront(item.Id);
+                    _queue.EnqueueFront(item);
 
                     _viewerMusic.AutoAdvanceEnabled = true;
                     _viewerModeActive = true;
