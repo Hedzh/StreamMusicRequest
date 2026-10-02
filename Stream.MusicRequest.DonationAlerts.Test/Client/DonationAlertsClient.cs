@@ -3,6 +3,8 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Stream.MusicRequest.DonationAlerts.Test.Logging;
+using Stream.MusicRequest.DonationAlerts.Test.Models;
 
 namespace Stream.MusicRequest.DonationAlerts.Test.Client;
 
@@ -18,10 +20,15 @@ public sealed class DonationAlertsClient
         "wss://centrifugo.donationalerts.com/connection/websocket";
 
     private readonly HttpClient _httpClient;
+    private readonly DonationAlertsTestLogger _logger;
+    private readonly HashSet<long> _processedDonationIds = new();
 
-    public DonationAlertsClient(HttpClient httpClient)
+    public DonationAlertsClient(
+        HttpClient httpClient,
+        DonationAlertsTestLogger logger)
     {
         _httpClient = httpClient;
+        _logger = logger;
     }
 
     public string BuildAuthorizationUrl(
@@ -91,11 +98,17 @@ public sealed class DonationAlertsClient
         Console.WriteLine(
             "Подключаемся к Donation Alerts Centrifugo...");
 
+        _logger.Log(
+            "Подключение к Donation Alerts Centrifugo.");
+
         await socket.ConnectAsync(
             new Uri(CentrifugoUrl),
             cancellationToken);
 
         Console.WriteLine(
+            "WebSocket соединение установлено.");
+
+        _logger.Log(
             "WebSocket соединение установлено.");
 
         var connectMessage =
@@ -126,6 +139,10 @@ public sealed class DonationAlertsClient
 
         PrintRawJson(connectResponse);
 
+        _logger.LogRaw(
+            "Ответ Centrifugo на подключение:",
+            connectResponse);
+
         var clientId =
             ExtractClientId(connectResponse);
 
@@ -137,6 +154,9 @@ public sealed class DonationAlertsClient
 
         Console.WriteLine();
         Console.WriteLine(
+            $"Centrifugo Client ID: {clientId}");
+
+        _logger.Log(
             $"Centrifugo Client ID: {clientId}");
 
         var subscription =
@@ -151,6 +171,10 @@ public sealed class DonationAlertsClient
             "Ответ API на подписку:");
 
         PrintRawJson(subscription);
+
+        _logger.LogRaw(
+            "Ответ API на подписку:",
+            subscription);
 
         var channel =
             $"$alerts:donation_{user.Id}";
@@ -195,8 +219,15 @@ public sealed class DonationAlertsClient
 
         PrintRawJson(subscribeResponse);
 
+        _logger.LogRaw(
+            "Ответ Centrifugo на подписку:",
+            subscribeResponse);
+
         Console.WriteLine();
         Console.WriteLine(
+            $"Подписка активна: {channel}");
+
+        _logger.Log(
             $"Подписка активна: {channel}");
 
         Console.WriteLine();
@@ -206,6 +237,9 @@ public sealed class DonationAlertsClient
             "Сделай тестовый донат и НЕ закрывай это окно.");
         Console.WriteLine(
             "Для остановки нажми Ctrl+C.");
+
+        _logger.Log(
+            "Ожидание новых донатов.");
 
         while (
             socket.State == WebSocketState.Open &&
@@ -221,15 +255,105 @@ public sealed class DonationAlertsClient
                 continue;
             }
 
+            ProcessDonationMessage(message);
+        }
+    }
+
+    private void ProcessDonationMessage(string message)
+    {
+        var donation = TryParseDonation(message);
+
+        if (donation == null)
+        {
+            _logger.LogRaw(
+                "Получено WebSocket-сообщение, не являющееся событием доната:",
+                message);
+
+            return;
+        }
+
+        if (!_processedDonationIds.Add(donation.Id))
+        {
             Console.WriteLine();
             Console.WriteLine(
-                "========== DONATION ALERT EVENT ==========");
+                $"Дубликат доната #{donation.Id} проигнорирован.");
 
-            PrintRawJson(message);
+            _logger.Log(
+                $"Дубликат доната #{donation.Id} проигнорирован.");
 
-            Console.WriteLine();
-            Console.WriteLine(
-                "==========================================");
+            return;
+        }
+
+        Console.WriteLine();
+        Console.WriteLine(
+            "========== DONATION ALERT EVENT ==========");
+
+        Console.WriteLine(
+            $"ID: {donation.Id}");
+        Console.WriteLine(
+            $"Пользователь: {donation.Username}");
+        Console.WriteLine(
+            $"Сумма: {donation.Amount} {donation.Currency}");
+        Console.WriteLine(
+            $"В валюте аккаунта: {donation.AmountInUserCurrency}");
+        Console.WriteLine(
+            $"Сообщение: {donation.Message}");
+        Console.WriteLine(
+            $"Время: {donation.CreatedAt}");
+        Console.WriteLine(
+            $"Тип сообщения: {donation.MessageType}");
+        Console.WriteLine(
+            $"Pay-in system: {donation.PayinSystem ?? "null"}");
+        Console.WriteLine(
+            $"Reason: {donation.Reason}");
+
+        Console.WriteLine();
+        Console.WriteLine(
+            "==========================================");
+
+        _logger.Log(
+            $"Донат #{donation.Id}: " +
+            $"{donation.Username}, " +
+            $"{donation.Amount} {donation.Currency}, " +
+            $"amount_in_user_currency={donation.AmountInUserCurrency}, " +
+            $"message="{donation.Message}"");
+
+        _logger.LogRaw(
+            $"Полный JSON нового доната #{donation.Id}:",
+            message);
+    }
+
+    private static DonationEvent? TryParseDonation(
+        string message)
+    {
+        try
+        {
+            using var document =
+                JsonDocument.Parse(message);
+
+            if (!document.RootElement.TryGetProperty(
+                    "result",
+                    out var result) ||
+                !result.TryGetProperty(
+                    "data",
+                    out var envelope) ||
+                !envelope.TryGetProperty(
+                    "data",
+                    out var donationElement))
+            {
+                return null;
+            }
+
+            return JsonSerializer.Deserialize<DonationEvent>(
+                donationElement.GetRawText(),
+                new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+        }
+        catch (JsonException)
+        {
+            return null;
         }
     }
 
