@@ -46,6 +46,40 @@ public class MusicQueueService
         OnQueueChanged();
     }
 
+    public bool PromoteToFront(string itemId)
+    {
+        if (string.IsNullOrWhiteSpace(itemId) ||
+            _queue.Count == 0)
+        {
+            return false;
+        }
+
+        var items = _queue.ToList();
+        var item = items.FirstOrDefault(
+            candidate =>
+                candidate.Id.Equals(
+                    itemId,
+                    StringComparison.Ordinal));
+
+        if (item == null)
+        {
+            return false;
+        }
+
+        items.Remove(item);
+
+        _queue.Clear();
+        _queue.Enqueue(item);
+
+        foreach (var queuedItem in items)
+        {
+            _queue.Enqueue(queuedItem);
+        }
+
+        OnQueueChanged();
+        return true;
+    }
+
     public QueueItem? Dequeue()
     {
         if (_queue.Count == 0)
