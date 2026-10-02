@@ -990,22 +990,7 @@
                                         <TextBlock Text="ЗАКАЗ МУЗЫКИ"
                                                    Style="{StaticResource SmallLabel}"/>
 
-                                        <StackPanel Orientation="Horizontal"
-                                                    Margin="0,5,0,0">
-
-                                                <Ellipse x:Name="InternetStatusIndicator"
-                                                         Width="8"
-                                                         Height="8"
-                                                         Fill="{StaticResource TextMuted}"
-                                                         VerticalAlignment="Center"/>
-
-                                                <TextBlock x:Name="InternetStatusText"
-                                                           Text="Проверка подключения..."
-                                                           FontSize="12"
-                                                           Foreground="{StaticResource TextSecondary}"
-                                                           Margin="7,0,0,0"/>
-
-                                        </StackPanel>
+                                        
 
                                 </StackPanel>
 
