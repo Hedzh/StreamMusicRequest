@@ -16,8 +16,5 @@
     <ProjectReference Include="..\Stream.MusicRequest.Audio\Stream.MusicRequest.Audio.csproj" />
     <ProjectReference Include="..\Stream.MusicRequest.DonationAlerts\Stream.MusicRequest.DonationAlerts.csproj" />
   </ItemGroup>
-  <ItemGroup>
-    <Resource Include="Assets\dalink-qr-code.png" />
-  </ItemGroup>
 
 </Project>
