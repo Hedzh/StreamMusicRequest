@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Stream.MusicRequest.Infrastructure\Stream.MusicRequest.Infrastructure.csproj" />
+    <ProjectReference Include="..\Stream.MusicRequest.Yandex\Stream.MusicRequest.Yandex.csproj" />
   </ItemGroup>
 
   <ItemGroup>
