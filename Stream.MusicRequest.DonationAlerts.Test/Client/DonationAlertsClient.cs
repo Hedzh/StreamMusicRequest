@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Stream.MusicRequest.DonationAlerts.Test.Logging;
 using Stream.MusicRequest.DonationAlerts.Test.Models;
+using Stream.MusicRequest.DonationAlerts.Test.Services;
 
 namespace Stream.MusicRequest.DonationAlerts.Test.Client;
 
@@ -16,12 +17,17 @@ public sealed class DonationAlertsClient
 
     private readonly HttpClient _httpClient;
     private readonly DonationAlertsTestLogger _logger;
+    private readonly DonationOrderClassifier _donationOrderClassifier;
     private readonly HashSet<long> _processedDonationIds = new();
 
-    public DonationAlertsClient(HttpClient httpClient, DonationAlertsTestLogger logger)
+    public DonationAlertsClient(
+        HttpClient httpClient,
+        DonationAlertsTestLogger logger,
+        DonationOrderClassifier donationOrderClassifier)
     {
         _httpClient = httpClient;
         _logger = logger;
+        _donationOrderClassifier = donationOrderClassifier;
     }
 
     public string BuildAuthorizationUrl(string clientId, string redirectUri, IEnumerable<string> scopes)
@@ -196,6 +202,17 @@ public sealed class DonationAlertsClient
         _logger.LogRaw(
             $"Полный JSON нового доната #{donation.Id}:",
             message);
+    }
+
+    private static string GetOrderTypeLabel(DonationOrderType orderType)
+    {
+        return orderType switch
+        {
+            DonationOrderType.Ignore => "IGNORE",
+            DonationOrderType.Normal => "NORMAL",
+            DonationOrderType.SuperPriority => "SUPER-PRIORITY",
+            _ => "UNKNOWN"
+        };
     }
 
     private static DonationEvent? TryParseDonation(string message)
