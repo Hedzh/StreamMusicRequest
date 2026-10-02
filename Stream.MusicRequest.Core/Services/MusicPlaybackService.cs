@@ -167,10 +167,11 @@ public class MusicPlaybackService
             _currentItem = null;
 
             FileLogger.Error(
-                "Ошибка запуска плеера.",
+                "Ошибка запуска плеера. Трек пропущен, " +
+                "попытка запуска следующего элемента очереди.",
                 ex);
 
-            throw;
+            return await StartNextCoreAsync();
         }
     
     }
