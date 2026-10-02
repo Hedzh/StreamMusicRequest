@@ -108,7 +108,7 @@ public class AppServices
                 playbackController,
                 yandexMusicSource);
 
-        await DonationAlertsMusicService.LoadSettingsAsync();
+        DonationAlertsMusicService.LoadSettings();
 
     }
 
