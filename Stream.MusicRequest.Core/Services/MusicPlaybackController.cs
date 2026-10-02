@@ -181,7 +181,8 @@ public class MusicPlaybackController
         {
             ValidateQueueItem(item);
 
-            _queue.PromoteToFront(item.Id);
+            item.QueuePriority = 10;
+            _queue.PromoteByPriority(item.Id);
 
             if (_viewerModeActive)
             {
@@ -283,7 +284,8 @@ public class MusicPlaybackController
 
             _viewerModeActive = true;
 
-            _queue.PromoteToFront(item.Id);
+            item.QueuePriority = 100;
+            _queue.PromoteByPriority(item.Id);
 
             _viewerMusic.AutoAdvanceEnabled = false;
 
