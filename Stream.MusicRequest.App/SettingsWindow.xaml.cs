@@ -1046,7 +1046,6 @@ public partial class SettingsWindow : Window
             OrderMusicRewardIdTextBox.Text =
                 orderMusicBinding?.RewardId ?? string.Empty;
 
-            SkipTrackRewardIdTextBox.Text =
                 skipTrackBinding?.RewardId ?? string.Empty;
 
             if (string.IsNullOrWhiteSpace(
@@ -1088,15 +1087,8 @@ public partial class SettingsWindow : Window
         OrderMusicRewardEnabledText.Text = "—";
     }
 
-    private void ResetSkipTrackRewardDetails()
     {
-        SkipTrackRewardStatusText.Text = "Не проверена";
-        SkipTrackRewardStatusText.Foreground =
             FindResource("TextSecondary") as Brush;
-        SkipTrackRewardNameText.Text = "—";
-        SkipTrackRewardCostText.Text = "—";
-        SkipTrackRewardInputText.Text = "—";
-        SkipTrackRewardEnabledText.Text = "—";
     }
 
     private void SetRewardCheckError(
@@ -1106,7 +1098,6 @@ public partial class SettingsWindow : Window
         var statusText =
             isOrderMusic
                 ? OrderMusicRewardStatusText
-                : SkipTrackRewardStatusText;
 
         statusText.Text =
             message;
