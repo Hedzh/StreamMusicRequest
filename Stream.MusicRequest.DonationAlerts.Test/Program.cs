@@ -112,7 +112,7 @@ try
                     accessToken);
 
             Console.WriteLine(
-                $"Сохранённый Access Token действителен.");
+                "Сохранённый Access Token действителен.");
             Console.WriteLine(
                 $"Пользователь: {savedUser.Name} ({savedUser.Code}), ID {savedUser.Id}");
 
@@ -124,6 +124,10 @@ try
 
             return;
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
             Console.WriteLine();
@@ -133,7 +137,7 @@ try
             Console.WriteLine();
             Console.WriteLine(
                 "Локальная авторизация будет сброшена.");
-            
+
             await storage.ClearAsync();
         }
     }
