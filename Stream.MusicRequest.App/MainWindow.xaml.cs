@@ -234,6 +234,8 @@ public partial class MainWindow : Window
             yandexAuthenticated: false,
             twitchAuthenticated: false);
 
+        UpdateDonationAlertsStatusUi();
+
         Loaded +=
             MainWindow_ControlsLoaded;
     }
@@ -486,8 +488,13 @@ public partial class MainWindow : Window
 
         if (isConnected)
         {
+            var userName =
+                _appServices.TwitchService.CurrentUser?.DisplayName;
+
             TwitchStatusText.Text =
-                "Подключено";
+                string.IsNullOrWhiteSpace(userName)
+                    ? "Подключено"
+                    : $"Подключено — {userName}";
 
             SetTwitchStatusVisual(true);
         }
@@ -516,6 +523,48 @@ public partial class MainWindow : Window
 
         FileLogger.Info(
             $"Donation Alerts: состояние соединения изменено: {(isConnected ? "подключено" : "отключено")}.");
+    }
+
+    private void UpdateDonationAlertsStatusUi()
+    {
+        var service =
+            _appServices.DonationAlertsMusicService;
+
+        if (service.IsConnected && service.CurrentUser != null)
+        {
+            DonationAlertsStatusText.Text =
+                $"Подключено — {service.CurrentUser.Name}";
+
+            SetDonationAlertsStatusVisual(true);
+            return;
+        }
+
+        if (service.CurrentUser != null)
+        {
+            DonationAlertsStatusText.Text =
+                $"Авторизовано — {service.CurrentUser.Name}";
+
+            SetDonationAlertsStatusVisual(true);
+            return;
+        }
+
+        DonationAlertsStatusText.Text =
+            "Не подключено";
+
+        SetDonationAlertsStatusVisual(false);
+    }
+
+    private void SetDonationAlertsStatusVisual(bool isConnected)
+    {
+        DonationAlertsStatusText.Foreground =
+            isConnected
+                ? FindResource("SuccessBrush") as Brush
+                : FindResource("TextMuted") as Brush;
+
+        DonationAlertsStatusIndicator.Fill =
+            isConnected
+                ? FindResource("SuccessBrush") as Brush
+                : FindResource("TextMuted") as Brush;
     }
 
     private void TwitchService_AuthenticationRequired(
