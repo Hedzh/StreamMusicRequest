@@ -2,6 +2,27 @@
 
 All notable changes to Stream Music Request are documented here.
 
+## [1.2.0] - 2026-10-02
+
+### Added
+- Donation Alerts production integration for music orders.
+- Donation Alerts authorization restoration on application startup.
+- Donation Alerts normal-priority and SUPER-PRIORITY playback modes.
+- Donation Alerts thresholds for RUB, EUR and USD.
+- Synchronized Donation Alerts connection state between Settings and the main window.
+- Persistent Twitch connection state with the current Twitch display name shown in the main window.
+
+### Improved
+- Multiple SUPER-PRIORITY donations are now processed sequentially instead of being rejected while another SUPER-PRIORITY order is playing.
+- A failed playback startup no longer stops the viewer queue; the failed track is skipped and the next queued item is attempted.
+- Main window status text is kept synchronized with the actual Twitch and Donation Alerts services.
+- Removed obsolete main-window "Повторить трек" and redundant Twitch reward labels.
+
+### Fixed
+- Twitch username disappearing from the main-window connection status after closing Settings.
+- Donation Alerts connection changes were previously logged but not reflected in the main-window UI.
+- Queue processing after transient Media Foundation playback startup failures.
+
 ## [1.1.0] - 2026-09-26
 
 ### Added
@@ -29,9 +50,9 @@ All notable changes to Stream Music Request are documented here.
 - Media Foundation playback startup failures no longer stop the main music sequence.
 - Removed unused track cover loading and cover UI.
 
-### Not included in 1.1.0
-- Donation Alerts integration remains planned for a later development stage.
-- Temporary test projects and development files are intentionally retained until Donation Alerts integration is completed.
+### Notes
+- Donation Alerts integration was completed after the 1.1.0 release and is documented in 1.2.0.
+- Temporary test projects remain in the repository until the final cleanup before release.
 
 ## [1.0.0] - Initial working version
 
