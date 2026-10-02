@@ -1,4 +1,9 @@
+using Stream.MusicRequest.Core.Services;
+using Stream.MusicRequest.DonationAlerts.Client;
+using Stream.MusicRequest.DonationAlerts.Services;
+using Stream.MusicRequest.DonationAlerts.Storage;
 using Stream.MusicRequest.Infrastructure.Storage;
+using Stream.MusicRequest.Yandex.Sources;
 using Stream.MusicRequest.Twitch.EventSub;
 using Stream.MusicRequest.Twitch.Models;
 using Stream.MusicRequest.Twitch.Services;
@@ -19,6 +24,8 @@ public class AppServices
 
     public TwitchService TwitchService { get; }
 
+    public DonationAlertsMusicService DonationAlertsMusicService { get; }
+
     public IReadOnlyList<TwitchRewardBinding>
         TwitchRewardBindings
     { get; }
@@ -27,7 +34,10 @@ public class AppServices
         YandexAuthService yandexAuthService,
         TwitchAuthService twitchAuthService,
         TwitchApiClient twitchApiClient,
-        TwitchRewardSettingsStorage twitchRewardSettingsStorage)
+        TwitchRewardSettingsStorage twitchRewardSettingsStorage,
+        MusicPlaybackController playbackController,
+        MusicRequestService requestService,
+        YandexMusicSource yandexMusicSource)
     {
         YandexAuthService =
             yandexAuthService
@@ -68,6 +78,38 @@ public class AppServices
                 TwitchApiClient,
                 twitchEventSubClient,
                 TwitchRewardBindings);
+        var donationAlertsHttpClient =
+            new HttpClient();
+
+        var donationAlertsTokenStorage =
+            new DonationAlertsTokenStorage();
+
+        var donationAlertsSettingsStorage =
+            new DonationAlertsSettingsStorage();
+
+        var donationAlertsClient =
+            new DonationAlertsClient(
+                donationAlertsHttpClient,
+                donationAlertsTokenStorage);
+
+        var donationAlertsSettings =
+            donationAlertsSettingsStorage.Load();
+
+        var donationAlertsClassifier =
+            new DonationOrderClassifier(
+                donationAlertsSettings.DonationThresholds);
+
+        DonationAlertsMusicService =
+            new DonationAlertsMusicService(
+                donationAlertsClient,
+                donationAlertsClassifier,
+                donationAlertsSettingsStorage,
+                requestService,
+                playbackController,
+                yandexMusicSource);
+
+        await DonationAlertsMusicService.LoadSettingsAsync();
+
     }
 
     public async Task LoadTwitchRewardSettingsAsync()
