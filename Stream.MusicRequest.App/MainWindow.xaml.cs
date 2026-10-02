@@ -941,6 +941,7 @@ public partial class MainWindow : Window
             _appServices.TwitchService.IsConnected);
 
         UpdateDonationAlertsStatusUi();
+    }
 
     private async void MainWindow_Loaded(
         object sender,
