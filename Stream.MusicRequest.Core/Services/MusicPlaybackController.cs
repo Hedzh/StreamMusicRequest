@@ -230,8 +230,14 @@ public class MusicPlaybackController
             if (_priorityResumeMainState != null ||
                 _priorityResumeViewerItem != null)
             {
-                throw new InvalidOperationException(
-                    "SUPER-PRIORITY воспроизведение уже выполняется.");
+                item.QueuePriority = 100;
+                _queue.PromoteByPriority(item.Id);
+
+                FileLogger.Info(
+                    $"Donation SUPER-PRIORITY: #{item.Id} добавлен в очередь " +
+                    "SUPER-PRIORITY и будет воспроизведён после текущего.");
+
+                return;
             }
 
             if (_viewerModeActive)
@@ -458,6 +464,21 @@ public class MusicPlaybackController
 
             try
             {
+                if (_queue.Peek()?.QueuePriority >= 100)
+                {
+                    _viewerModeActive = true;
+                    _viewerMusic.AutoAdvanceEnabled = false;
+
+                    var startedNextPriority =
+                        await _viewerMusic.StartNextAsync();
+
+                    FileLogger.Info(
+                        $"SUPER-PRIORITY завершён. Следующий SUPER-PRIORITY " +
+                        $"заказ запущен: {startedNextPriority}.");
+
+                    return;
+                }
+
                 if (_priorityResumeMainState != null)
                 {
                     var state = _priorityResumeMainState;
