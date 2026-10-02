@@ -11,8 +11,11 @@ public class MusicPlaybackController
     private readonly MusicQueueService _queue;
 
     private MainMusicPlaybackState? _savedMainState;
+    private QueueItem? _priorityResumeViewerItem;
+    private MainMusicPlaybackState? _priorityResumeMainState;
 
     private bool _viewerModeActive;
+    private bool _pendingNormalDonation;
 
     private readonly SemaphoreSlim _operationGate =
         new(1, 1);
@@ -22,17 +25,15 @@ public class MusicPlaybackController
         MusicPlaybackService viewerMusic,
         MusicQueueService queue)
     {
-        _mainMusic =
-            mainMusic;
-
-        _viewerMusic =
-            viewerMusic;
-
-        _queue =
-            queue;
+        _mainMusic = mainMusic;
+        _viewerMusic = viewerMusic;
+        _queue = queue;
 
         _viewerMusic.QueuePlaybackFinished +=
             ViewerMusic_QueuePlaybackFinished;
+
+        _mainMusic.PlaybackFinished +=
+            MainMusic_PlaybackFinished;
 
         FileLogger.Info(
             "MusicPlaybackController создан.");
@@ -50,30 +51,23 @@ public class MusicPlaybackController
     public Track? CurrentMainTrack =>
         _mainMusic.CurrentTrack;
 
-    public async Task SetMainMusicAsync(
-        MusicAlbum album)
+    public async Task SetMainMusicAsync(MusicAlbum album)
     {
         await _operationGate.WaitAsync().ConfigureAwait(false);
 
         try
         {
-        if (album == null)
-        {
-            throw new ArgumentNullException(
-                nameof(album));
-        }
+            if (album == null)
+                throw new ArgumentNullException(nameof(album));
 
-        FileLogger.Info(
-            $"Установка нового основного источника: " +
-            $"{album.Title}");
+            FileLogger.Info(
+                $"Установка нового основного источника: {album.Title}");
 
-        if (_viewerModeActive)
-        {
-            _mainMusic.SetAlbum(
-                album);
+            if (_viewerModeActive)
+            {
+                _mainMusic.SetAlbum(album);
 
-            _savedMainState =
-                new MainMusicPlaybackState
+                _savedMainState = new MainMusicPlaybackState
                 {
                     Album = album,
                     TrackIndex = 0,
@@ -81,25 +75,20 @@ public class MusicPlaybackController
                     WasPlaying = true
                 };
 
-            FileLogger.Info(
-                "Основной источник изменён во время " +
-                "очереди зрителей. Новый источник " +
-                "будет запущен после окончания очереди.");
+                FileLogger.Info(
+                    "Основной источник изменён во время очереди зрителей. " +
+                    "Новый источник будет запущен после окончания очереди.");
 
-            return;
-        }
+                return;
+            }
 
-        if (_mainMusic.IsMainMusicActive)
-        {
-            await _mainMusic.StopAsync();
-        }
+            if (_mainMusic.IsMainMusicActive)
+                await _mainMusic.StopAsync();
 
-        _savedMainState =
-            null;
-
-        _mainMusic.SetAlbum(
-            album);
-    
+            _savedMainState = null;
+            _pendingNormalDonation = false;
+            _mainMusic.AutoAdvanceEnabled = true;
+            _mainMusic.SetAlbum(album);
         }
         finally
         {
@@ -113,17 +102,11 @@ public class MusicPlaybackController
 
         try
         {
-        if (_viewerModeActive)
-        {
-            FileLogger.Info(
-                "StartMainMusicAsync: " +
-                "активен режим зрительской очереди.");
+            if (_viewerModeActive)
+                return false;
 
-            return false;
-        }
-
-        return await _mainMusic.PlayAsync();
-    
+            _mainMusic.AutoAdvanceEnabled = true;
+            return await _mainMusic.PlayAsync();
         }
         finally
         {
@@ -137,8 +120,7 @@ public class MusicPlaybackController
 
         try
         {
-        await _mainMusic.PauseAsync();
-    
+            await _mainMusic.PauseAsync();
         }
         finally
         {
@@ -152,8 +134,7 @@ public class MusicPlaybackController
 
         try
         {
-        await _mainMusic.ResumeAsync();
-    
+            await _mainMusic.ResumeAsync();
         }
         finally
         {
@@ -161,56 +142,155 @@ public class MusicPlaybackController
         }
     }
 
-    public async Task AddViewerRequestAsync(
-        QueueItem item)
+    public async Task AddViewerRequestAsync(QueueItem item)
     {
         await _operationGate.WaitAsync().ConfigureAwait(false);
 
         try
         {
-        if (item == null)
-        {
-            throw new ArgumentNullException(
-                nameof(item));
+            ValidateQueueItem(item);
+
+            if (!_viewerModeActive)
+            {
+                _savedMainState =
+                    _mainMusic.CaptureState();
+
+                if (_mainMusic.IsMainMusicActive)
+                    await _mainMusic.StopAsync();
+
+                _mainMusic.AutoAdvanceEnabled = true;
+                _viewerModeActive = true;
+            }
+
+            _viewerMusic.AutoAdvanceEnabled = true;
+
+            if (!_viewerMusic.IsPlaying)
+                await _viewerMusic.StartNextAsync();
         }
-
-        if (item.Track == null)
+        finally
         {
-            throw new InvalidOperationException(
-                "Заявка зрителя не содержит трек.");
+            _operationGate.Release();
         }
+    }
 
-        if (!_viewerModeActive)
+    public async Task AddDonationRequestAsync(QueueItem item)
+    {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
         {
-            FileLogger.Info(
-                "Первая заявка зрителя. " +
-                "Переключение в режим очереди.");
+            ValidateQueueItem(item);
 
-            _savedMainState =
-                _mainMusic.CaptureState();
+            _queue.PromoteToFront(item.Id);
+
+            if (_viewerModeActive)
+            {
+                _viewerMusic.AutoAdvanceEnabled = true;
+
+                if (!_viewerMusic.IsPlaying)
+                    await _viewerMusic.StartNextAsync();
+
+                FileLogger.Info(
+                    $"Donation NORMAL: элемент #{item.Id} поставлен следующим в очереди зрителей.");
+
+                return;
+            }
 
             if (_mainMusic.IsMainMusicActive)
             {
-                await _mainMusic.StopAsync();
+                _pendingNormalDonation = true;
+                _mainMusic.AutoAdvanceEnabled = false;
+
+                FileLogger.Info(
+                    $"Donation NORMAL: #{item.Id} будет воспроизведён после текущего основного трека.");
+
+                return;
             }
 
-            _viewerModeActive =
-                true;
-        }
+            _viewerModeActive = true;
+            _viewerMusic.AutoAdvanceEnabled = true;
 
-        /*
-         * MusicRequestService уже добавил
-         * заявку в очередь.
-         *
-         * Здесь только запускаем очередь,
-         * если сейчас ничего не играет.
-         */
-
-        if (!_viewerMusic.IsPlaying)
-        {
             await _viewerMusic.StartNextAsync();
         }
-    
+        finally
+        {
+            _operationGate.Release();
+        }
+    }
+
+    public async Task PlaySuperPriorityDonationAsync(QueueItem item)
+    {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
+            ValidateQueueItem(item);
+
+            if (_priorityResumeMainState != null ||
+                _priorityResumeViewerItem != null)
+            {
+                throw new InvalidOperationException(
+                    "SUPER-PRIORITY воспроизведение уже выполняется.");
+            }
+
+            if (_viewerModeActive)
+            {
+                var currentViewerItem =
+                    _viewerMusic.CurrentItem;
+
+                if (currentViewerItem != null)
+                {
+                    currentViewerItem.ResumePosition =
+                        _viewerMusic.GetPosition();
+
+                    currentViewerItem.ResumePlayback =
+                        _viewerMusic.IsPlaying;
+
+                    _priorityResumeViewerItem =
+                        currentViewerItem;
+                }
+
+                await _viewerMusic.StopAsync();
+
+                if (_priorityResumeViewerItem != null)
+                {
+                    _queue.PromoteToFront(
+                        _priorityResumeViewerItem.Id);
+                }
+
+                _queue.PromoteToFront(item.Id);
+
+                _viewerMusic.AutoAdvanceEnabled = false;
+
+                if (!_viewerMusic.IsPlaying)
+                    await _viewerMusic.StartNextAsync();
+
+                FileLogger.Info(
+                    $"Donation SUPER-PRIORITY: #{item.Id} запущен поверх очереди зрителей.");
+
+                return;
+            }
+
+            if (_mainMusic.IsMainMusicActive)
+            {
+                _priorityResumeMainState =
+                    _mainMusic.CaptureState();
+
+                await _mainMusic.StopAsync();
+
+                _mainMusic.AutoAdvanceEnabled = true;
+            }
+
+            _viewerModeActive = true;
+
+            _queue.PromoteToFront(item.Id);
+
+            _viewerMusic.AutoAdvanceEnabled = false;
+
+            await _viewerMusic.StartNextAsync();
+
+            FileLogger.Info(
+                $"Donation SUPER-PRIORITY: #{item.Id} запущен немедленно.");
         }
         finally
         {
@@ -224,8 +304,7 @@ public class MusicPlaybackController
 
         try
         {
-        await _viewerMusic.PauseAsync();
-    
+            await _viewerMusic.PauseAsync();
         }
         finally
         {
@@ -239,8 +318,7 @@ public class MusicPlaybackController
 
         try
         {
-        await _viewerMusic.ResumeAsync();
-    
+            await _viewerMusic.ResumeAsync();
         }
         finally
         {
@@ -254,28 +332,16 @@ public class MusicPlaybackController
 
         try
         {
-        if (_viewerModeActive)
-        {
-            FileLogger.Info(
-                "NextAsync: активна очередь зрителей. " +
-                "Пропускаем текущий трек.");
+            if (_viewerModeActive)
+            {
+                await _viewerMusic.SkipAsync();
+                return;
+            }
 
-            await _viewerMusic.SkipAsync();
+            if (!HasMainMusic)
+                return;
 
-            return;
-        }
-
-        if (!HasMainMusic)
-        {
-            FileLogger.Info(
-                "NextAsync: основной источник " +
-                "не установлен.");
-
-            return;
-        }
-
-        await _mainMusic.NextAsync();
-    
+            await _mainMusic.NextAsync();
         }
         finally
         {
@@ -289,27 +355,10 @@ public class MusicPlaybackController
 
         try
         {
-        if (_viewerModeActive)
-        {
-            FileLogger.Info(
-                "PreviousAsync: активна очередь зрителей. " +
-                "Предыдущий трек для очереди " +
-                "не поддерживается.");
+            if (_viewerModeActive || !HasMainMusic)
+                return;
 
-            return;
-        }
-
-        if (!HasMainMusic)
-        {
-            FileLogger.Info(
-                "PreviousAsync: основной источник " +
-                "не установлен.");
-
-            return;
-        }
-
-        await _mainMusic.PreviousAsync();
-    
+            await _mainMusic.PreviousAsync();
         }
         finally
         {
@@ -323,18 +372,11 @@ public class MusicPlaybackController
 
         try
         {
-        if (!_viewerModeActive)
-        {
-            return;
-        }
+            if (!_viewerModeActive ||
+                _queue.Count > 0)
+                return;
 
-        if (_queue.Count > 0)
-        {
-            return;
-        }
-
-        await RestoreMainMusicAsync();
-    
+            await RestoreMainMusicAsync();
         }
         finally
         {
@@ -348,19 +390,17 @@ public class MusicPlaybackController
 
         try
         {
-        FileLogger.Info(
-            "MusicPlaybackController.StopAsync.");
+            await _viewerMusic.StopAsync();
+            await _mainMusic.StopAsync();
 
-        await _viewerMusic.StopAsync();
+            _viewerModeActive = false;
+            _pendingNormalDonation = false;
+            _savedMainState = null;
+            _priorityResumeMainState = null;
+            _priorityResumeViewerItem = null;
 
-        await _mainMusic.StopAsync();
-
-        _viewerModeActive =
-            false;
-
-        _savedMainState =
-            null;
-    
+            _viewerMusic.AutoAdvanceEnabled = true;
+            _mainMusic.AutoAdvanceEnabled = true;
         }
         finally
         {
@@ -368,24 +408,102 @@ public class MusicPlaybackController
         }
     }
 
-    private async void ViewerMusic_QueuePlaybackFinished(
+    private async void MainMusic_PlaybackFinished(
         object? sender,
         EventArgs e)
     {
-        if (!_viewerModeActive)
-        {
-            return;
-        }
-
         try
         {
-            await ResumeMainAfterViewerQueueAsync();
+            await _operationGate.WaitAsync().ConfigureAwait(false);
+
+            try
+            {
+                if (!_pendingNormalDonation ||
+                    _viewerModeActive ||
+                    _queue.Count == 0)
+                    return;
+
+                _pendingNormalDonation = false;
+                _mainMusic.AutoAdvanceEnabled = true;
+                _viewerModeActive = true;
+                _viewerMusic.AutoAdvanceEnabled = true;
+
+                FileLogger.Info(
+                    "Основной трек завершён. Запускаем ожидающий NORMAL donation order.");
+
+                await _viewerMusic.StartNextAsync();
+            }
+            finally
+            {
+                _operationGate.Release();
+            }
         }
         catch (Exception ex)
         {
             FileLogger.Error(
-                "Ошибка восстановления основной музыки " +
-                "после окончания очереди.",
+                "Ошибка запуска NORMAL donation после основного трека.",
+                ex);
+        }
+    }
+
+    private async void ViewerMusic_QueuePlaybackFinished(
+        object? sender,
+        EventArgs e)
+    {
+        try
+        {
+            await _operationGate.WaitAsync().ConfigureAwait(false);
+
+            try
+            {
+                if (_priorityResumeMainState != null)
+                {
+                    var state = _priorityResumeMainState;
+                    _priorityResumeMainState = null;
+
+                    _viewerModeActive = false;
+                    _viewerMusic.AutoAdvanceEnabled = true;
+                    _mainMusic.AutoAdvanceEnabled = true;
+
+                    await _mainMusic.RestoreStateAsync(state);
+
+                    FileLogger.Info(
+                        "SUPER-PRIORITY завершён. Основная музыка восстановлена.");
+                    return;
+                }
+
+                if (_priorityResumeViewerItem != null)
+                {
+                    var item = _priorityResumeViewerItem;
+                    _priorityResumeViewerItem = null;
+
+                    _queue.PromoteToFront(item.Id);
+
+                    _viewerMusic.AutoAdvanceEnabled = true;
+                    _viewerModeActive = true;
+
+                    await _viewerMusic.StartNextAsync();
+
+                    FileLogger.Info(
+                        "SUPER-PRIORITY завершён. Прерванный зрительский трек восстановлен.");
+                    return;
+                }
+
+                if (!_viewerModeActive ||
+                    _queue.Count > 0)
+                    return;
+
+                await RestoreMainMusicAsync();
+            }
+            finally
+            {
+                _operationGate.Release();
+            }
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Error(
+                "Ошибка обработки окончания очереди зрителей.",
                 ex);
         }
     }
@@ -393,37 +511,32 @@ public class MusicPlaybackController
     private async Task RestoreMainMusicAsync()
     {
         if (!_viewerModeActive)
-        {
             return;
-        }
 
-        FileLogger.Info(
-            "Очередь зрителей закончилась. " +
-            "Возвращаем основную музыку.");
+        _viewerModeActive = false;
 
-        _viewerModeActive =
-            false;
-
-        var state =
-            _savedMainState;
-
-        _savedMainState =
-            null;
+        var state = _savedMainState;
+        _savedMainState = null;
 
         if (state == null)
-        {
-            FileLogger.Info(
-                "Сохранённого состояния основной музыки нет.");
-
             return;
-        }
+
+        _mainMusic.AutoAdvanceEnabled = true;
 
         var restored =
-            await _mainMusic.RestoreStateAsync(
-                state);
+            await _mainMusic.RestoreStateAsync(state);
 
         FileLogger.Info(
-            $"Результат восстановления основной музыки: " +
-            $"{restored}");
+            $"Результат восстановления основной музыки: {restored}");
+    }
+
+    private static void ValidateQueueItem(QueueItem item)
+    {
+        if (item == null)
+            throw new ArgumentNullException(nameof(item));
+
+        if (item.Track == null)
+            throw new InvalidOperationException(
+                "Музыкальная заявка не содержит трек.");
     }
 }
