@@ -33,6 +33,8 @@ public class TwitchService : ITwitchService
 
     public TwitchUser? CurrentUser => _currentUser;
 
+    public bool IsConnected => _isConnected;
+
     public event EventHandler<bool>? ConnectionStateChanged;
 
     public event EventHandler? AuthenticationRequired;
