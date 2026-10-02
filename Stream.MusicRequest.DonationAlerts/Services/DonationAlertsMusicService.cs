@@ -47,10 +47,15 @@ public sealed class DonationAlertsMusicService
 
     public event EventHandler<bool>? ConnectionStateChanged;
 
-    public async Task LoadSettingsAsync()
+    public void LoadSettings()
     {
         Settings = _settingsStorage.Load();
-        await Task.CompletedTask;
+    }
+
+    public Task LoadSettingsAsync()
+    {
+        LoadSettings();
+        return Task.CompletedTask;
     }
 
     public async Task<bool> RestoreAuthorizationAsync(
