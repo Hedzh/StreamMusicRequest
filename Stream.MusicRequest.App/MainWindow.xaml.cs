@@ -666,11 +666,20 @@ public partial class MainWindow : Window
                 track.Title;
         }
 
+        var requestSource =
+            string.IsNullOrWhiteSpace(track.RequestSource)
+                ? "Запрос"
+                : track.RequestSource;
+
+        var requestMode =
+            string.IsNullOrWhiteSpace(track.RequestMode)
+                ? string.Empty
+                : $" • {track.RequestMode}";
+
         CurrentAlbumText.Text =
-            string.IsNullOrWhiteSpace(
-                track.Album)
-                ? "Без альбома"
-                : track.Album;
+            $"{(string.IsNullOrWhiteSpace(track.Album) ? "Без альбома" : track.Album)} • " +
+            $"{requestSource}{requestMode} • Заказал: " +
+            $"{(string.IsNullOrWhiteSpace(track.RequestedBy) ? "неизвестно" : track.RequestedBy)}";
         var duration =
             _musicPlayer.GetDuration();
 
@@ -1812,7 +1821,7 @@ public partial class MainWindow : Window
                 new TextBlock
                 {
                     Text =
-                        $"Зритель: {item.Request.ViewerName}",
+                        $"Заказал: {(string.IsNullOrWhiteSpace(item.Request.ViewerName) ? "неизвестно" : item.Request.ViewerName)}",
 
                     FontSize =
                         11,
@@ -1831,6 +1840,36 @@ public partial class MainWindow : Window
 
             infoPanel.Children.Add(
                 viewerText);
+
+            var sourceText =
+                new TextBlock
+                {
+                    Text =
+                        $"Источник: {item.Track.RequestSource}" +
+                        (string.IsNullOrWhiteSpace(item.Track.RequestMode)
+                            ? string.Empty
+                            : $" • {item.Track.RequestMode}"),
+
+                    FontSize =
+                        11,
+
+                    Foreground =
+                        (Brush)FindResource(
+                            item.Track.RequestMode ==
+                            "SUPER-PRIORITY"
+                                ? "WarningBrush"
+                                : "TextSecondary"),
+
+                    Margin =
+                        new Thickness(
+                            0,
+                            3,
+                            0,
+                            0)
+                };
+
+            infoPanel.Children.Add(
+                sourceText);
 
             Grid.SetColumn(
                 infoPanel,
