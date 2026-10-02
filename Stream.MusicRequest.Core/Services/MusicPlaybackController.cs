@@ -197,15 +197,32 @@ public class MusicPlaybackController
                 return;
             }
 
-            if (_mainMusic.IsMainMusicActive)
+            if (_mainMusic.IsMainMusicActive &&
+                _queue.Count > 1)
             {
                 _pendingNormalDonation = true;
                 _mainMusic.AutoAdvanceEnabled = false;
 
                 FileLogger.Info(
-                    $"Donation NORMAL: #{item.Id} будет воспроизведён после текущего основного трека.");
+                    $"Donation NORMAL: #{item.Id} будет воспроизведён после текущего основного трека, " +
+                    "так как в очереди уже есть зрительские заказы.");
 
                 return;
+            }
+
+            // Если это единственный элемент в очереди, это первый заказ.
+            // В таком случае NORMAL должен прервать основную музыку
+            // так же, как обычная зрительская заявка.
+            if (_mainMusic.IsMainMusicActive)
+            {
+                _savedMainState =
+                    _mainMusic.CaptureState();
+
+                await _mainMusic.StopAsync();
+
+                FileLogger.Info(
+                    $"Donation NORMAL: #{item.Id} запущен немедленно. " +
+                    "Очередь зрителей до этого была пустой.");
             }
 
             _viewerModeActive = true;
