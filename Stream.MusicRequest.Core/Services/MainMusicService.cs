@@ -17,7 +17,7 @@ public class MainMusicService
 
     public bool AutoAdvanceEnabled { get; set; } = true;
 
-    public event EventHandler? PlaybackFinished;
+    public event Func<Task>? PlaybackFinishedAsync;
 
     private readonly Random _shuffleRandom = new();
     private readonly List<int> _shuffleOrder = new();
@@ -548,6 +548,25 @@ public class MainMusicService
         return await playableSource.GetPlaybackUrlAsync(track);
     }
 
+    private async Task RaisePlaybackFinishedAsync()
+    {
+        var handlers =
+            PlaybackFinishedAsync?.GetInvocationList();
+
+        if (handlers == null)
+        {
+            return;
+        }
+
+        foreach (var handler in handlers)
+        {
+            if (handler is Func<Task> callback)
+            {
+                await callback();
+            }
+        }
+    }
+
     private async void Player_PlaybackFinished(
         object? sender,
         EventArgs e)
@@ -572,9 +591,7 @@ public class MainMusicService
 
             _isMainMusicActive = false;
 
-            PlaybackFinished?.Invoke(
-                this,
-                EventArgs.Empty);
+            await RaisePlaybackFinishedAsync();
 
             if (!AutoAdvanceEnabled)
             {
