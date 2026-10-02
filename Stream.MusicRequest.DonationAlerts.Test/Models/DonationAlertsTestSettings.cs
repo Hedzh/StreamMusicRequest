@@ -12,4 +12,15 @@ public sealed class DonationAlertsTestSettings
         "oauth-user-show",
         "oauth-donation-subscribe"
     };
+
+    public Dictionary<string, DonationThresholdSettings> DonationThresholds { get; set; } =
+        new(StringComparer.OrdinalIgnoreCase);
+}
+
+
+public sealed class DonationThresholdSettings
+{
+    public decimal Normal { get; set; }
+
+    public decimal SuperPriority { get; set; }
 }
