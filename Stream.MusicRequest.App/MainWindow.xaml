@@ -1005,7 +1005,7 @@
                                                    Foreground="{StaticResource TextMuted}"
                                                    HorizontalAlignment="Right"/>
 
-                                        <TextBlock Text="v1.2.0"
+                                        <TextBlock Text="v1.2.1"
                                                    FontSize="11"
                                                    Foreground="{StaticResource TextSecondary}"
                                                    HorizontalAlignment="Right"
