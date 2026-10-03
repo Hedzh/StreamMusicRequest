@@ -41,7 +41,7 @@
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
@@ -59,19 +59,7 @@
                        TextWrapping="Wrap"
                        Margin="0,8,0,14"/>
 
-            <Border Grid.Row="2"
-                    HorizontalAlignment="Center"
-                    VerticalAlignment="Center"
-                    Background="White"
-                    Padding="10"
-                    CornerRadius="8">
-                <Image Width="260"
-                       Height="260"
-                       Stretch="Uniform"
-                       Source="{Binding QrCodeImage}"/>
-            </Border>
-
-            <TextBlock Grid.Row="3"
+            <TextBlock Grid.Row="2"
                        HorizontalAlignment="Center"
                        Margin="0,14,0,8"
                        FontSize="13">
@@ -83,7 +71,7 @@
                 </Hyperlink>
             </TextBlock>
 
-            <StackPanel Grid.Row="4"
+            <StackPanel Grid.Row="3"
                         Orientation="Horizontal"
                         HorizontalAlignment="Center">
                 <Button Content="Открыть в браузере"
