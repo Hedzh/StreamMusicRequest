@@ -7,6 +7,7 @@ All notable changes to Stream Music Request are documented here.
 ### Added
 - Added the SMR application icon to the main window and all custom dialog windows.
 - Added the SMR icon as the application executable icon.
+- Unified message boxes and dialog presentation with the application's dark visual style.
 
 ## [1.2.1] - 2026-10-03
 
