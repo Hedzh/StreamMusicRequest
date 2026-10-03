@@ -8,6 +8,7 @@
         MinWidth="1050"
         MinHeight="680"
         WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
         Background="#15181E"
         Foreground="#F2F4F7">
 
