@@ -11,7 +11,6 @@ public partial class SupportAuthorWindow : Window
     public SupportAuthorWindow()
     {
         InitializeComponent();
-        BuildQrCode();
     }
 
     private void SupportLink_RequestNavigate(object sender, RequestNavigateEventArgs e)
