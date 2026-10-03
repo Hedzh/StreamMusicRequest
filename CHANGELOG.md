@@ -2,6 +2,13 @@
 
 All notable changes to Stream Music Request are documented here.
 
+## [1.2.1] - 2026-10-03
+
+### Fixed
+- Donation Alerts logout now immediately updates the connection status in Settings and the main window.
+- Donation Alerts authorization state changes are propagated immediately when the saved authorization is cleared.
+- Donation Alerts connection status is now kept synchronized after authorization and logout operations.
+
 ## [1.2.0] - 2026-10-02
 
 ### Added
