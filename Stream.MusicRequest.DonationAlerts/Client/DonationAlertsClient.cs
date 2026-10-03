@@ -21,6 +21,7 @@ public sealed class DonationAlertsClient
     private readonly DonationAlertsTokenStorage _tokenStorage;
     private ClientWebSocket? _socket;
     private CancellationTokenSource? _connectionCts;
+    private bool _isConnected;
     private readonly HashSet<long> _processedDonationIds = new();
 
     public DonationAlertsClient(HttpClient httpClient, DonationAlertsTokenStorage tokenStorage)
@@ -32,7 +33,7 @@ public sealed class DonationAlertsClient
     public event EventHandler<DonationEvent>? DonationReceived;
     public event EventHandler<bool>? ConnectionStateChanged;
     public DonationAlertsUser? CurrentUser { get; private set; }
-    public bool IsConnected => _socket?.State == WebSocketState.Open;
+    public bool IsConnected => _isConnected;
 
     public async Task<DonationAlertsUser?> LoadSavedAuthorizationAsync(CancellationToken cancellationToken = default)
     {
@@ -265,12 +266,11 @@ public sealed class DonationAlertsClient
     private void SetConnectionState(
         bool isConnected)
     {
-        if (IsConnected == isConnected)
+        if (_isConnected == isConnected)
             return;
 
-        ConnectionStateChanged?.Invoke(
-            this,
-            isConnected);
+        _isConnected = isConnected;
+        ConnectionStateChanged?.Invoke(this, isConnected);
     }
 
     private void DisposeSocket()
