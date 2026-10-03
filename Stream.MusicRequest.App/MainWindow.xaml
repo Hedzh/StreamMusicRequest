@@ -985,10 +985,11 @@
 
                                 <!-- SUPPORT AUTHOR -->
 
-                        <Button Grid.Column="1"
+                        <Button Grid.Column="0"
                                 Content="Поддержать автора"
                                 Style="{StaticResource SecondaryButton}"
                                 Padding="18,0"
+                                HorizontalAlignment="Left"
                                 VerticalAlignment="Center"
                                 ToolTip="Поддержать автора"
                                 Click="SupportAuthorButton_Click"/>
