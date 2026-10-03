@@ -183,7 +183,12 @@ public class TwitchService : ITwitchService
             }
         }
         catch (OperationCanceledException) { }
-        catch { }
+        catch (Exception ex)
+        {
+            FileLogger.Error(
+                "Twitch EventSub: ошибка мониторинга соединения.",
+                ex);
+        }
     }
 
     private void EventSubClient_Disconnected(object? sender, EventArgs e)
@@ -215,16 +220,9 @@ public class TwitchService : ITwitchService
 
                 try
                 {
-                    using var attemptCancellation =
-                        CancellationTokenSource.CreateLinkedTokenSource(
-                            cancellationToken);
-
-                    attemptCancellation.CancelAfter(
-                        TimeSpan.FromSeconds(20));
-
                     var accessToken =
                         await _authService.GetValidAccessTokenAsync(
-                            attemptCancellation.Token);
+                            cancellationToken);
 
                     if (string.IsNullOrWhiteSpace(accessToken))
                     {
@@ -240,7 +238,7 @@ public class TwitchService : ITwitchService
                     }
 
                     await ConnectAsync(
-                        attemptCancellation.Token);
+                        cancellationToken);
 
                     if (_isConnected)
                     {
