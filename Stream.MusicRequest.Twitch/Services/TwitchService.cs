@@ -177,7 +177,7 @@ public class TwitchService : ITwitchService
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                await Task.Delay(TimeSpan.FromMinutes(60), cancellationToken);
+                await Task.Delay(TimeSpan.FromMinutes(5), cancellationToken);
                 if (cancellationToken.IsCancellationRequested) return;
                 await RecoverConnectionAsync(cancellationToken);
             }
