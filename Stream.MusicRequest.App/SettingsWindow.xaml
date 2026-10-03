@@ -1524,67 +1524,34 @@
                         <Border Style="{StaticResource SettingsCard}">
                             <StackPanel>
                                 <TextBlock Text="1.2.1 — 03.10.2026"
-                                           FontSize="20"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource AccentBrush}"/>
-                                <TextBlock Text="Текущая версия"
-                                           FontSize="12"
-                                           Foreground="{StaticResource TextMuted}"
-                                           Margin="0,4,0,16"/>
+                                   FontSize="20"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource AccentBrush}"/>
+                        <TextBlock Text="Текущая версия — исправления и стабилизация"
+                                   FontSize="12"
+                                   Foreground="{StaticResource TextMuted}"
+                                   Margin="0,4,0,16"/>
 
-                                <TextBlock Text="Добавлено"
-                                           Style="{StaticResource SectionTitle}"/>
-                                <TextBlock Text="• Индикатор состояния интернет-соединения в главном окне с автоматической проверкой при запуске и периодическим обновлением."
-                                           Style="{StaticResource FieldDescription}"/>
-                                 <TextBlock Text="• Автоматическое восстановление соединения Donation Alerts после разрыва подключения."
-                                           Style="{StaticResource FieldDescription}"/>
-                                 <TextBlock Text="• Полноценная интеграция Donation Alerts для музыкальных заказов."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Восстановление авторизации Donation Alerts при запуске приложения."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Обычный и SUPER-PRIORITY режимы донатов с настраиваемыми порогами RUB, EUR и USD."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Синхронизация состояния Donation Alerts между главным окном и настройками."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Отображение имени текущего Twitch-пользователя в статусе главного окна."
-                                           Style="{StaticResource FieldDescription}"/>
+                        <TextBlock Text="Исправлено"
+                                   Style="{StaticResource SectionTitle}"/>
+                        <TextBlock Text="• Исправлено мгновенное обновление статуса Donation Alerts после выхода из аккаунта."
+                                   Style="{StaticResource FieldDescription}"/>
+                        <TextBlock Text="• Состояние авторизации Donation Alerts теперь сразу синхронизируется между настройками и главным окном."
+                                   Style="{StaticResource FieldDescription}"/>
+                        <TextBlock Text="• Исправлена обработка потери авторизации Twitch во время работы приложения."
+                                   Style="{StaticResource FieldDescription}"/>
+                        <TextBlock Text="• Добавлена обработка отзыва Twitch EventSub-авторизации."
+                                   Style="{StaticResource FieldDescription}"/>
+                        <TextBlock Text="• Исправлена логика восстановления Twitch-соединения, чтобы временный таймаут подключения не завершал уже установленную сессию."
+                                   Style="{StaticResource FieldDescription}"/>
+                        <TextBlock Text="• Улучшена диагностика ошибок восстановления Twitch-соединения."
+                                   Style="{StaticResource FieldDescription}"/>
 
-                                <TextBlock Text="Улучшено"
-                                           Style="{StaticResource SectionTitle}"
-                                           Margin="0,20,0,12"/>
-                                <TextBlock Text="• Несколько SUPER-PRIORITY донатов теперь воспроизводятся последовательно, не отклоняясь из-за уже выполняемого приоритетного воспроизведения."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Ошибка запуска отдельного трека больше не останавливает очередь: приложение пропускает проблемный трек и пытается запустить следующий."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Состояние подключения Twitch и Donation Alerts поддерживается актуальным после закрытия окна настроек."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Убран устаревший текстовый блок «Пропустить трек» из главного окна; сама награда и её настройки сохранены."
-                                           Style="{StaticResource FieldDescription}"/>
-
-                                <TextBlock Text="Исправлено"
-                                           Style="{StaticResource SectionTitle}"
-                                           Margin="0,20,0,12"/>
-                                <TextBlock Text="• Исчезновение имени Twitch-пользователя из статуса главного окна после закрытия настроек."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Ошибки обработки нескольких SUPER-PRIORITY донатов подряд."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Остановка очереди после ошибки Media Foundation при запуске следующего трека."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Состояние Donation Alerts теперь корректно восстанавливается и отображается после запуска приложения."
-                                           Style="{StaticResource FieldDescription}"/>
-
-                                <TextBlock Text="Примечания"
-                                           Style="{StaticResource SectionTitle}"
-                                           Margin="0,20,0,12"/>
-                                <TextBlock Text="• Лог приложения ведётся по дням: для каждого календарного дня создаётся отдельный файл."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Временные тестовые проекты и файлы разработки пока сохраняются до финальной очистки перед релизом."
-                                           Style="{StaticResource FieldDescription}"/>
-                            
-                            <TextBlock Text="• Исправлено мгновенное обновление статуса Donation Alerts после выхода из аккаунта." TextWrapping="Wrap" Margin="0,4,0,0"/>
-                            <TextBlock Text="• Исправлена синхронизация состояния авторизации Donation Alerts между настройками и главным окном." TextWrapping="Wrap" Margin="0,4,0,0"/>
-</StackPanel>
-                        </Border>
+                        <TextBlock Text="Примечания"
+                                   Style="{StaticResource SectionTitle}"
+                                   Margin="0,20,0,12"/>
+                        <TextBlock Text="• Это техническое обновление перед дальнейшим тестированием и подготовкой публичного релиза."
+                                   Style="{StaticResource FieldDescription}"/>
 
                         <Border Style="{StaticResource SettingsCard}">
                             <StackPanel>
