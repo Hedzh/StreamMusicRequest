@@ -32,6 +32,7 @@ public sealed class DonationAlertsClient
 
     public event EventHandler<DonationEvent>? DonationReceived;
     public event EventHandler<bool>? ConnectionStateChanged;
+    public event EventHandler? AuthorizationStateChanged;
     public DonationAlertsUser? CurrentUser { get; private set; }
     public bool IsConnected => _isConnected;
 
@@ -51,6 +52,7 @@ public sealed class DonationAlertsClient
         {
             await _tokenStorage.ClearAsync();
             CurrentUser = null;
+            AuthorizationStateChanged?.Invoke(this, EventArgs.Empty);
             return null;
         }
     }
@@ -320,6 +322,7 @@ public sealed class DonationAlertsClient
         await DisconnectAsync();
         await _tokenStorage.ClearAsync();
         CurrentUser = null;
+        AuthorizationStateChanged?.Invoke(this, EventArgs.Empty);
     }
 
     private static string BuildAuthorizationUrl(string clientId, string redirectUri, IEnumerable<string> scopes)
