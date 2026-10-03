@@ -644,7 +644,7 @@
                                 </StackPanel>
 
                                 <TextBlock Grid.Column="1"
-                                           Text="1.2.2"
+                                           Text="1.2.3"
                                            FontSize="14"
                                            FontWeight="SemiBold"
                                            Foreground="{StaticResource AccentBrush}"
@@ -1522,6 +1522,29 @@
                         <TextBlock Text="История реализованных функций, исправлений и изменений Stream Music Request."
                                    Style="{StaticResource PageDescription}"
                                    Margin="0,0,0,20"/>
+
+                        <Border Style="{StaticResource SettingsCard}">
+                            <StackPanel>
+                                <TextBlock Text="1.2.3 — 03.10.2026"
+                                           FontSize="20"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource AccentBrush}"/>
+                                <TextBlock Text="Громкость и синхронизация настроек"
+                                           FontSize="12"
+                                           Foreground="{StaticResource TextMuted}"
+                                           Margin="0,4,0,16"/>
+                                <TextBlock Text="Исправлено"
+                                           Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="• Снижена субъективная громкость локального воспроизведения: шкала главного окна теперь использует более мягкую кривую."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Изменение локальной громкости не влияет на аудиопоток OBS."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Открытие окна настроек больше не сбрасывает текущую громкость главного окна к сохранённому значению."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Сохранённая громкость в настройках по-прежнему используется как начальная громкость при запуске приложения."
+                                           Style="{StaticResource FieldDescription}"/>
+                            </StackPanel>
+                        </Border>
 
                         <Border Style="{StaticResource SettingsCard}">
                             <StackPanel>

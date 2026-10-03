@@ -31,6 +31,7 @@ public partial class SettingsWindow : Window
     private ObsSettings _obsSettings = new();
 
     private PlaybackSettings _playbackSettings = new();
+    private bool _isLoadingPlaybackSettings;
 
     public SettingsWindow(
         AppServices appServices,
@@ -650,33 +651,43 @@ public partial class SettingsWindow : Window
 
     private void LoadPlaybackSettingsUi()
     {
-        _playbackSettings =
-            _playbackSettingsStorage.Load();
+        _isLoadingPlaybackSettings = true;
 
-        PlaybackSettingsVolumeSlider.Value =
-            _playbackSettings.Volume * 100.0;
+        try
+        {
+            _playbackSettings =
+                _playbackSettingsStorage.Load();
 
-        PlaybackSettingsVolumeText.Text =
-            $"{PlaybackSettingsVolumeSlider.Value:0}%";
+            PlaybackSettingsVolumeSlider.Value =
+                _playbackSettings.Volume * 100.0;
 
-        DefaultPlaylistUrlTextBox.Text =
-            _playbackSettings.DefaultPlaylistUrl;
+            PlaybackSettingsVolumeText.Text =
+                $"{PlaybackSettingsVolumeSlider.Value:0}%";
 
-        LoadDefaultPlaylistOnStartupCheckBox.IsChecked =
-            _playbackSettings.LoadDefaultPlaylistOnStartup;
+            DefaultPlaylistUrlTextBox.Text =
+                _playbackSettings.DefaultPlaylistUrl;
 
-        DefaultPlaylistStatusText.Text =
-            string.IsNullOrWhiteSpace(
-                _playbackSettings.DefaultPlaylistUrl)
-                ? string.Empty
-                : "Сохранённая ссылка загружена из настроек.";
+            LoadDefaultPlaylistOnStartupCheckBox.IsChecked =
+                _playbackSettings.LoadDefaultPlaylistOnStartup;
+
+            DefaultPlaylistStatusText.Text =
+                string.IsNullOrWhiteSpace(
+                    _playbackSettings.DefaultPlaylistUrl)
+                    ? string.Empty
+                    : "Сохранённая ссылка загружена из настроек.";
+        }
+        finally
+        {
+            _isLoadingPlaybackSettings = false;
+        }
     }
 
     private void PlaybackSettingsVolumeSlider_ValueChanged(
         object sender,
         RoutedPropertyChangedEventArgs<double> e)
     {
-        if (!_isInitialized)
+        if (!_isInitialized ||
+            _isLoadingPlaybackSettings)
         {
             return;
         }
