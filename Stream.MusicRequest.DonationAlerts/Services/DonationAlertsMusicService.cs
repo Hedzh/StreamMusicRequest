@@ -36,6 +36,7 @@ public sealed class DonationAlertsMusicService
 
         _client.DonationReceived += Client_DonationReceived;
         _client.ConnectionStateChanged += Client_ConnectionStateChanged;
+        _client.AuthorizationStateChanged += Client_AuthorizationStateChanged;
     }
 
     public DonationAlertsSettings Settings { get; private set; } = new();
@@ -208,6 +209,11 @@ public sealed class DonationAlertsMusicService
                 "Donation Alerts: ошибка обработки доната.",
                 ex);
         }
+    }
+
+    private void Client_AuthorizationStateChanged(object? sender, EventArgs e)
+    {
+        ConnectionStateChanged?.Invoke(this, _client.IsConnected);
     }
 
     private void Client_ConnectionStateChanged(
