@@ -178,7 +178,40 @@ public class TwitchService : ITwitchService
             while (!cancellationToken.IsCancellationRequested)
             {
                 await Task.Delay(TimeSpan.FromMinutes(5), cancellationToken);
-                if (cancellationToken.IsCancellationRequested) return;
+                if (cancellationToken.IsCancellationRequested)
+                    return;
+
+                if (_isConnected)
+                {
+                    var accessToken =
+                        await _authService.GetValidAccessTokenAsync(
+                            cancellationToken);
+
+                    if (string.IsNullOrWhiteSpace(accessToken))
+                    {
+                        FileLogger.Error(
+                            "Twitch EventSub: сохранённая OAuth-сессия больше не действительна.");
+
+                        SetConnectionState(false);
+
+                        try
+                        {
+                            await _eventSubClient.DisconnectAsync();
+                        }
+                        catch
+                        {
+                        }
+
+                        AuthenticationRequired?.Invoke(
+                            this,
+                            EventArgs.Empty);
+
+                        return;
+                    }
+
+                    continue;
+                }
+
                 await RecoverConnectionAsync(cancellationToken);
             }
         }
