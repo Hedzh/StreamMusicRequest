@@ -1555,6 +1555,76 @@
 
                         <Border Style="{StaticResource SettingsCard}">
                             <StackPanel>
+                                <TextBlock Text="1.2.0 — 02.10.2026"
+                                           FontSize="20"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource AccentBrush}"/>
+                                <TextBlock Text="Интеграция Donation Alerts и стабилизация"
+                                           FontSize="12"
+                                           Foreground="{StaticResource TextMuted}"
+                                           Margin="0,4,0,16"/>
+                                <TextBlock Text="Добавлено"
+                                           Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="• Интеграция Donation Alerts для музыкальных заказов."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Авторизация и восстановление авторизации Donation Alerts при запуске."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Обычный и SUPER-PRIORITY режимы донатов с настраиваемыми порогами."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Автоматическое восстановление соединения Donation Alerts после разрыва WebSocket."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Синхронизация состояния Twitch и Donation Alerts между настройками и главным окном."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="Исправлено"
+                                           Style="{StaticResource SectionTitle}"
+                                           Margin="0,20,0,12"/>
+                                <TextBlock Text="• Ошибки обработки нескольких SUPER-PRIORITY донатов подряд."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Остановка очереди после ошибки запуска отдельного трека."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Проблемы обновления состояния подключений после закрытия настроек."
+                                           Style="{StaticResource FieldDescription}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource SettingsCard}">
+                            <StackPanel>
+                                <TextBlock Text="1.1.0 — 26.09.2026"
+                                           FontSize="20"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource AccentBrush}"/>
+                                <TextBlock Text="Стабилизация Twitch и OBS"
+                                           FontSize="12"
+                                           Foreground="{StaticResource TextMuted}"
+                                           Margin="0,4,0,16"/>
+                                <TextBlock Text="Добавлено"
+                                           Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="• OBS-интеграция с локальным HTTP-виджетом и аудиопотоком."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Сохранение настроек воспроизведения и громкости."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Настройка плейлиста Yandex Music по умолчанию."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Проверка настроек воспроизведения и явное сохранение."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Автоматическое восстановление Twitch-соединения после временных разрывов."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Уведомление о невозможности восстановить сохранённую Twitch OAuth-сессию."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="Исправлено"
+                                           Style="{StaticResource SectionTitle}"
+                                           Margin="0,20,0,12"/>
+                                <TextBlock Text="• Восстановление Twitch EventSub после длительного простоя."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Первый заказ музыки Twitch после запуска приложения."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Устаревшие события завершения воспроизведения при быстрой смене треков."
+                                           Style="{StaticResource FieldDescription}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource SettingsCard}">
+                            <StackPanel>
                                 <TextBlock Text="1.0.0 — базовая версия"
                                            FontSize="20"
                                            FontWeight="SemiBold"
