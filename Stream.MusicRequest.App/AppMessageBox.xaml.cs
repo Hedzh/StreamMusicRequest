@@ -32,7 +32,7 @@ public partial class AppMessageBox : Window
     }
 
     public static MessageBoxResult Show(
-        Window owner,
+        Window? owner,
         string message,
         string title,
         MessageBoxButton button,
