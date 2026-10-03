@@ -13,6 +13,7 @@ All notable changes to Stream Music Request are documented here.
 - Fixed AppMessageBox resource resolution so error notifications no longer crash the application when the dialog is displayed.
 - Fixed custom dialog positioning so notifications open relative to the active application window and remain on the same monitor as the application.
 - Fixed the nullable owner warning in AppMessageBox.
+- Settings window no longer creates a separate taskbar button while remaining a separate modal window.
 
 ## [1.2.1] - 2026-10-03
 
