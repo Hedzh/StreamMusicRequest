@@ -255,6 +255,14 @@ public class TwitchEventSubClient
 
                 return;
             }
+
+            if (messageType ==
+                "revocation")
+            {
+                ProcessRevocation();
+
+                return;
+            }
         }
         catch
         {
@@ -361,6 +369,50 @@ public class TwitchEventSubClient
         RewardRedemptionReceived?.Invoke(
             this,
             redemption);
+    }
+
+    private void ProcessRevocation()
+    {
+        _ = CloseForRevocationAsync();
+    }
+
+    private async Task CloseForRevocationAsync()
+    {
+        _intentionalDisconnect = true;
+
+        var webSocket = _webSocket;
+
+        if (webSocket == null)
+        {
+            _intentionalDisconnect = false;
+            Disconnected?.Invoke(this, EventArgs.Empty);
+            return;
+        }
+
+        try
+        {
+            if (webSocket.State == WebSocketState.Open)
+            {
+                await webSocket.CloseAsync(
+                    WebSocketCloseStatus.NormalClosure,
+                    "Authorization revoked",
+                    CancellationToken.None);
+            }
+        }
+        catch
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(_webSocket, webSocket))
+            {
+                _webSocket = null;
+            }
+
+            webSocket.Dispose();
+            _intentionalDisconnect = false;
+            Disconnected?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     private void ProcessReconnect(
