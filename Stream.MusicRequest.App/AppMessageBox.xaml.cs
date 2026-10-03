@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Linq;
 using System.Windows.Media;
 
 namespace Stream.MusicRequest.App;
@@ -28,7 +29,22 @@ public partial class AppMessageBox : Window
         MessageBoxButton button,
         MessageBoxImage image)
     {
-        return Show(null, message, title, button, image);
+        var owner =
+            Application.Current?
+                .Windows
+                .OfType<Window>()
+                .FirstOrDefault(window => window.IsActive);
+
+        if (owner is null)
+        {
+            owner =
+                Application.Current?
+                    .Windows
+                    .OfType<Window>()
+                    .FirstOrDefault(window => window.IsVisible);
+        }
+
+        return Show(owner, message, title, button, image);
     }
 
     public static MessageBoxResult Show(

@@ -9,6 +9,11 @@ All notable changes to Stream Music Request are documented here.
 - Added the SMR icon as the application executable icon.
 - Unified message boxes and dialog presentation with the application's dark visual style.
 
+### Fixed
+- Fixed AppMessageBox resource resolution so error notifications no longer crash the application when the dialog is displayed.
+- Fixed custom dialog positioning so notifications open relative to the active application window and remain on the same monitor as the application.
+- Fixed the nullable owner warning in AppMessageBox.
+
 ## [1.2.1] - 2026-10-03
 
 ### Fixed
