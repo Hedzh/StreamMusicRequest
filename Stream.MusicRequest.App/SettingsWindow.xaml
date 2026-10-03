@@ -1538,6 +1538,8 @@
                                            Style="{StaticResource FieldDescription}"/>
                                 <TextBlock Text="• Иконка также используется как иконка исполняемого файла приложения."
                                            Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Диалоговые и информационные окна приведены к единому визуальному стилю приложения."
+                                           Style="{StaticResource FieldDescription}"/>
                             </StackPanel>
                         </Border>
 
