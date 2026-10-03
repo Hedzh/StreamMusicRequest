@@ -642,7 +642,7 @@
                                 </StackPanel>
 
                                 <TextBlock Grid.Column="1"
-                                           Text="1.2.0"
+                                           Text="1.2.1"
                                            FontSize="14"
                                            FontWeight="SemiBold"
                                            Foreground="{StaticResource AccentBrush}"
@@ -1523,7 +1523,7 @@
 
                         <Border Style="{StaticResource SettingsCard}">
                             <StackPanel>
-                                <TextBlock Text="1.2.0 — 02.10.2026"
+                                <TextBlock Text="1.2.1 — 03.10.2026"
                                            FontSize="20"
                                            FontWeight="SemiBold"
                                            Foreground="{StaticResource AccentBrush}"/>
@@ -1580,7 +1580,10 @@
                                            Style="{StaticResource FieldDescription}"/>
                                 <TextBlock Text="• Временные тестовые проекты и файлы разработки пока сохраняются до финальной очистки перед релизом."
                                            Style="{StaticResource FieldDescription}"/>
-                            </StackPanel>
+                            
+                            <TextBlock Text="• Исправлено мгновенное обновление статуса Donation Alerts после выхода из аккаунта." TextWrapping="Wrap" Margin="0,4,0,0"/>
+                            <TextBlock Text="• Исправлена синхронизация состояния авторизации Donation Alerts между настройками и главным окном." TextWrapping="Wrap" Margin="0,4,0,0"/>
+</StackPanel>
                         </Border>
 
                         <Border Style="{StaticResource SettingsCard}">
