@@ -160,7 +160,7 @@ public class NAudioMusicPlayer :
                         Output_PlaybackStopped;
 
                     output.Init(streamingProvider);
-                    output.Volume = _volume;
+                    output.Volume = ToOutputVolume(_volume);
 
                     _audioReader = reader;
                     _resampler = resampler;
@@ -380,11 +380,26 @@ public class NAudioMusicPlayer :
 
         if (_outputDevice != null)
         {
-            _outputDevice.Volume = _volume;
+            _outputDevice.Volume =
+                ToOutputVolume(_volume);
         }
 
         FileLogger.Info(
-            $"Громкость установлена: {_volume:0.00}");
+            $"Громкость установлена: {_volume:0.00}, " +
+            $"локальная громкость WaveOut: {ToOutputVolume(_volume):0.00}");
+    }
+
+    private static float ToOutputVolume(
+        float userVolume)
+    {
+        var clampedVolume =
+            Math.Clamp(userVolume, 0.0f, 1.0f);
+
+        // The UI value is intentionally mapped to a softer
+        // curve for local playback only. The OBS stream is
+        // produced before WaveOut volume is applied, so OBS
+        // remains at its original level.
+        return MathF.Pow(clampedVolume, 2.0f);
     }
 
     public Track? GetCurrentTrack() => _currentTrack;

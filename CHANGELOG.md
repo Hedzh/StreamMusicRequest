@@ -2,6 +2,14 @@
 
 All notable changes to Stream Music Request are documented here.
 
+## [1.2.3] - 2026-10-03
+
+### Fixed
+- Reduced the effective loudness of local application playback by applying a softer volume curve to the main-window volume control.
+- Local playback volume changes are applied only to WaveOut output; the OBS audio stream remains unaffected.
+- Opening Settings no longer overwrites the current playback volume with the saved default volume.
+- The saved playback volume in Settings remains the default volume used when the application starts.
+
 ## [1.2.2] - 2026-10-03
 
 ### Added
