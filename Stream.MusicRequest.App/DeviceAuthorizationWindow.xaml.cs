@@ -45,7 +45,7 @@ public partial class DeviceAuthorizationWindow : Window
             StatusTextBlock.Text =
                 "Не удалось открыть браузер.";
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 $"Не удалось открыть страницу авторизации.\n\n{ex.Message}",
                 "Ошибка",
                 MessageBoxButton.OK,

@@ -52,7 +52,7 @@ public partial class YandexAuthorizationWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 this,
                 $"Не удалось открыть страницу авторизации.\n\n{ex.Message}",
                 "Yandex Music",
@@ -76,7 +76,7 @@ public partial class YandexAuthorizationWindow : Window
             Clipboard.SetText(
                 UserCodeText.Text);
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 this,
                 "Код скопирован в буфер обмена.",
                 "Yandex Music",
@@ -85,7 +85,7 @@ public partial class YandexAuthorizationWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 this,
                 $"Не удалось скопировать код.\n\n{ex.Message}",
                 "Yandex Music",

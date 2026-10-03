@@ -408,7 +408,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 $"Не удалось изменить состояние воспроизведения.\n\n{ex.Message}",
                 "Ошибка плеера",
                 MessageBoxButton.OK,
@@ -430,7 +430,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 $"Не удалось переключить на предыдущий трек.\n\n{ex.Message}",
                 "Ошибка плеера",
                 MessageBoxButton.OK,
@@ -452,7 +452,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 $"Не удалось переключить трек.\n\n{ex.Message}",
                 "Ошибка плеера",
                 MessageBoxButton.OK,
@@ -596,7 +596,7 @@ public partial class MainWindow : Window
 
         SetTwitchDisconnectedUi();
 
-        MessageBox.Show(
+        AppMessageBox.Show(
             "Соединение с Twitch было потеряно, а сохранённая OAuth-сессия больше не действительна.\n\n" +
             "Автоматически восстановить подключение не удалось. " +
             "Пожалуйста, войдите в Twitch заново через настройки.",
@@ -881,7 +881,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 $"Не удалось перемотать трек.\n\n{ex.Message}",
                 "Ошибка перемотки",
                 MessageBoxButton.OK,
@@ -1074,7 +1074,7 @@ public partial class MainWindow : Window
             SetYandexStatusVisual(
                 isConnected: false);
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 $"Не удалось восстановить авторизацию Yandex Music.\n\n{ex.Message}",
                 "Ошибка восстановления",
                 MessageBoxButton.OK,
@@ -1124,7 +1124,7 @@ public partial class MainWindow : Window
             SetTwitchStatusVisual(
                 isConnected: false);
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 $"Не удалось проверить авторизацию Twitch через API.\n\n{ex.Message}",
                 "Ошибка Twitch API",
                 MessageBoxButton.OK,
@@ -1246,7 +1246,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 $"Не удалось обработать Twitch-награду.\n\n{ex.Message}",
                 "Ошибка Twitch-награды",
                 MessageBoxButton.OK,
@@ -1412,7 +1412,7 @@ public partial class MainWindow : Window
 
         if (string.IsNullOrWhiteSpace(url))
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "Введите ссылку на музыкальный трек.",
                 "Музыкальный запрос",
                 MessageBoxButton.OK,
@@ -1439,7 +1439,7 @@ public partial class MainWindow : Window
 
             if (!result.Success)
             {
-                MessageBox.Show(
+                AppMessageBox.Show(
                     result.Error ??
                     "Не удалось добавить музыкальный запрос.",
                     "Ошибка",
@@ -1455,7 +1455,7 @@ public partial class MainWindow : Window
             if (item == null ||
                 item.Track == null)
             {
-                MessageBox.Show(
+                AppMessageBox.Show(
                     "Запрос считается успешным, но данные трека отсутствуют.",
                     "Ошибка",
                     MessageBoxButton.OK,
@@ -1476,7 +1476,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 $"Не удалось обработать музыкальный запрос.\n\n{ex.Message}",
                 "Ошибка музыкального запроса",
                 MessageBoxButton.OK,
@@ -1498,7 +1498,7 @@ public partial class MainWindow : Window
 
         if (string.IsNullOrWhiteSpace(url))
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 "Введите ссылку на альбом или плейлист Yandex Music.",
                 "Основная музыка",
                 MessageBoxButton.OK,
@@ -1535,7 +1535,7 @@ public partial class MainWindow : Window
             }
             else
             {
-                MessageBox.Show(
+                AppMessageBox.Show(
                     "Для основной музыки необходимо указать " +
                     "ссылку именно на альбом или плейлист Yandex Music.\n\n" +
                     "Ссылки на отдельные треки здесь не принимаются.",
@@ -1548,7 +1548,7 @@ public partial class MainWindow : Window
 
             if (album == null)
             {
-                MessageBox.Show(
+                AppMessageBox.Show(
                     "Не удалось загрузить альбом или плейлист.",
                     "Основная музыка",
                     MessageBoxButton.OK,
@@ -1559,7 +1559,7 @@ public partial class MainWindow : Window
 
             if (album.Tracks.Count == 0)
             {
-                MessageBox.Show(
+                AppMessageBox.Show(
                     "Источник загружен, но в нём нет доступных треков.",
                     "Основная музыка",
                     MessageBoxButton.OK,
@@ -1585,7 +1585,7 @@ public partial class MainWindow : Window
 
                 MainMusicUrlTextBox.Clear();
 
-                MessageBox.Show(
+                AppMessageBox.Show(
                     $"Основная музыка загружена.\n\n" +
                     $"Название: {album.Title}\n" +
                     $"Треков: {album.Tracks.Count}\n\n" +
@@ -1604,7 +1604,7 @@ public partial class MainWindow : Window
 
             if (!started)
             {
-                MessageBox.Show(
+                AppMessageBox.Show(
                     "Основной источник загружен, " +
                     "но воспроизведение не удалось запустить.",
                     "Основная музыка",
@@ -1623,7 +1623,7 @@ public partial class MainWindow : Window
 
             MainMusicUrlTextBox.Clear();
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 $"Основная музыка загружена.\n\n" +
                 $"Название: {album.Title}\n" +
                 $"Треков: {album.Tracks.Count}\n\n" +
@@ -1638,7 +1638,7 @@ public partial class MainWindow : Window
                 "Не удалось загрузить основную музыку.",
                 ex);
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 $"Не удалось загрузить основную музыку.\n\n{ex.Message}",
                 "Ошибка основной музыки",
                 MessageBoxButton.OK,

@@ -257,7 +257,7 @@ public partial class SettingsWindow : Window
         {
             CloseYandexAuthorizationWindow();
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 this,
                 $"Не удалось авторизоваться в Yandex Music.\n\n{ex.Message}",
                 "Yandex Music",
@@ -338,7 +338,7 @@ public partial class SettingsWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 this,
                 $"Не удалось выйти из аккаунта Yandex Music.\n\n{ex.Message}",
                 "Yandex Music",
@@ -548,7 +548,7 @@ public partial class SettingsWindow : Window
         {
             CloseTwitchAuthorizationWindow();
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 this,
                 $"Не удалось авторизоваться в Twitch.\n\n{ex.Message}",
                 "Twitch",
@@ -633,7 +633,7 @@ public partial class SettingsWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 this,
                 $"Не удалось выйти из Twitch.\n\n{ex.Message}",
                 "Twitch",
@@ -756,7 +756,7 @@ public partial class SettingsWindow : Window
         if (!string.IsNullOrWhiteSpace(url) &&
             !_appServices.YandexAuthService.IsAuthenticated)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 this,
                 "Для сохранения плейлиста по умолчанию сначала подключите Yandex Music.",
                 "Воспроизведение",
@@ -769,7 +769,7 @@ public partial class SettingsWindow : Window
         {
             if (!_yandexMusicSource.CanHandlePlaylistUrl(url))
             {
-                MessageBox.Show(
+                AppMessageBox.Show(
                     this,
                     "Указана некорректная ссылка на плейлист Yandex Music.",
                     "Воспроизведение",
@@ -801,7 +801,7 @@ public partial class SettingsWindow : Window
         DefaultPlaylistStatusText.Text =
             "Настройки сохранены.";
 
-        MessageBox.Show(
+        AppMessageBox.Show(
             this,
             "Настройки воспроизведения сохранены.",
             "Воспроизведение",
@@ -834,7 +834,7 @@ public partial class SettingsWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 this,
                 $"Не удалось открыть папку логов.\n\n{ex.Message}",
                 "Логи",
@@ -899,7 +899,7 @@ public partial class SettingsWindow : Window
             address.AddressFamily !=
             System.Net.Sockets.AddressFamily.InterNetwork)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 this,
                 "Адрес привязки должен быть корректным IPv4-адресом, например 127.0.0.1 или 0.0.0.0.",
                 "OBS",
@@ -913,7 +913,7 @@ public partial class SettingsWindow : Window
                 out var widgetPort) ||
             widgetPort is < 1 or > 65535)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 this,
                 "Порт виджета должен быть целым числом от 1 до 65535.",
                 "OBS",
@@ -927,7 +927,7 @@ public partial class SettingsWindow : Window
                 out var audioPort) ||
             audioPort is < 1 or > 65535)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 this,
                 "Порт аудио должен быть целым числом от 1 до 65535.",
                 "OBS",
@@ -938,7 +938,7 @@ public partial class SettingsWindow : Window
 
         if (widgetPort == audioPort)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 this,
                 "Порт виджета и порт аудио должны отличаться.",
                 "OBS",
@@ -957,7 +957,7 @@ public partial class SettingsWindow : Window
                     ObsScrollSpeedTextBox.Text.Trim(),
                     out scrollSpeed))
             {
-                MessageBox.Show(
+                AppMessageBox.Show(
                     this,
                     "Скорость текста должна быть числом.",
                     "OBS",
@@ -987,7 +987,7 @@ public partial class SettingsWindow : Window
 
         LoadObsSettingsUi();
 
-        MessageBox.Show(
+        AppMessageBox.Show(
             this,
             "Настройки OBS сохранены. Адрес и порты будут применены после перезапуска приложения.",
             "OBS",
@@ -1010,7 +1010,7 @@ public partial class SettingsWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 this,
                 $"Не удалось открыть виджет.\\n\\n{ex.Message}",
                 "OBS",
@@ -1521,7 +1521,7 @@ public partial class SettingsWindow : Window
         {
             UpdateDonationAlertsConnectionUi();
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 this,
                 $"Не удалось подключить Donation Alerts.\n\n{ex.Message}",
                 "Donation Alerts",
@@ -1544,7 +1544,7 @@ public partial class SettingsWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 this,
                 $"Не удалось отключить Donation Alerts.\n\n{ex.Message}",
                 "Donation Alerts",
@@ -1591,7 +1591,7 @@ public partial class SettingsWindow : Window
                 .DonationAlertsMusicService
                 .SaveSettingsAsync(settings);
 
-            MessageBox.Show(
+            AppMessageBox.Show(
                 this,
                 "Настройки Donation Alerts сохранены.",
                 "Donation Alerts",
@@ -1600,7 +1600,7 @@ public partial class SettingsWindow : Window
         }
         catch (Exception ex)
         {
-            MessageBox.Show(
+            AppMessageBox.Show(
                 this,
                 ex.Message,
                 "Donation Alerts",
