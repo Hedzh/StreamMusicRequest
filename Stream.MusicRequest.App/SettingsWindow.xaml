@@ -1549,8 +1549,6 @@
 
                         <Border Style="{StaticResource SettingsCard}">
                             <StackPanel>
-                                <TextBlock Text="1.2.1 — 03.10.2026"                        <Border Style="{StaticResource SettingsCard}">
-                            <StackPanel>
                                 <TextBlock Text="1.2.1 — 03.10.2026"
                                    FontSize="20"
                                    FontWeight="SemiBold"
