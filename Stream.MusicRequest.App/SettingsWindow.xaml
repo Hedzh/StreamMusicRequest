@@ -1553,6 +1553,9 @@
                         <TextBlock Text="• Это техническое обновление перед дальнейшим тестированием и подготовкой публичного релиза."
                                    Style="{StaticResource FieldDescription}"/>
 
+                            </StackPanel>
+                        </Border>
+
                         <Border Style="{StaticResource SettingsCard}">
                             <StackPanel>
                                 <TextBlock Text="1.2.0 — 02.10.2026"
