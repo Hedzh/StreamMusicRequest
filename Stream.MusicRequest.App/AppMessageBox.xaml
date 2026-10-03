@@ -11,6 +11,33 @@
         ShowInTaskbar="False"
         Background="#111419"
         Foreground="#F2F4F7">
+    <Window.Resources>
+        <SolidColorBrush x:Key="AccentBrush"
+                         Color="#FF7A18"/>
+
+        <Style x:Key="PrimaryButton"
+               TargetType="Button">
+            <Setter Property="Height"
+                    Value="38"/>
+            <Setter Property="Padding"
+                    Value="16,0"/>
+            <Setter Property="Background"
+                    Value="{StaticResource AccentBrush}"/>
+            <Setter Property="Foreground"
+                    Value="#FFFFFF"/>
+            <Setter Property="BorderBrush"
+                    Value="{StaticResource AccentBrush}"/>
+            <Setter Property="BorderThickness"
+                    Value="1"/>
+            <Setter Property="FontSize"
+                    Value="13"/>
+            <Setter Property="FontWeight"
+                    Value="SemiBold"/>
+            <Setter Property="Cursor"
+                    Value="Hand"/>
+        </Style>
+    </Window.Resources>
+
     <Border Margin="1"
             Padding="24"
             Background="#15181E"
@@ -24,7 +51,8 @@
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <Grid Grid.Row="0" Margin="0,0,0,18">
+            <Grid Grid.Row="0"
+                  Margin="0,0,0,18">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="56"/>
                     <ColumnDefinition Width="*"/>
