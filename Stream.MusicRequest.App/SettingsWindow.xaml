@@ -1528,22 +1528,28 @@
                                            FontSize="20"
                                            FontWeight="SemiBold"
                                            Foreground="{StaticResource AccentBrush}"/>
-                                <TextBlock Text="Фирменная иконка приложения"
+                                <TextBlock Text="Иконка, диалоги и исправления"
                                            FontSize="12"
                                            Foreground="{StaticResource TextMuted}"
                                            Margin="0,4,0,16"/>
-                                <TextBlock Text="Добавлено"
+                                <TextBlock Text="Добавлено и исправлено"
                                            Style="{StaticResource SectionTitle}"/>
-                                <TextBlock Text="• Добавлена фирменная иконка SMR для главного окна и всех пользовательских диалоговых окон."
+                                <TextBlock Text="• Добавлена фирменная иконка SMR для главного окна, настроек и пользовательских диалоговых окон."
                                            Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Иконка также используется как иконка исполняемого файла приложения."
+                                <TextBlock Text="• Иконка SMR добавлена как иконка исполняемого файла приложения."
                                            Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Диалоговые и информационные окна приведены к единому визуальному стилю приложения."
+                                <TextBlock Text="• Диалоговые окна приведены к единому визуальному стилю приложения."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Исправлена ошибка загрузки AppMessageBox, из-за которой уведомление при ошибке загрузки основной музыки могло завершить приложение."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Исправлено позиционирование пользовательских диалогов: они открываются относительно активного окна приложения и на том же мониторе."
                                            Style="{StaticResource FieldDescription}"/>
                             </StackPanel>
                         </Border>
 
                         <Border Style="{StaticResource SettingsCard}">
+                            <StackPanel>
+                                <TextBlock Text="1.2.1 — 03.10.2026"                        <Border Style="{StaticResource SettingsCard}">
                             <StackPanel>
                                 <TextBlock Text="1.2.1 — 03.10.2026"
                                    FontSize="20"
