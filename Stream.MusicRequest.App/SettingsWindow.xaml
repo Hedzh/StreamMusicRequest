@@ -644,7 +644,7 @@
                                 </StackPanel>
 
                                 <TextBlock Grid.Column="1"
-                                           Text="1.2.1"
+                                           Text="1.2.2"
                                            FontSize="14"
                                            FontWeight="SemiBold"
                                            Foreground="{StaticResource AccentBrush}"
