@@ -1,4 +1,5 @@
 ﻿<Window x:Class="Stream.MusicRequest.App.MainWindow"
+        Icon="{StaticResource AppIcon}"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Stream Music Request"
@@ -1005,7 +1006,7 @@
                                                    Foreground="{StaticResource TextMuted}"
                                                    HorizontalAlignment="Right"/>
 
-                                        <TextBlock Text="v1.2.1"
+                                        <TextBlock Text="v1.2.2"
                                                    FontSize="11"
                                                    Foreground="{StaticResource TextSecondary}"
                                                    HorizontalAlignment="Right"

@@ -4,5 +4,7 @@
              xmlns:local="clr-namespace:Stream.MusicRequest.App"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
+        <BitmapImage x:Key="AppIcon"
+                     UriSource="pack://application:,,,/Assets/SMR.ico"/>
     </Application.Resources>
 </Application>

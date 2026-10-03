@@ -6,9 +6,12 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <ApplicationIcon>Assets\SMR.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
+    <Resource Include="Assets\SMR.ico" />
+
     <ProjectReference Include="..\Stream.MusicRequest.Core\Stream.MusicRequest.Core.csproj" />
     <ProjectReference Include="..\Stream.MusicRequest.Yandex\Stream.MusicRequest.Yandex.csproj" />
     <ProjectReference Include="..\Stream.MusicRequest.Infrastructure\Stream.MusicRequest.Infrastructure.csproj" />
