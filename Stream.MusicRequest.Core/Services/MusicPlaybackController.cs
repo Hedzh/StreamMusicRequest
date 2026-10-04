@@ -359,6 +359,73 @@ public class MusicPlaybackController
         }
     }
 
+    public async Task SkipFromTwitchAsync()
+    {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
+            if (!_viewerModeActive)
+            {
+                if (!HasMainMusic)
+                    return;
+
+                await _mainMusic.NextAsync();
+                return;
+            }
+
+            var currentItem = _viewerMusic.CurrentItem;
+
+            if (currentItem?.Track != null &&
+                string.Equals(
+                    currentItem.Track.RequestSource,
+                    "Donation Alerts",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                FileLogger.Info(
+                    "Twitch Skip: пропуск заблокирован, так как текущий трек заказан через Donation Alerts.");
+
+                return;
+            }
+
+            await _viewerMusic.SkipAsync();
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
+    }
+
+    public async Task SkipFromDonationAsync()
+    {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
+            if (_viewerModeActive)
+            {
+                await _viewerMusic.SkipAsync();
+
+                FileLogger.Info(
+                    "Donation Alerts Skip: текущий зрительский трек пропущен.");
+
+                return;
+            }
+
+            if (!HasMainMusic)
+                return;
+
+            await _mainMusic.NextAsync();
+
+            FileLogger.Info(
+                "Donation Alerts Skip: текущий основной трек пропущен.");
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
+    }
+
     public async Task NextAsync()
     {
         await _operationGate.WaitAsync().ConfigureAwait(false);
