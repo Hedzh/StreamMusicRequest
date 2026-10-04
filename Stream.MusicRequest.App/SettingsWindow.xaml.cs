@@ -75,6 +75,7 @@ public partial class SettingsWindow : Window
             TwitchPage,
             TwitchRewardsPage,
             DonationAlertsPage,
+            BansPage,
             PlaybackPage,
             ObsPage,
             ChangelogPage
@@ -114,6 +115,13 @@ public partial class SettingsWindow : Window
         _ = UpdateTwitchUiAsync();
         _ = LoadTwitchRewardSettingsUiAsync();
         LoadDonationAlertsSettingsUi();
+
+        _appServices
+            .BanService
+            .BanChanged +=
+                BanService_BanChanged;
+
+        RefreshBansUi();
 
         Closed +=
             SettingsWindow_Closed;
@@ -1663,6 +1671,205 @@ public partial class SettingsWindow : Window
                    out value);
     }
 
+
+
+    // ============================================================
+    // BANS
+    // ============================================================
+
+    private void BanService_BanChanged(
+        object? sender,
+        EventArgs e)
+    {
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.BeginInvoke(
+                new Action(
+                    RefreshBansUi));
+            return;
+        }
+
+        RefreshBansUi();
+    }
+
+    private void RefreshBansUi()
+    {
+        BannedUsersPanel.Children.Clear();
+        BannedTracksPanel.Children.Clear();
+
+        var users =
+            _appServices
+                .BanService
+                .GetBannedUsers();
+
+        var tracks =
+            _appServices
+                .BanService
+                .GetBannedTracks();
+
+        if (users.Count == 0)
+        {
+            BannedUsersPanel.Children.Add(
+                CreateBanEmptyText("Заблокированных пользователей нет."));
+        }
+        else
+        {
+            foreach (var user in users)
+            {
+                var row = new Grid
+                {
+                    Margin = new Thickness(0, 0, 0, 8)
+                };
+
+                row.ColumnDefinitions.Add(
+                    new ColumnDefinition
+                    {
+                        Width = new GridLength(1, GridUnitType.Star)
+                    });
+
+                row.ColumnDefinitions.Add(
+                    new ColumnDefinition
+                    {
+                        Width = GridLength.Auto
+                    });
+
+                var text = new TextBlock
+                {
+                    Text = user.Username,
+                    FontSize = 13,
+                    Foreground =
+                        FindResource("TextPrimary") as Brush,
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+
+                Grid.SetColumn(text, 0);
+                row.Children.Add(text);
+
+                var button = new Button
+                {
+                    Content = "Разблокировать",
+                    Style =
+                        FindResource("ActionButton") as Style,
+                    Tag = user.Username,
+                    ToolTip = "Снять блокировку с пользователя"
+                };
+
+                button.Click += UnbanUserButton_Click;
+
+                Grid.SetColumn(button, 1);
+                row.Children.Add(button);
+
+                BannedUsersPanel.Children.Add(row);
+            }
+        }
+
+        if (tracks.Count == 0)
+        {
+            BannedTracksPanel.Children.Add(
+                CreateBanEmptyText("Заблокированных треков нет."));
+        }
+        else
+        {
+            foreach (var track in tracks)
+            {
+                var row = new Grid
+                {
+                    Margin = new Thickness(0, 0, 0, 8)
+                };
+
+                row.ColumnDefinitions.Add(
+                    new ColumnDefinition
+                    {
+                        Width = new GridLength(1, GridUnitType.Star)
+                    });
+
+                row.ColumnDefinitions.Add(
+                    new ColumnDefinition
+                    {
+                        Width = GridLength.Auto
+                    });
+
+                var title =
+                    string.IsNullOrWhiteSpace(track.Artist)
+                        ? track.Title
+                        : $"{track.Artist} — {track.Title}";
+
+                var text = new TextBlock
+                {
+                    Text = title,
+                    FontSize = 13,
+                    Foreground =
+                        FindResource("TextPrimary") as Brush,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    TextTrimming = TextTrimming.CharacterEllipsis
+                };
+
+                Grid.SetColumn(text, 0);
+                row.Children.Add(text);
+
+                var button = new Button
+                {
+                    Content = "Разблокировать",
+                    Style =
+                        FindResource("ActionButton") as Style,
+                    Tag = track,
+                    ToolTip = "Снять блокировку с трека"
+                };
+
+                button.Click += UnbanTrackButton_Click;
+
+                Grid.SetColumn(button, 1);
+                row.Children.Add(button);
+
+                BannedTracksPanel.Children.Add(row);
+            }
+        }
+    }
+
+    private static TextBlock CreateBanEmptyText(string text)
+    {
+        return new TextBlock
+        {
+            Text = text,
+            FontSize = 13,
+            Foreground =
+                System.Windows.Media.Brushes.Gray,
+            Margin = new Thickness(0, 4, 0, 4)
+        };
+    }
+
+    private void UnbanUserButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not Button button ||
+            button.Tag is not string username)
+        {
+            return;
+        }
+
+        _appServices
+            .BanService
+            .UnbanUser(username);
+    }
+
+    private void UnbanTrackButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not Button button ||
+            button.Tag is not Stream.MusicRequest.Core.Models.BannedTrack track)
+        {
+            return;
+        }
+
+        _appServices
+            .BanService
+            .UnbanTrack(
+                track.Source,
+                track.TrackId);
+    }
+
     // ============================================================
     // WINDOW
     // ============================================================
@@ -1693,6 +1900,11 @@ public partial class SettingsWindow : Window
             .DonationAlertsMusicService
             .ConnectionStateChanged -=
                 DonationAlertsMusicService_ConnectionStateChanged;
+
+        _appServices
+            .BanService
+            .BanChanged -=
+                BanService_BanChanged;
 
         Closed -=
             SettingsWindow_Closed;
