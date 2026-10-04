@@ -56,6 +56,9 @@ public class MusicPlaybackController
     public Track? CurrentMainTrack =>
         _mainMusic.CurrentTrack;
 
+    public QueueItem? CurrentViewerItem =>
+        _viewerMusic.CurrentItem;
+
     public async Task SetMainMusicAsync(MusicAlbum album)
     {
         await _operationGate.WaitAsync().ConfigureAwait(false);
