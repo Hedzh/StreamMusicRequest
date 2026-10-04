@@ -877,7 +877,16 @@ public partial class MainWindow : Window
 
     private void UpdatePlaybackModeUi()
     {
-        if (_playbackController.IsViewerModeActive)
+        var isViewerMusicActive =
+            _playbackController.IsViewerModeActive;
+
+        BanTrackButton.IsEnabled =
+            isViewerMusicActive;
+
+        BanUserButton.IsEnabled =
+            isViewerMusicActive;
+
+        if (isViewerMusicActive)
         {
             PlaybackModeText.Text =
                 "Музыка зрителей";
