@@ -97,10 +97,26 @@ public partial class MainWindow : Window
                     _yandexMusicSource
                 });
 
+        var settingsDirectory =
+            Path.Combine(
+                Environment.GetFolderPath(
+                    Environment.SpecialFolder.LocalApplicationData),
+                "StreamMusicRequest",
+                "Settings");
+
+        var banStorage =
+            new BanStorage(
+                settingsDirectory);
+
+        var banService =
+            new BanService(
+                banStorage);
+
         _requestService =
             new MusicRequestService(
                 _queue,
-                sourceResolver);
+                sourceResolver,
+                banService);
 
         var obsSettingsDirectory =
             Path.Combine(
@@ -176,11 +192,7 @@ public partial class MainWindow : Window
             TwitchAuthService_AuthenticationStateChanged;
 
         var twitchRewardSettingsDirectory =
-            Path.Combine(
-                Environment.GetFolderPath(
-                    Environment.SpecialFolder.LocalApplicationData),
-                "StreamMusicRequest",
-                "Settings");
+            settingsDirectory;
 
         var twitchRewardSettingsStorage =
             new TwitchRewardSettingsStorage(
