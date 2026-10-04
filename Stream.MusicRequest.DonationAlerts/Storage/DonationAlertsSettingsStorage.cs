@@ -79,6 +79,10 @@ public sealed class DonationAlertsSettingsStorage
             new DonationAlertsSettings()
                 .DonationThresholds;
 
+        settings.DonationThresholds ??=
+            new Dictionary<string, DonationThresholdSettings>(
+                StringComparer.OrdinalIgnoreCase);
+
         foreach (var currency in new[] { "RUB", "EUR", "USD" })
         {
             if (!settings.DonationThresholds.TryGetValue(
