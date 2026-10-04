@@ -2,6 +2,34 @@
 
 All notable changes to Stream Music Request are documented here.
 
+## [1.3.2] - 2026-10-04
+
+### Added
+- Donation Alerts now uses three independent exact amounts per currency: normal music order, priority music order, and track skip.
+- A Donation Alerts skip donation is processed by amount only and does not require a music link.
+- Donation Alerts skip can skip any currently playing track, including tracks ordered through Donation Alerts.
+- Twitch "Пропустить трек" is blocked while a Donation Alerts track is playing.
+- Manual streamer next-track control remains unrestricted.
+
+### Changed
+- Donation Alerts no longer uses amount ranges for normal and SUPER-PRIORITY orders.
+- A donation is accepted only when its amount exactly matches one configured action amount.
+- The three configured amounts for each currency must be unique.
+- Legacy Donation Alerts settings are migrated with a default skip amount when necessary.
+
+## [1.3.1] - 2026-10-04
+
+### Added
+- Convenient selection of existing Twitch rewards from a dropdown.
+- Reward metadata display for title, cost, user input requirement and enabled state.
+- Twitch reward revalidation before saving.
+- Protection against binding the same Twitch reward to two functions.
+- Detailed warnings for incompatible or disabled Twitch rewards.
+
+### Improved
+- Increased Twitch reward selector text size and field height.
+- Twitch ban controls are unavailable while main music is playing.
+
 ## [1.2.3] - 2026-10-03
 
 ### Fixed
