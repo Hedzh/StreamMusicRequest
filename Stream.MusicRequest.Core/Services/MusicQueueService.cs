@@ -150,6 +150,44 @@ public class MusicQueueService
         return _queue.Peek();
     }
 
+    public int RemoveWhere(
+        Func<QueueItem, bool> predicate)
+    {
+        if (predicate == null)
+        {
+            throw new ArgumentNullException(nameof(predicate));
+        }
+
+        if (_queue.Count == 0)
+        {
+            return 0;
+        }
+
+        var items = _queue.ToList();
+
+        var remainingItems =
+            items.Where(item => !predicate(item)).ToList();
+
+        var removedCount =
+            items.Count - remainingItems.Count;
+
+        if (removedCount == 0)
+        {
+            return 0;
+        }
+
+        _queue.Clear();
+
+        foreach (var item in remainingItems)
+        {
+            _queue.Enqueue(item);
+        }
+
+        OnQueueChanged();
+
+        return removedCount;
+    }
+
     public bool Remove(
         string itemId)
     {
