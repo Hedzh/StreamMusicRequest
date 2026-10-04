@@ -1838,7 +1838,7 @@ public partial class SettingsWindow : Window
         };
     }
 
-    private void UnbanUserButton_Click(
+    private async void UnbanUserButton_Click(
         object sender,
         RoutedEventArgs e)
     {
@@ -1848,12 +1848,24 @@ public partial class SettingsWindow : Window
             return;
         }
 
-        _appServices
-            .BanService
-            .UnbanUser(username);
+        try
+        {
+            await _appServices
+                .BanService
+                .UnbanUserAsync(username);
+        }
+        catch (Exception ex)
+        {
+            AppMessageBox.Show(
+                this,
+                $"Не удалось разблокировать пользователя.\n\n{ex.Message}",
+                "Разблокировка пользователя",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
     }
 
-    private void UnbanTrackButton_Click(
+    private async void UnbanTrackButton_Click(
         object sender,
         RoutedEventArgs e)
     {
@@ -1863,11 +1875,23 @@ public partial class SettingsWindow : Window
             return;
         }
 
-        _appServices
-            .BanService
-            .UnbanTrack(
-                track.Source,
-                track.TrackId);
+        try
+        {
+            await _appServices
+                .BanService
+                .UnbanTrackAsync(
+                    track.Source,
+                    track.TrackId);
+        }
+        catch (Exception ex)
+        {
+            AppMessageBox.Show(
+                this,
+                $"Не удалось разблокировать трек.\n\n{ex.Message}",
+                "Разблокировка трека",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
     }
 
     // ============================================================
