@@ -1170,7 +1170,7 @@
                                           Checked="DonationAlertsSettingsChanged"
                                           Unchecked="DonationAlertsSettingsChanged"/>
 
-                                <TextBlock Text="В сообщении доната должна находиться ссылка на отдельный трек Yandex Music."
+                                <TextBlock Text="Для обычного и приоритетного заказа в сообщении должна находиться ссылка на отдельный трек Yandex Music. Донат на пропуск трека ссылку не требует."
                                            Style="{StaticResource FieldDescription}"
                                            Margin="0,3,0,14"/>
 
