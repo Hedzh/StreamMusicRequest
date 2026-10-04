@@ -24,4 +24,6 @@ public interface IBanService
     IReadOnlyList<BannedUser> GetBannedUsers();
 
     IReadOnlyList<BannedTrack> GetBannedTracks();
+
+    event EventHandler? BanChanged;
 }
