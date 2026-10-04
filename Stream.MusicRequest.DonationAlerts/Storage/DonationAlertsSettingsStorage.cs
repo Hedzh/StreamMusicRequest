@@ -44,8 +44,12 @@ public sealed class DonationAlertsSettingsStorage
                         PropertyNameCaseInsensitive = true
                     });
 
-            return settings ??
-                   new DonationAlertsSettings();
+            if (settings == null)
+                return new DonationAlertsSettings();
+
+            NormalizeThresholds(settings);
+
+            return settings;
         }
         catch
         {
@@ -68,4 +72,36 @@ public sealed class DonationAlertsSettingsStorage
             _filePath,
             json);
     }
+    private static void NormalizeThresholds(
+        DonationAlertsSettings settings)
+    {
+        var defaults =
+            new DonationAlertsSettings()
+                .DonationThresholds;
+
+        foreach (var currency in new[] { "RUB", "EUR", "USD" })
+        {
+            if (!settings.DonationThresholds.TryGetValue(
+                    currency,
+                    out var threshold))
+            {
+                settings.DonationThresholds[currency] =
+                    new DonationThresholdSettings
+                    {
+                        Normal = defaults[currency].Normal,
+                        SuperPriority = defaults[currency].SuperPriority,
+                        SkipTrack = defaults[currency].SkipTrack
+                    };
+
+                continue;
+            }
+
+            if (threshold.SkipTrack <= 0)
+            {
+                threshold.SkipTrack =
+                    defaults[currency].SkipTrack;
+            }
+        }
+    }
+
 }
