@@ -2,6 +2,13 @@
 
 All notable changes to Stream Music Request are documented here.
 
+## [1.3.3] - 2026-10-04
+
+### Fixed
+- Yandex Music playback startup now retries up to three times when Media Foundation fails to open the direct audio stream with network timeout `0x80072EE2`.
+- Each retry requests a fresh Yandex Music direct playback URL before reopening the audio stream.
+- A track is skipped only after all playback startup attempts are exhausted or when a non-retryable playback error occurs.
+
 ## [1.3.2] - 2026-10-04
 
 ### Added
