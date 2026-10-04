@@ -499,6 +499,10 @@
                     </ListBoxItem>
 
                     <ListBoxItem>
+                        <TextBlock Text="Баны"/>
+                    </ListBoxItem>
+
+                    <ListBoxItem>
                         <TextBlock Text="Воспроизведение"/>
                     </ListBoxItem>
 
@@ -1185,6 +1189,44 @@
                     <!-- ================================================== -->
                     <!-- PLAYBACK -->
                     <!-- ================================================== -->
+
+                    <StackPanel x:Name="BansPage"
+                                Visibility="Collapsed">
+
+                        <TextBlock Text="Баны"
+                                   Style="{StaticResource PageTitle}"/>
+
+                        <TextBlock Text="Заблокированные пользователи и треки. Новые заявки от заблокированных пользователей и на заблокированные треки автоматически отклоняются."
+                                   Style="{StaticResource PageDescription}"
+                                   Margin="0,0,0,20"/>
+
+                        <Border Style="{StaticResource SettingsCard}">
+                            <StackPanel>
+                                <TextBlock Text="Заблокированные пользователи"
+                                           Style="{StaticResource SectionTitle}"/>
+
+                                <TextBlock Text="Пользователь не сможет создавать новые музыкальные заявки. Его уже добавленные заявки также удаляются из очереди."
+                                           Style="{StaticResource FieldDescription}"
+                                           Margin="0,0,0,12"/>
+
+                                <StackPanel x:Name="BannedUsersPanel"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource SettingsCard}">
+                            <StackPanel>
+                                <TextBlock Text="Заблокированные треки"
+                                           Style="{StaticResource SectionTitle}"/>
+
+                                <TextBlock Text="Заблокированный трек нельзя заказать повторно. Все его заявки удаляются из очереди."
+                                           Style="{StaticResource FieldDescription}"
+                                           Margin="0,0,0,12"/>
+
+                                <StackPanel x:Name="BannedTracksPanel"/>
+                            </StackPanel>
+                        </Border>
+
+                    </StackPanel>
 
                     <StackPanel x:Name="PlaybackPage"
                                 Visibility="Collapsed">
