@@ -9,6 +9,7 @@ public class MusicPlaybackController
     private readonly MainMusicService _mainMusic;
     private readonly MusicPlaybackService _viewerMusic;
     private readonly MusicQueueService _queue;
+    private readonly IBanService _banService;
 
     private MainMusicPlaybackState? _savedMainState;
     private QueueItem? _priorityResumeViewerItem;
@@ -23,11 +24,15 @@ public class MusicPlaybackController
     public MusicPlaybackController(
         MainMusicService mainMusic,
         MusicPlaybackService viewerMusic,
-        MusicQueueService queue)
+        MusicQueueService queue,
+        IBanService banService)
     {
         _mainMusic = mainMusic;
         _viewerMusic = viewerMusic;
         _queue = queue;
+        _banService =
+            banService
+            ?? throw new ArgumentNullException(nameof(banService));
 
         _viewerMusic.QueuePlaybackFinished +=
             ViewerMusic_QueuePlaybackFinished;
@@ -409,6 +414,131 @@ public class MusicPlaybackController
         }
     }
 
+
+
+    public async Task BanUserAsync(string username)
+    {
+        if (string.IsNullOrWhiteSpace(username))
+        {
+            throw new ArgumentException(
+                "Имя пользователя не указано.",
+                nameof(username));
+        }
+
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
+            _banService.BanUser(username);
+
+            var currentItem =
+                _viewerMusic.CurrentItem;
+
+            var removedCount =
+                _queue.RemoveWhere(
+                    item =>
+                        string.Equals(
+                            item.Request.ViewerName,
+                            username.Trim(),
+                            StringComparison.OrdinalIgnoreCase));
+
+            if (currentItem != null &&
+                string.Equals(
+                    currentItem.Request.ViewerName,
+                    username.Trim(),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                await _viewerMusic.StopAsync();
+
+                if (_queue.Count > 0)
+                {
+                    await _viewerMusic.StartNextAsync();
+                }
+                else
+                {
+                    await RestoreMainMusicAsync();
+                }
+            }
+
+            FileLogger.Info(
+                $"Пользователь заблокирован: {username}. " +
+                $"Удалено заявок из очереди: {removedCount}.");
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
+    }
+
+    public async Task BanCurrentTrackAsync()
+    {
+        await _operationGate.WaitAsync().ConfigureAwait(false);
+
+        try
+        {
+            var currentItem =
+                _viewerMusic.CurrentItem;
+
+            var currentTrack =
+                _viewerMusic.GetCurrentTrack();
+
+            if (currentItem?.Track == null ||
+                currentItem.Source == null)
+            {
+                throw new InvalidOperationException(
+                    "Сейчас не воспроизводится зрительский трек.");
+            }
+
+            var track =
+                currentItem.Track;
+
+            _banService.BanTrack(
+                currentItem.Source.Name,
+                track.Id,
+                track.Title,
+                track.Artist,
+                track.SourceUrl ?? string.Empty);
+
+            var sourceName =
+                currentItem.Source.Name;
+
+            var trackId =
+                track.Id;
+
+            var removedCount =
+                _queue.RemoveWhere(
+                    item =>
+                        item.Track != null &&
+                        item.Source != null &&
+                        string.Equals(
+                            item.Source.Name,
+                            sourceName,
+                            StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(
+                            item.Track.Id,
+                            trackId,
+                            StringComparison.OrdinalIgnoreCase));
+
+            await _viewerMusic.StopAsync();
+
+            if (_queue.Count > 0)
+            {
+                await _viewerMusic.StartNextAsync();
+            }
+            else
+            {
+                await RestoreMainMusicAsync();
+            }
+
+            FileLogger.Info(
+                $"Трек заблокирован: {track.Artist} — {track.Title}. " +
+                $"Удалено заявок из очереди: {removedCount}.");
+        }
+        finally
+        {
+            _operationGate.Release();
+        }
+    }
     public async Task StopAsync()
     {
         await _operationGate.WaitAsync().ConfigureAwait(false);
