@@ -1181,17 +1181,24 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="140"/>
                                         <ColumnDefinition Width="140"/>
+                                        <ColumnDefinition Width="140"/>
                                     </Grid.ColumnDefinitions>
 
                                     <TextBox x:Name="DonationAlertsRubNormalTextBox"
                                              Style="{StaticResource InputBox}"
-                                             ToolTip="Минимум для обычного заказа"/>
+                                             ToolTip="Точная сумма обычного заказа"/>
 
                                     <TextBox x:Name="DonationAlertsRubSuperTextBox"
                                              Grid.Column="1"
                                              Margin="10,0,0,0"
                                              Style="{StaticResource InputBox}"
-                                             ToolTip="Порог SUPER-PRIORITY"/>
+                                             ToolTip="Точная сумма приоритетного заказа"/>
+
+                                    <TextBox x:Name="DonationAlertsRubSkipTextBox"
+                                             Grid.Column="2"
+                                             Margin="10,0,0,0"
+                                             Style="{StaticResource InputBox}"
+                                             ToolTip="Точная сумма пропуска трека"/>
                                 </Grid>
 
                                 <TextBlock Text="EUR"
@@ -1199,6 +1206,7 @@
 
                                 <Grid Margin="0,4,0,12">
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="140"/>
                                         <ColumnDefinition Width="140"/>
                                         <ColumnDefinition Width="140"/>
                                     </Grid.ColumnDefinitions>
@@ -1210,6 +1218,11 @@
                                              Grid.Column="1"
                                              Margin="10,0,0,0"
                                              Style="{StaticResource InputBox}"/>
+
+                                    <TextBox x:Name="DonationAlertsEurSkipTextBox"
+                                             Grid.Column="2"
+                                             Margin="10,0,0,0"
+                                             Style="{StaticResource InputBox}"/>
                                 </Grid>
 
                                 <TextBlock Text="USD"
@@ -1217,6 +1230,7 @@
 
                                 <Grid Margin="0,4,0,14">
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="140"/>
                                         <ColumnDefinition Width="140"/>
                                         <ColumnDefinition Width="140"/>
                                     </Grid.ColumnDefinitions>
@@ -1228,9 +1242,14 @@
                                              Grid.Column="1"
                                              Margin="10,0,0,0"
                                              Style="{StaticResource InputBox}"/>
+
+                                    <TextBox x:Name="DonationAlertsUsdSkipTextBox"
+                                             Grid.Column="2"
+                                             Margin="10,0,0,0"
+                                             Style="{StaticResource InputBox}"/>
                                 </Grid>
 
-                                <TextBlock Text="Первое поле — минимальная сумма обычного заказа. Второе — порог SUPER-PRIORITY. Ниже первого порога донат игнорируется."
+                                <TextBlock Text="Для каждого действия указывается точная сумма. Если сумма доната не совпадает ни с одной из трёх сумм, донат игнорируется. Суммы должны быть уникальными."
                                            Style="{StaticResource FieldDescription}"/>
 
                                 <Button Content="Сохранить настройки Donation Alerts"
