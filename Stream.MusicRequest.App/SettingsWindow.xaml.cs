@@ -1466,10 +1466,21 @@ public partial class SettingsWindow : Window
 
             if (!result.IsValid)
             {
+                var problem =
+                    result.WarningMessage ??
+                    "Награда не соответствует требованиям и не может быть сохранена.";
+
                 SetRewardCheckWarning(
                     isOrderMusic,
-                    result.WarningMessage ??
-                    "Награда не прошла проверку и не может быть сохранена.");
+                    problem);
+
+                AppMessageBox.Show(
+                    this,
+                    $"Награда не сохранена.\\n\\n{problem}",
+                    "Сохранение награды",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+
                 return;
             }
 
