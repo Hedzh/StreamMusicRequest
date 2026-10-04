@@ -342,7 +342,7 @@ public class NAudioMusicPlayer :
                     Output_PlaybackStopped;
 
                 output.Init(streamingProvider);
-                output.Volume = _volume;
+                output.Volume = ToOutputVolume(_volume);
 
                 _resampler = resampler;
                 _streamingProvider = streamingProvider;
