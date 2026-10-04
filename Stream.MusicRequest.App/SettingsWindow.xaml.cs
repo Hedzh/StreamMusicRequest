@@ -1613,19 +1613,22 @@ public partial class SettingsWindow : Window
             settings.DonationThresholds,
             "RUB",
             DonationAlertsRubNormalTextBox,
-            DonationAlertsRubSuperTextBox);
+            DonationAlertsRubSuperTextBox,
+            DonationAlertsRubSkipTextBox);
 
         SetDonationThresholdUi(
             settings.DonationThresholds,
             "EUR",
             DonationAlertsEurNormalTextBox,
-            DonationAlertsEurSuperTextBox);
+            DonationAlertsEurSuperTextBox,
+            DonationAlertsEurSkipTextBox);
 
         SetDonationThresholdUi(
             settings.DonationThresholds,
             "USD",
             DonationAlertsUsdNormalTextBox,
-            DonationAlertsUsdSuperTextBox);
+            DonationAlertsUsdSuperTextBox,
+            DonationAlertsUsdSkipTextBox);
 
         UpdateDonationAlertsConnectionUi();
     }
@@ -1634,7 +1637,8 @@ public partial class SettingsWindow : Window
         IReadOnlyDictionary<string, DonationThresholdSettings> thresholds,
         string currency,
         TextBox normalTextBox,
-        TextBox superTextBox)
+        TextBox superTextBox,
+        TextBox skipTextBox)
     {
         if (thresholds.TryGetValue(currency, out var threshold))
         {
@@ -1645,11 +1649,16 @@ public partial class SettingsWindow : Window
             superTextBox.Text =
                 threshold.SuperPriority.ToString(
                     System.Globalization.CultureInfo.InvariantCulture);
+
+            skipTextBox.Text =
+                threshold.SkipTrack.ToString(
+                    System.Globalization.CultureInfo.InvariantCulture);
         }
         else
         {
             normalTextBox.Clear();
             superTextBox.Clear();
+            skipTextBox.Clear();
         }
     }
 
