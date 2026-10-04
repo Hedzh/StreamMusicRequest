@@ -27,6 +27,8 @@ public class AppServices
 
     public DonationAlertsMusicService DonationAlertsMusicService { get; }
 
+    public IBanService BanService { get; }
+
     public IReadOnlyList<TwitchRewardBinding>
         TwitchRewardBindings
     { get; }
@@ -38,7 +40,8 @@ public class AppServices
         TwitchRewardSettingsStorage twitchRewardSettingsStorage,
         MusicPlaybackController playbackController,
         MusicRequestService requestService,
-        YandexMusicSource yandexMusicSource)
+        YandexMusicSource yandexMusicSource,
+        IBanService banService)
     {
         YandexAuthService =
             yandexAuthService
@@ -54,6 +57,11 @@ public class AppServices
             twitchApiClient
             ?? throw new ArgumentNullException(
                 nameof(twitchApiClient));
+
+        BanService =
+            banService
+            ?? throw new ArgumentNullException(
+                nameof(banService));
 
         _twitchRewardSettingsStorage =
             twitchRewardSettingsStorage
