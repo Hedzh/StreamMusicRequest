@@ -165,7 +165,8 @@ public partial class MainWindow : Window
             new MusicPlaybackController(
                 _mainMusicService,
                 _playbackService,
-                _queue);
+                _queue,
+                banService);
 
         var twitchSettings =
             new TwitchSettings();
