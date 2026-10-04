@@ -694,11 +694,42 @@ public class MusicPlaybackController
 
         _mainMusic.AutoAdvanceEnabled = true;
 
-        var restored =
-            await _mainMusic.RestoreStateAsync(state);
+        try
+        {
+            var restored =
+                await _mainMusic.RestoreStateAsync(state);
 
-        FileLogger.Info(
-            $"Результат восстановления основной музыки: {restored}");
+            FileLogger.Info(
+                $"Результат восстановления основной музыки: {restored}");
+
+            if (!restored)
+            {
+                FileLogger.Info(
+                    "Основную музыку не удалось восстановить. " +
+                    "Переходим к следующему основному треку.");
+
+                await _mainMusic.NextAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Error(
+                "Ошибка восстановления основной музыки. " +
+                "Текущий основной трек будет пропущен.",
+                ex);
+
+            try
+            {
+                await _mainMusic.NextAsync();
+            }
+            catch (Exception nextException)
+            {
+                FileLogger.Error(
+                    "Не удалось перейти к следующему основному треку " +
+                    "после ошибки восстановления.",
+                    nextException);
+            }
+        }
     }
 
     private static void ValidateQueueItem(QueueItem item)
