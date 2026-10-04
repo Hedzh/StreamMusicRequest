@@ -87,6 +87,7 @@ public class AppServices
                 TwitchApiClient,
                 twitchEventSubClient,
                 TwitchRewardBindings);
+
         var donationAlertsHttpClient =
             new HttpClient();
 
@@ -118,7 +119,6 @@ public class AppServices
                 yandexMusicSource);
 
         DonationAlertsMusicService.LoadSettings();
-
     }
 
     public async Task LoadTwitchRewardSettingsAsync()
@@ -160,6 +160,145 @@ public class AppServices
                 !string.IsNullOrWhiteSpace(
                     skipTrackBinding.RewardId);
         }
+    }
+
+    public async Task<IReadOnlyList<TwitchCustomReward>>
+        GetTwitchCustomRewardsAsync(
+            CancellationToken cancellationToken = default)
+    {
+        var accessToken =
+            await GetTwitchAccessTokenAsync(
+                cancellationToken);
+
+        var user =
+            await TwitchApiClient.GetCurrentUserAsync(
+                accessToken,
+                cancellationToken);
+
+        return await TwitchApiClient.GetCustomRewardsAsync(
+            accessToken,
+            user.Id,
+            cancellationToken);
+    }
+
+    public async Task<TwitchRewardValidationResult>
+        ValidateTwitchRewardAsync(
+            string featureKey,
+            string rewardId,
+            CancellationToken cancellationToken = default)
+    {
+        featureKey =
+            featureKey?.Trim()
+            ?? string.Empty;
+
+        rewardId =
+            rewardId?.Trim()
+            ?? string.Empty;
+
+        if (featureKey != TwitchRewardService.OrderMusicFeatureKey &&
+            featureKey != TwitchRewardService.SkipTrackFeatureKey)
+        {
+            throw new ArgumentException(
+                "Неизвестная функция Twitch-награды.",
+                nameof(featureKey));
+        }
+
+        if (string.IsNullOrWhiteSpace(rewardId))
+        {
+            throw new ArgumentException(
+                "Reward ID не указан.",
+                nameof(rewardId));
+        }
+
+        if (!Guid.TryParse(rewardId, out _))
+        {
+            throw new ArgumentException(
+                "Некорректный Reward ID. Используйте ID в формате UUID.",
+                nameof(rewardId));
+        }
+
+        var accessToken =
+            await GetTwitchAccessTokenAsync(
+                cancellationToken);
+
+        var user =
+            await TwitchApiClient.GetCurrentUserAsync(
+                accessToken,
+                cancellationToken);
+
+        var reward =
+            await TwitchApiClient.GetCustomRewardAsync(
+                accessToken,
+                user.Id,
+                rewardId,
+                cancellationToken);
+
+        if (reward == null)
+        {
+            throw new InvalidOperationException(
+                "Награда с таким Reward ID не найдена.");
+        }
+
+        var settings =
+            await _twitchRewardSettingsStorage
+                .LoadAsync();
+
+        var otherRewardId =
+            featureKey ==
+                TwitchRewardService.OrderMusicFeatureKey
+                ? settings.SkipTrackRewardId
+                : settings.OrderMusicRewardId;
+
+        if (!string.IsNullOrWhiteSpace(otherRewardId) &&
+            otherRewardId.Equals(
+                reward.Id,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            var otherFeature =
+                featureKey ==
+                    TwitchRewardService.OrderMusicFeatureKey
+                    ? "«Пропустить трек»"
+                    : "«Заказ музыки»";
+
+            return new TwitchRewardValidationResult(
+                reward,
+                false,
+                $"Эта Twitch-награда уже используется для функции {otherFeature}.");
+        }
+
+        var warnings =
+            new List<string>();
+
+        if (featureKey ==
+                TwitchRewardService.OrderMusicFeatureKey &&
+            !reward.IsUserInputRequired)
+        {
+            warnings.Add(
+                "для «Заказ музыки» необходимо включить ввод текста пользователя");
+        }
+
+        if (featureKey ==
+                TwitchRewardService.SkipTrackFeatureKey &&
+            reward.IsUserInputRequired)
+        {
+            warnings.Add(
+                "для «Пропустить трек» ввод текста пользователя должен быть отключён");
+        }
+
+        if (!reward.IsEnabled)
+        {
+            warnings.Add(
+                "награда отключена в Twitch");
+        }
+
+        return new TwitchRewardValidationResult(
+            reward,
+            warnings.Count == 0,
+            warnings.Count == 0
+                ? null
+                : "Награда несовместима с выбранной функцией: " +
+                  string.Join("; ", warnings) +
+                  ".");
     }
 
     public async Task SaveTwitchRewardSettingAsync(
@@ -281,5 +420,22 @@ public class AppServices
                 SkipTrackRewardId =
                     normalizedSkipTrackRewardId
             });
+    }
+
+    private async Task<string> GetTwitchAccessTokenAsync(
+        CancellationToken cancellationToken)
+    {
+        var token =
+            await TwitchAuthService.TryRestoreAsync();
+
+        if (token == null ||
+            string.IsNullOrWhiteSpace(
+                token.AccessToken))
+        {
+            throw new InvalidOperationException(
+                "Twitch не авторизован.");
+        }
+
+        return token.AccessToken;
     }
 }
