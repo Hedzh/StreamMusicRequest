@@ -4,5 +4,6 @@ public enum DonationOrderType
 {
     Ignore,
     Normal,
-    SuperPriority
+    SuperPriority,
+    SkipTrack
 }
