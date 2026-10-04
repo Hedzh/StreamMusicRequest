@@ -474,6 +474,107 @@ public partial class MainWindow : Window
         }
     }
 
+    private async void BanTrackButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (!_playbackController.IsViewerModeActive ||
+            _playbackController.CurrentViewerItem?.Track == null)
+        {
+            AppMessageBox.Show(
+                "Сейчас не воспроизводится трек зрителя.",
+                "Блокировка трека",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
+        var track =
+            _playbackController.CurrentViewerItem.Track;
+
+        var result =
+            AppMessageBox.Show(
+                $"Заблокировать трек?\n\n" +
+                $"{track.Artist} — {track.Title}\n\n" +
+                "Текущий трек будет остановлен, а все его заявки будут удалены из очереди.",
+                "Заблокировать трек",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+        if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        try
+        {
+            await _playbackController.BanCurrentTrackAsync();
+            UpdatePlaybackUi();
+            UpdatePlaybackModeUi();
+            RefreshQueueUi();
+        }
+        catch (Exception ex)
+        {
+            AppMessageBox.Show(
+                $"Не удалось заблокировать трек.\n\n{ex.Message}",
+                "Ошибка блокировки",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    private async void BanUserButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var item =
+            _playbackController.CurrentViewerItem;
+
+        if (!_playbackController.IsViewerModeActive ||
+            item == null ||
+            string.IsNullOrWhiteSpace(item.Request.ViewerName))
+        {
+            AppMessageBox.Show(
+                "Сейчас не воспроизводится трек зрителя с определённым пользователем.",
+                "Блокировка пользователя",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
+        var username =
+            item.Request.ViewerName.Trim();
+
+        var result =
+            AppMessageBox.Show(
+                $"Заблокировать пользователя «{username}»?\n\n" +
+                "Все его заявки будут удалены из очереди, а текущий трек остановится.",
+                "Заблокировать пользователя",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+        if (result != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        try
+        {
+            await _playbackController.BanUserAsync(username);
+            UpdatePlaybackUi();
+            UpdatePlaybackModeUi();
+            RefreshQueueUi();
+        }
+        catch (Exception ex)
+        {
+            AppMessageBox.Show(
+                $"Не удалось заблокировать пользователя.\n\n{ex.Message}",
+                "Ошибка блокировки",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
     private void SetPlaybackButtonText(
         string text)
     {
