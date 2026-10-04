@@ -619,6 +619,20 @@
                                                                             HorizontalAlignment="Right"
                                                                             VerticalAlignment="Center">
 
+                                                                        <Button x:Name="BanTrackButton"
+                                                                                Content="🚫"
+                                                                                Style="{StaticResource IconButton}"
+                                                                                ToolTip="Заблокировать текущий трек"
+                                                                                Click="BanTrackButton_Click"
+                                                                                Margin="0,0,8,0"/>
+
+                                                                        <Button x:Name="BanUserButton"
+                                                                                Content="👤"
+                                                                                Style="{StaticResource IconButton}"
+                                                                                ToolTip="Заблокировать пользователя текущего трека"
+                                                                                Click="BanUserButton_Click"
+                                                                                Margin="0,0,14,0"/>
+
                                                                         <TextBlock Text="🔊"
                                                                                    FontSize="14"
                                                                                    Foreground="{StaticResource TextSecondary}"
