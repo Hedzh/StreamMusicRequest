@@ -1439,7 +1439,7 @@ public partial class MainWindow : Window
     private async Task HandleSkipTrackRewardAsync()
     {
         await _playbackController
-            .NextAsync();
+            .SkipFromTwitchAsync();
 
         await Dispatcher.InvokeAsync(
             () =>
