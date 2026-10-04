@@ -6,6 +6,4 @@
   <Project Path="Stream.MusicRequest.Infrastructure/Stream.MusicRequest.Infrastructure.csproj" />
   <Project Path="Stream.MusicRequest.Twitch/Stream.MusicRequest.Twitch.csproj" />
   <Project Path="Stream.MusicRequest.Yandex/Stream.MusicRequest.Yandex.csproj" />
-  <Project Path="Stream.MusicRequest.DonationAlerts.Test/Stream.MusicRequest.DonationAlerts.Test.csproj" />
-  <Project Path="YandexMusic.Test/YandexMusic.Test.csproj" />
 </Solution>
