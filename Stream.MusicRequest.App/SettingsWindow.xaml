@@ -1652,6 +1652,8 @@
                                            Style="{StaticResource FieldDescription}"/>
                                 <TextBlock Text="• Увеличено поле выбора Twitch-награды."
                                            Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Кнопки блокировки трека и пользователя недоступны во время воспроизведения основной музыки."
+                                           Style="{StaticResource FieldDescription}"/>
                             </StackPanel>
                         </Border>
 
