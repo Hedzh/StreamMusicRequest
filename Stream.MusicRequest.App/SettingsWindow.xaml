@@ -881,7 +881,9 @@
                                 <TextBlock Text="Twitch-награда"
                                            Style="{StaticResource FieldTitle}"/>
 
-                                <ComboBox x:Name="OrderMusicRewardComboBox"\n                                           Width="520"\n                                           Height="42"
+                                <ComboBox x:Name="OrderMusicRewardComboBox"
+                                           Width="520"
+                                           Height="42"
                                           DisplayMemberPath="Title"
                                           SelectionChanged="OrderMusicRewardComboBox_SelectionChanged"
                                           Margin="0,0,0,8"/>
@@ -988,7 +990,9 @@
                                 <TextBlock Text="Twitch-награда"
                                            Style="{StaticResource FieldTitle}"/>
 
-                                <ComboBox x:Name="SkipTrackRewardComboBox"\n                                           Width="520"\n                                           Height="42"
+                                <ComboBox x:Name="SkipTrackRewardComboBox"
+                                           Width="520"
+                                           Height="42"
                                           DisplayMemberPath="Title"
                                           SelectionChanged="SkipTrackRewardComboBox_SelectionChanged"
                                           Margin="0,0,0,8"/>
