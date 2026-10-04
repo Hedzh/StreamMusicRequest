@@ -135,6 +135,18 @@ public sealed class DonationAlertsMusicService
             if (orderType == DonationOrderType.Ignore)
                 return;
 
+            if (orderType == DonationOrderType.SkipTrack)
+            {
+                await _playbackController
+                    .SkipFromDonationAsync();
+
+                FileLogger.Info(
+                    $"Donation Alerts: донат #{donation.Id} " +
+                    "обработан как пропуск текущего трека.");
+
+                return;
+            }
+
             var message =
                 donation.Message?.Trim();
 
