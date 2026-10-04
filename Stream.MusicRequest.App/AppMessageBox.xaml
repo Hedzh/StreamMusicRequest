@@ -36,6 +36,30 @@
             <Setter Property="Cursor"
                     Value="Hand"/>
         </Style>
+
+        <Style x:Key="SecondaryButton"
+               TargetType="Button">
+            <Setter Property="Height"
+                    Value="38"/>
+            <Setter Property="MinWidth"
+                    Value="100"/>
+            <Setter Property="Padding"
+                    Value="16,0"/>
+            <Setter Property="Background"
+                    Value="#202630"/>
+            <Setter Property="Foreground"
+                    Value="#F2F4F7"/>
+            <Setter Property="BorderBrush"
+                    Value="#343B46"/>
+            <Setter Property="BorderThickness"
+                    Value="1"/>
+            <Setter Property="FontSize"
+                    Value="13"/>
+            <Setter Property="FontWeight"
+                    Value="SemiBold"/>
+            <Setter Property="Cursor"
+                    Value="Hand"/>
+        </Style>
     </Window.Resources>
 
     <Border Margin="1"
@@ -98,11 +122,31 @@
                         Orientation="Horizontal"
                         HorizontalAlignment="Right"
                         Margin="0,24,0,0">
+                <Button x:Name="YesButton"
+                        Content="Да"
+                        MinWidth="100"
+                        Margin="0,0,8,0"
+                        IsDefault="True"
+                        Click="YesButton_Click"
+                        Style="{StaticResource PrimaryButton}"/>
+
+                <Button x:Name="NoButton"
+                        Content="Нет"
+                        MinWidth="100"
+                        Margin="0,0,8,0"
+                        Click="NoButton_Click"
+                        Style="{StaticResource SecondaryButton}"/>
+
+                <Button x:Name="CancelButton"
+                        Content="Отмена"
+                        MinWidth="100"
+                        Margin="0,0,8,0"
+                        Click="CancelButton_Click"
+                        Style="{StaticResource SecondaryButton}"/>
+
                 <Button x:Name="OkButton"
                         Content="OK"
                         MinWidth="100"
-                        Height="38"
-                        Padding="20,0"
                         IsDefault="True"
                         Click="OkButton_Click"
                         Style="{StaticResource PrimaryButton}"/>
