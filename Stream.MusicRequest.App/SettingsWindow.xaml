@@ -218,6 +218,12 @@
             <Setter Property="Padding"
                     Value="10,0"/>
 
+            <Setter Property="HorizontalContentAlignment"
+                    Value="Left"/>
+
+            <Setter Property="VerticalContentAlignment"
+                    Value="Center"/>
+
         </Style>
 
         <!-- ====================================================== -->
@@ -884,7 +890,10 @@
                                 <ComboBox x:Name="OrderMusicRewardComboBox"
                                            Width="520"
                                            Height="42"
-                                          DisplayMemberPath="Title"
+                                           HorizontalAlignment="Left"
+                                           DisplayMemberPath="Title"
+                                           FontSize="14"
+                                           VerticalContentAlignment="Center"
                                           SelectionChanged="OrderMusicRewardComboBox_SelectionChanged"
                                           Margin="0,0,0,8"/>
 
@@ -993,7 +1002,10 @@
                                 <ComboBox x:Name="SkipTrackRewardComboBox"
                                            Width="520"
                                            Height="42"
-                                          DisplayMemberPath="Title"
+                                           HorizontalAlignment="Left"
+                                           DisplayMemberPath="Title"
+                                           FontSize="14"
+                                           VerticalContentAlignment="Center"
                                           SelectionChanged="SkipTrackRewardComboBox_SelectionChanged"
                                           Margin="0,0,0,8"/>
 
