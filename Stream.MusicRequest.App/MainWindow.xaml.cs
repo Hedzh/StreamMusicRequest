@@ -206,7 +206,8 @@ public partial class MainWindow : Window
                 twitchRewardSettingsStorage,
                 _playbackController,
                 _requestService,
-                _yandexMusicSource);
+                _yandexMusicSource,
+                banService);
 
         _appServices.TwitchService.RewardActionReceived +=
             TwitchService_RewardActionReceived;
