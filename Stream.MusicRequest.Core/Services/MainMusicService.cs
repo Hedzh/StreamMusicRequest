@@ -138,31 +138,56 @@ public class MainMusicService
             $"Подготовка основной музыки: " +
             $"{track.Artist} — {track.Title}");
 
-        var playbackUrl = await GetPlaybackUrlAsync(track);
+        const int maxPlaybackAttempts = 3;
 
-        if (string.IsNullOrWhiteSpace(playbackUrl))
+        for (var attempt = 1;
+             attempt <= maxPlaybackAttempts;
+             attempt++)
         {
-            FileLogger.Info(
-                "Не удалось получить прямую " +
-                "ссылку на основной трек.");
+            var playbackUrl = await GetPlaybackUrlAsync(track);
 
-            return false;
+            if (string.IsNullOrWhiteSpace(playbackUrl))
+            {
+                FileLogger.Info(
+                    "Не удалось получить прямую " +
+                    "ссылку на основной трек.");
+
+                return false;
+            }
+
+            track.SourceUrl = playbackUrl;
+
+            FileLogger.Info(
+                $"Прямая ссылка на основной трек получена. " +
+                $"Попытка запуска {attempt}/{maxPlaybackAttempts}.");
+
+            try
+            {
+                await _player.PlayAsync(track);
+
+                _isMainMusicActive = true;
+
+                FileLogger.Info(
+                    $"Основная музыка запущена: " +
+                    $"{track.Artist} — {track.Title}");
+
+                return true;
+            }
+            catch (Exception ex) when (
+                attempt < maxPlaybackAttempts &&
+                IsTransientPlaybackError(ex))
+            {
+                FileLogger.Info(
+                    $"Не удалось открыть поток основной музыки. " +
+                    $"Попытка {attempt}/{maxPlaybackAttempts}. " +
+                    "Будет получена новая прямая ссылка.");
+
+                await Task.Delay(
+                    TimeSpan.FromMilliseconds(500));
+            }
         }
 
-        track.SourceUrl = playbackUrl;
-
-        FileLogger.Info(
-            "Прямая ссылка на основной трек получена.");
-
-        await _player.PlayAsync(track);
-
-        _isMainMusicActive = true;
-
-        FileLogger.Info(
-            $"Основная музыка запущена: " +
-            $"{track.Artist} — {track.Title}");
-
-        return true;
+        return false;
     }
 
     public async Task PauseAsync()
@@ -527,6 +552,24 @@ public class MainMusicService
                 (_shuffleOrder[swapIndex],
                  _shuffleOrder[index]);
         }
+    }
+
+    private static bool IsTransientPlaybackError(Exception exception)
+    {
+        const int hresultNetworkTimeout =
+            unchecked((int)0x80072EE2);
+
+        for (var current = exception;
+             current != null;
+             current = current.InnerException)
+        {
+            if (current.HResult == hresultNetworkTimeout)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private async Task<string?> GetPlaybackUrlAsync(Track track)
