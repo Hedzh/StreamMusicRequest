@@ -236,10 +236,8 @@ public class MusicPlaybackService
 
         return false;
     }
-    
-    }
 
-    public async Task PauseAsync()
+public async Task PauseAsync()
     {
         await _operationGate.WaitAsync().ConfigureAwait(false);
 
