@@ -8,18 +8,18 @@ public interface IBanService
 
     bool IsTrackBanned(string source, string trackId);
 
-    void BanUser(string username);
+    Task BanUserAsync(string username);
 
-    void UnbanUser(string username);
+    Task UnbanUserAsync(string username);
 
-    void BanTrack(
+    Task BanTrackAsync(
         string source,
         string trackId,
         string title,
         string artist,
         string sourceUrl);
 
-    void UnbanTrack(string source, string trackId);
+    Task UnbanTrackAsync(string source, string trackId);
 
     IReadOnlyList<BannedUser> GetBannedUsers();
 
