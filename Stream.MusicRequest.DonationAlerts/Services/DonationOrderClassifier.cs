@@ -34,18 +34,32 @@ public sealed class DonationOrderClassifier
         }
 
         if (threshold.Normal <= 0 ||
-            threshold.SuperPriority <= threshold.Normal)
+            threshold.SuperPriority <= 0 ||
+            threshold.SkipTrack <= 0)
         {
             return DonationOrderType.Ignore;
         }
 
-        if (donation.Amount < threshold.Normal)
-        {
-            return DonationOrderType.Ignore;
-        }
+        var matchingActions = 0;
 
-        return donation.Amount >= threshold.SuperPriority
-            ? DonationOrderType.SuperPriority
-            : DonationOrderType.Normal;
+        if (donation.Amount == threshold.Normal)
+            matchingActions++;
+
+        if (donation.Amount == threshold.SuperPriority)
+            matchingActions++;
+
+        if (donation.Amount == threshold.SkipTrack)
+            matchingActions++;
+
+        if (matchingActions != 1)
+            return DonationOrderType.Ignore;
+
+        if (donation.Amount == threshold.Normal)
+            return DonationOrderType.Normal;
+
+        if (donation.Amount == threshold.SuperPriority)
+            return DonationOrderType.SuperPriority;
+
+        return DonationOrderType.SkipTrack;
     }
 }
