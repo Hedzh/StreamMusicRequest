@@ -16,6 +16,14 @@ public class MusicPlaybackService
 
     public bool AutoAdvanceEnabled { get; set; } = true;
 
+    private const int MaxPlaybackStartAttempts = 3;
+
+    private const int MediaFoundationNetworkTimeoutHResult =
+        unchecked((int)0x80072EE2);
+
+    private static readonly TimeSpan PlaybackRetryDelay =
+        TimeSpan.FromSeconds(1);
+
     private readonly SemaphoreSlim _operationGate =
         new(1, 1);
 
@@ -101,78 +109,133 @@ public class MusicPlaybackService
             return await StartNextCoreAsync();
         }
 
-        FileLogger.Info(
-            $"Получение прямой ссылки. " +
-            $"Источник: {playableSource.Name}");
-
-        var playbackUrl =
-            await playableSource.GetPlaybackUrlAsync(
-                item.Track);
-
-        if (string.IsNullOrWhiteSpace(
-                playbackUrl))
-        {
-            FileLogger.Info(
-                "Прямая ссылка не получена. " +
-                "Переход к следующему.");
-
-            return await StartNextCoreAsync();
-        }
-
-        FileLogger.Info(
-            "Прямая ссылка успешно получена.");
-
-        item.Track.SourceUrl =
-            playbackUrl;
-
         _isPlaying =
             true;
 
         _currentItem = item;
 
-        try
+        for (var attempt = 1;
+             attempt <= MaxPlaybackStartAttempts;
+             attempt++)
         {
-            FileLogger.Info(
-                $"Запуск плеера: " +
-                $"{item.Track.Artist} — " +
-                $"{item.Track.Title}");
-
-            if (item.ResumePosition > TimeSpan.Zero)
+            try
             {
-                await _player.PlayAsync(
-                    item.Track,
-                    item.ResumePosition);
+                FileLogger.Info(
+                    $"Получение прямой ссылки. " +
+                    $"Источник: {playableSource.Name}. " +
+                    $"Попытка {attempt}/{MaxPlaybackStartAttempts}.");
+
+                var playbackUrl =
+                    await playableSource.GetPlaybackUrlAsync(
+                        item.Track);
+
+                if (string.IsNullOrWhiteSpace(
+                        playbackUrl))
+                {
+                    FileLogger.Info(
+                        $"Прямая ссылка не получена " +
+                        $"на попытке {attempt}/{MaxPlaybackStartAttempts}.");
+
+                    break;
+                }
+
+                FileLogger.Info(
+                    $"Прямая ссылка успешно получена. " +
+                    $"Попытка {attempt}/{MaxPlaybackStartAttempts}.");
+
+                item.Track.SourceUrl =
+                    playbackUrl;
+
+                FileLogger.Info(
+                    $"Запуск плеера: " +
+                    $"{item.Track.Artist} — " +
+                    $"{item.Track.Title}. " +
+                    $"Попытка {attempt}/{MaxPlaybackStartAttempts}");
+
+                if (item.ResumePosition > TimeSpan.Zero)
+                {
+                    await _player.PlayAsync(
+                        item.Track,
+                        item.ResumePosition);
+                }
+                else
+                {
+                    await _player.PlayAsync(
+                        item.Track);
+                }
+
+                if (!item.ResumePlayback)
+                {
+                    item.ResumePlayback = true;
+                }
+
+                FileLogger.Info(
+                    $"PlayAsync плеера завершён успешно " +
+                    $"на попытке {attempt}/{MaxPlaybackStartAttempts}.");
+
+                return true;
             }
-            else
+            catch (Exception ex) when (
+                IsMediaFoundationNetworkTimeout(ex) &&
+                attempt < MaxPlaybackStartAttempts)
             {
-                await _player.PlayAsync(
-                    item.Track);
-            }
+                FileLogger.Error(
+                    $"Media Foundation не смогла открыть " +
+                    $"аудиопоток на попытке " +
+                    $"{attempt}/{MaxPlaybackStartAttempts}. " +
+                    $"Будет получена новая прямая ссылка и выполнена " +
+                    $"повторная попытка через {PlaybackRetryDelay.TotalSeconds:0} сек.",
+                    ex);
 
-            if (!item.ResumePlayback)
+                await Task.Delay(
+                    PlaybackRetryDelay)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex)
             {
-                item.ResumePlayback = true;
+                _isPlaying =
+                    false;
+
+                _currentItem = null;
+
+                FileLogger.Error(
+                    "Ошибка запуска плеера. Трек пропущен, " +
+                    "попытка запуска следующего элемента очереди.",
+                    ex);
+
+                return await StartNextCoreAsync();
             }
-
-            FileLogger.Info(
-                "PlayAsync плеера завершён успешно.");
-
-            return true;
         }
-        catch (Exception ex)
+
+        _isPlaying =
+            false;
+
+        _currentItem = null;
+
+        FileLogger.Error(
+            $"Не удалось запустить трек после " +
+            $"{MaxPlaybackStartAttempts} попыток. " +
+            "Трек пропущен, попытка запуска следующего элемента очереди.");
+
+        return await StartNextCoreAsync();
+    }
+
+    private static bool IsMediaFoundationNetworkTimeout(
+        Exception exception)
+    {
+        for (var current = exception;
+             current != null;
+             current = current.InnerException)
         {
-            _isPlaying =
-                false;
-
-            _currentItem = null;
-
-            FileLogger.Error(
-                "Ошибка запуска плеера. Трек пропущен, " +
-                "попытка запуска следующего элемента очереди.",
-                ex);
-
-            return await StartNextCoreAsync();
+            if (current.HResult ==
+                MediaFoundationNetworkTimeoutHResult)
+            {
+                return true;
+            }
         }
+
+        return false;
+    }
     
     }
 
