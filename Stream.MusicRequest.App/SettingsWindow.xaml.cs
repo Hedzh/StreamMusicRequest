@@ -1809,17 +1809,20 @@ public partial class SettingsWindow : Window
                     ["RUB"] = ParseDonationThreshold(
                         "RUB",
                         DonationAlertsRubNormalTextBox.Text,
-                        DonationAlertsRubSuperTextBox.Text),
+                        DonationAlertsRubSuperTextBox.Text,
+                        DonationAlertsRubSkipTextBox.Text),
 
                     ["EUR"] = ParseDonationThreshold(
                         "EUR",
                         DonationAlertsEurNormalTextBox.Text,
-                        DonationAlertsEurSuperTextBox.Text),
+                        DonationAlertsEurSuperTextBox.Text,
+                        DonationAlertsEurSkipTextBox.Text),
 
                     ["USD"] = ParseDonationThreshold(
                         "USD",
                         DonationAlertsUsdNormalTextBox.Text,
-                        DonationAlertsUsdSuperTextBox.Text)
+                        DonationAlertsUsdSuperTextBox.Text,
+                        DonationAlertsUsdSkipTextBox.Text)
                 };
 
             await _appServices
@@ -1847,26 +1850,38 @@ public partial class SettingsWindow : Window
     private static DonationThresholdSettings ParseDonationThreshold(
         string currency,
         string normalText,
-        string superText)
+        string superText,
+        string skipText)
     {
         if (!TryParseDonationAmount(normalText, out var normal) ||
-            !TryParseDonationAmount(superText, out var superPriority))
+            !TryParseDonationAmount(superText, out var superPriority) ||
+            !TryParseDonationAmount(skipText, out var skipTrack))
         {
             throw new InvalidOperationException(
-                $"Для {currency} укажите оба порога.");
+                $"Для {currency} укажите все три суммы.");
         }
 
         if (normal <= 0 ||
-            superPriority <= normal)
+            superPriority <= 0 ||
+            skipTrack <= 0)
         {
             throw new InvalidOperationException(
-                $"Для {currency} SUPER-PRIORITY должен быть больше обычного порога.");
+                $"Для {currency} все три суммы должны быть больше нуля.");
+        }
+
+        if (normal == superPriority ||
+            normal == skipTrack ||
+            superPriority == skipTrack)
+        {
+            throw new InvalidOperationException(
+                $"Для {currency} суммы обычного заказа, приоритетного заказа и пропуска трека должны быть разными.");
         }
 
         return new DonationThresholdSettings
         {
             Normal = normal,
-            SuperPriority = superPriority
+            SuperPriority = superPriority,
+            SkipTrack = skipTrack
         };
     }
 
@@ -1886,8 +1901,6 @@ public partial class SettingsWindow : Window
                    System.Globalization.CultureInfo.CurrentCulture,
                    out value);
     }
-
-
 
     // ============================================================
     // BANS
