@@ -13,6 +13,8 @@ public class BanService : IBanService
 
     private readonly List<BannedUser> _bannedUsers;
 
+    public event EventHandler? BanChanged;
+
     public BanService(
         IBanStorage storage)
     {
@@ -119,6 +121,7 @@ public class BanService : IBanService
                 });
 
             Save();
+            BanChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -136,14 +139,19 @@ public class BanService : IBanService
 
         lock (_syncRoot)
         {
-            _bannedUsers.RemoveAll(
-                user =>
-                    string.Equals(
-                        user.Username,
-                        normalizedUsername,
-                        StringComparison.OrdinalIgnoreCase));
+            var removed =
+                _bannedUsers.RemoveAll(
+                    user =>
+                        string.Equals(
+                            user.Username,
+                            normalizedUsername,
+                            StringComparison.OrdinalIgnoreCase));
 
-            Save();
+            if (removed > 0)
+            {
+                Save();
+                BanChanged?.Invoke(this, EventArgs.Empty);
+            }
         }
     }
 
@@ -205,6 +213,7 @@ public class BanService : IBanService
                 });
 
             Save();
+            BanChanged?.Invoke(this, EventArgs.Empty);
         }
     }
 
@@ -226,18 +235,23 @@ public class BanService : IBanService
 
         lock (_syncRoot)
         {
-            _bannedTracks.RemoveAll(
-                track =>
-                    string.Equals(
-                        track.Source,
-                        normalizedSource,
-                        StringComparison.OrdinalIgnoreCase) &&
-                    string.Equals(
-                        track.TrackId,
-                        normalizedTrackId,
-                        StringComparison.OrdinalIgnoreCase));
+            var removed =
+                _bannedTracks.RemoveAll(
+                    track =>
+                        string.Equals(
+                            track.Source,
+                            normalizedSource,
+                            StringComparison.OrdinalIgnoreCase) &&
+                        string.Equals(
+                            track.TrackId,
+                            normalizedTrackId,
+                            StringComparison.OrdinalIgnoreCase));
 
-            Save();
+            if (removed > 0)
+            {
+                Save();
+                BanChanged?.Invoke(this, EventArgs.Empty);
+            }
         }
     }
 
