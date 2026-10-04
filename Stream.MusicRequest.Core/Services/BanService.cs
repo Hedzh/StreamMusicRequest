@@ -6,25 +6,21 @@ namespace Stream.MusicRequest.Core.Services;
 public class BanService : IBanService
 {
     private readonly object _syncRoot = new();
+    private readonly SemaphoreSlim _mutationGate = new(1, 1);
 
     private readonly IBanStorage _storage;
-
     private readonly List<BannedTrack> _bannedTracks;
-
     private readonly List<BannedUser> _bannedUsers;
 
     public event EventHandler? BanChanged;
 
-    public BanService(
-        IBanStorage storage)
+    public BanService(IBanStorage storage)
     {
         _storage =
             storage
-            ?? throw new ArgumentNullException(
-                nameof(storage));
+            ?? throw new ArgumentNullException(nameof(storage));
 
-        var data =
-            _storage.Load();
+        var data = _storage.Load();
 
         _bannedTracks =
             data.Tracks ?? new List<BannedTrack>();
@@ -33,17 +29,12 @@ public class BanService : IBanService
             data.Users ?? new List<BannedUser>();
     }
 
-    public bool IsUserBanned(
-        string username)
+    public bool IsUserBanned(string username)
     {
-        var normalizedUsername =
-            NormalizeUsername(username);
+        var normalizedUsername = NormalizeUsername(username);
 
-        if (string.IsNullOrWhiteSpace(
-                normalizedUsername))
-        {
+        if (string.IsNullOrWhiteSpace(normalizedUsername))
             return false;
-        }
 
         lock (_syncRoot)
         {
@@ -56,15 +47,10 @@ public class BanService : IBanService
         }
     }
 
-    public bool IsTrackBanned(
-        string source,
-        string trackId)
+    public bool IsTrackBanned(string source, string trackId)
     {
-        var normalizedSource =
-            NormalizeKey(source);
-
-        var normalizedTrackId =
-            NormalizeKey(trackId);
+        var normalizedSource = NormalizeKey(source);
+        var normalizedTrackId = NormalizeKey(trackId);
 
         if (string.IsNullOrWhiteSpace(normalizedSource) ||
             string.IsNullOrWhiteSpace(normalizedTrackId))
@@ -87,86 +73,142 @@ public class BanService : IBanService
         }
     }
 
-    public void BanUser(
-        string username)
+    public async Task BanUserAsync(string username)
     {
-        var normalizedUsername =
-            NormalizeUsername(username);
+        var normalizedUsername = NormalizeUsername(username);
 
-        if (string.IsNullOrWhiteSpace(
-                normalizedUsername))
+        if (string.IsNullOrWhiteSpace(normalizedUsername))
         {
             throw new ArgumentException(
                 "Имя пользователя не указано.",
                 nameof(username));
         }
 
-        lock (_syncRoot)
+        await _mutationGate.WaitAsync().ConfigureAwait(false);
+
+        try
         {
-            if (_bannedUsers.Any(
-                    user =>
-                        string.Equals(
-                            user.Username,
-                            normalizedUsername,
-                            StringComparison.OrdinalIgnoreCase)))
+            lock (_syncRoot)
             {
-                return;
+                if (_bannedUsers.Any(
+                        user =>
+                            string.Equals(
+                                user.Username,
+                                normalizedUsername,
+                                StringComparison.OrdinalIgnoreCase)))
+                {
+                    return;
+                }
+
+                _bannedUsers.Add(
+                    new BannedUser
+                    {
+                        Username = normalizedUsername,
+                        BannedAt = DateTime.UtcNow
+                    });
             }
 
-            _bannedUsers.Add(
-                new BannedUser
+            try
+            {
+                await SaveAsync().ConfigureAwait(false);
+            }
+            catch
+            {
+                lock (_syncRoot)
                 {
-                    Username = normalizedUsername,
-                    BannedAt = DateTime.UtcNow
-                });
+                    _bannedUsers.RemoveAll(
+                        user =>
+                            string.Equals(
+                                user.Username,
+                                normalizedUsername,
+                                StringComparison.OrdinalIgnoreCase));
+                }
 
-            Save();
+                throw;
+            }
+
             BanChanged?.Invoke(this, EventArgs.Empty);
+        }
+        finally
+        {
+            _mutationGate.Release();
         }
     }
 
-    public void UnbanUser(
-        string username)
+    public async Task UnbanUserAsync(string username)
     {
-        var normalizedUsername =
-            NormalizeUsername(username);
+        var normalizedUsername = NormalizeUsername(username);
 
-        if (string.IsNullOrWhiteSpace(
-                normalizedUsername))
-        {
+        if (string.IsNullOrWhiteSpace(normalizedUsername))
             return;
-        }
 
-        lock (_syncRoot)
+        await _mutationGate.WaitAsync().ConfigureAwait(false);
+
+        try
         {
-            var removed =
+            List<BannedUser> removedUsers;
+
+            lock (_syncRoot)
+            {
+                removedUsers =
+                    _bannedUsers
+                        .Where(
+                            user =>
+                                string.Equals(
+                                    user.Username,
+                                    normalizedUsername,
+                                    StringComparison.OrdinalIgnoreCase))
+                        .Select(
+                            user =>
+                                new BannedUser
+                                {
+                                    Username = user.Username,
+                                    BannedAt = user.BannedAt
+                                })
+                        .ToList();
+
+                if (removedUsers.Count == 0)
+                    return;
+
                 _bannedUsers.RemoveAll(
                     user =>
                         string.Equals(
                             user.Username,
                             normalizedUsername,
                             StringComparison.OrdinalIgnoreCase));
-
-            if (removed > 0)
-            {
-                Save();
-                BanChanged?.Invoke(this, EventArgs.Empty);
             }
+
+            try
+            {
+                await SaveAsync().ConfigureAwait(false);
+            }
+            catch
+            {
+                lock (_syncRoot)
+                {
+                    _bannedUsers.AddRange(removedUsers);
+                }
+
+                throw;
+            }
+
+            BanChanged?.Invoke(this, EventArgs.Empty);
+        }
+        finally
+        {
+            _mutationGate.Release();
         }
     }
 
-    public void BanTrack(
+    public async Task BanTrackAsync(
         string source,
         string trackId,
         string title,
         string artist,
         string sourceUrl)
     {
-        var normalizedSource =
-            NormalizeKey(source);
-
-        var normalizedTrackId =
-            NormalizeKey(trackId);
+        var normalizedSource = NormalizeKey(source);
+        var normalizedTrackId = NormalizeKey(trackId);
 
         if (string.IsNullOrWhiteSpace(normalizedSource))
         {
@@ -182,50 +224,76 @@ public class BanService : IBanService
                 nameof(trackId));
         }
 
-        lock (_syncRoot)
-        {
-            var existing =
-                _bannedTracks.FirstOrDefault(
-                    track =>
-                        string.Equals(
-                            track.Source,
-                            normalizedSource,
-                            StringComparison.OrdinalIgnoreCase) &&
-                        string.Equals(
-                            track.TrackId,
-                            normalizedTrackId,
-                            StringComparison.OrdinalIgnoreCase));
+        await _mutationGate.WaitAsync().ConfigureAwait(false);
 
-            if (existing != null)
+        try
+        {
+            lock (_syncRoot)
             {
-                return;
+                var existing =
+                    _bannedTracks.FirstOrDefault(
+                        track =>
+                            string.Equals(
+                                track.Source,
+                                normalizedSource,
+                                StringComparison.OrdinalIgnoreCase) &&
+                            string.Equals(
+                                track.TrackId,
+                                normalizedTrackId,
+                                StringComparison.OrdinalIgnoreCase));
+
+                if (existing != null)
+                    return;
+
+                _bannedTracks.Add(
+                    new BannedTrack
+                    {
+                        Source = normalizedSource,
+                        TrackId = normalizedTrackId,
+                        Title = title?.Trim() ?? string.Empty,
+                        Artist = artist?.Trim() ?? string.Empty,
+                        SourceUrl = sourceUrl?.Trim() ?? string.Empty,
+                        BannedAt = DateTime.UtcNow
+                    });
             }
 
-            _bannedTracks.Add(
-                new BannedTrack
+            try
+            {
+                await SaveAsync().ConfigureAwait(false);
+            }
+            catch
+            {
+                lock (_syncRoot)
                 {
-                    Source = normalizedSource,
-                    TrackId = normalizedTrackId,
-                    Title = title?.Trim() ?? string.Empty,
-                    Artist = artist?.Trim() ?? string.Empty,
-                    SourceUrl = sourceUrl?.Trim() ?? string.Empty,
-                    BannedAt = DateTime.UtcNow
-                });
+                    _bannedTracks.RemoveAll(
+                        track =>
+                            string.Equals(
+                                track.Source,
+                                normalizedSource,
+                                StringComparison.OrdinalIgnoreCase) &&
+                            string.Equals(
+                                track.TrackId,
+                                normalizedTrackId,
+                                StringComparison.OrdinalIgnoreCase));
+                }
 
-            Save();
+                throw;
+            }
+
             BanChanged?.Invoke(this, EventArgs.Empty);
+        }
+        finally
+        {
+            _mutationGate.Release();
         }
     }
 
-    public void UnbanTrack(
+    public async Task UnbanTrackAsync(
         string source,
         string trackId)
     {
-        var normalizedSource =
-            NormalizeKey(source);
-
-        var normalizedTrackId =
-            NormalizeKey(trackId);
+        var normalizedSource = NormalizeKey(source);
+        var normalizedTrackId = NormalizeKey(trackId);
 
         if (string.IsNullOrWhiteSpace(normalizedSource) ||
             string.IsNullOrWhiteSpace(normalizedTrackId))
@@ -233,9 +301,42 @@ public class BanService : IBanService
             return;
         }
 
-        lock (_syncRoot)
+        await _mutationGate.WaitAsync().ConfigureAwait(false);
+
+        try
         {
-            var removed =
+            List<BannedTrack> removedTracks;
+
+            lock (_syncRoot)
+            {
+                removedTracks =
+                    _bannedTracks
+                        .Where(
+                            track =>
+                                string.Equals(
+                                    track.Source,
+                                    normalizedSource,
+                                    StringComparison.OrdinalIgnoreCase) &&
+                                string.Equals(
+                                    track.TrackId,
+                                    normalizedTrackId,
+                                    StringComparison.OrdinalIgnoreCase))
+                        .Select(
+                            track =>
+                                new BannedTrack
+                                {
+                                    Source = track.Source,
+                                    TrackId = track.TrackId,
+                                    Title = track.Title,
+                                    Artist = track.Artist,
+                                    SourceUrl = track.SourceUrl,
+                                    BannedAt = track.BannedAt
+                                })
+                        .ToList();
+
+                if (removedTracks.Count == 0)
+                    return;
+
                 _bannedTracks.RemoveAll(
                     track =>
                         string.Equals(
@@ -246,12 +347,27 @@ public class BanService : IBanService
                             track.TrackId,
                             normalizedTrackId,
                             StringComparison.OrdinalIgnoreCase));
-
-            if (removed > 0)
-            {
-                Save();
-                BanChanged?.Invoke(this, EventArgs.Empty);
             }
+
+            try
+            {
+                await SaveAsync().ConfigureAwait(false);
+            }
+            catch
+            {
+                lock (_syncRoot)
+                {
+                    _bannedTracks.AddRange(removedTracks);
+                }
+
+                throw;
+            }
+
+            BanChanged?.Invoke(this, EventArgs.Empty);
+        }
+        finally
+        {
+            _mutationGate.Release();
         }
     }
 
@@ -291,10 +407,13 @@ public class BanService : IBanService
         }
     }
 
-    private void Save()
+    private async Task SaveAsync()
     {
-        _storage
-            .SaveAsync(
+        BanStorageModel data;
+
+        lock (_syncRoot)
+        {
+            data =
                 new BanStorageModel
                 {
                     Tracks = _bannedTracks
@@ -320,19 +439,18 @@ public class BanService : IBanService
                                     BannedAt = user.BannedAt
                                 })
                         .ToList()
-                })
-            .GetAwaiter()
-            .GetResult();
+                };
+        }
+
+        await _storage.SaveAsync(data).ConfigureAwait(false);
     }
 
-    private static string NormalizeUsername(
-        string username)
+    private static string NormalizeUsername(string username)
     {
         return username?.Trim() ?? string.Empty;
     }
 
-    private static string NormalizeKey(
-        string value)
+    private static string NormalizeKey(string value)
     {
         return value?.Trim() ?? string.Empty;
     }
