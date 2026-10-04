@@ -10,17 +10,20 @@ public sealed class DonationAlertsSettings
             ["RUB"] = new DonationThresholdSettings
             {
                 Normal = 100,
-                SuperPriority = 200
+                SuperPriority = 200,
+                SkipTrack = 250
             },
             ["EUR"] = new DonationThresholdSettings
             {
                 Normal = 1,
-                SuperPriority = 2
+                SuperPriority = 2,
+                SkipTrack = 3
             },
             ["USD"] = new DonationThresholdSettings
             {
                 Normal = 1.5m,
-                SuperPriority = 3
+                SuperPriority = 3,
+                SkipTrack = 4
             }
         };
 }
