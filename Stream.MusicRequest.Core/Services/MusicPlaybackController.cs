@@ -432,7 +432,7 @@ public class MusicPlaybackController
 
         try
         {
-            _banService.BanUser(username);
+            await _banService.BanUserAsync(username).ConfigureAwait(false);
 
             var currentItem =
                 _viewerMusic.CurrentItem;
@@ -495,12 +495,12 @@ public class MusicPlaybackController
             var track =
                 currentItem.Track;
 
-            _banService.BanTrack(
+            await _banService.BanTrackAsync(
                 currentItem.Source.Name,
                 track.Id,
                 track.Title,
                 track.Artist,
-                track.SourceUrl ?? string.Empty);
+                track.SourceUrl ?? string.Empty).ConfigureAwait(false);
 
             var sourceName =
                 currentItem.Source.Name;
