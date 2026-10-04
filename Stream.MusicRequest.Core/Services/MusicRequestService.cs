@@ -8,13 +8,17 @@ public class MusicRequestService
 {
     private readonly MusicQueueService _queue;
     private readonly IMusicSourceResolver _sourceResolver;
+    private readonly IBanService _banService;
 
     public MusicRequestService(
         MusicQueueService queue,
-        IMusicSourceResolver sourceResolver)
+        IMusicSourceResolver sourceResolver,
+        IBanService banService)
     {
         _queue = queue;
         _sourceResolver = sourceResolver;
+        _banService = banService
+            ?? throw new ArgumentNullException(nameof(banService));
     }
 
     public async Task<MusicRequestResult> AddRequestAsync(
@@ -25,6 +29,12 @@ public class MusicRequestService
         {
             return MusicRequestResult.Failed(
                 "Ссылка на музыкальный трек не указана.");
+        }
+
+        if (_banService.IsUserBanned(request.ViewerName))
+        {
+            return MusicRequestResult.Failed(
+                "Пользователь заблокирован и не может заказывать музыку.");
         }
 
         var source =
@@ -69,6 +79,14 @@ public class MusicRequestService
         {
             return MusicRequestResult.Failed(
                 "Не удалось найти музыкальный трек.");
+        }
+
+        if (_banService.IsTrackBanned(
+                source.Name,
+                track.Id))
+        {
+            return MusicRequestResult.Failed(
+                "Этот трек заблокирован и не может быть добавлен в очередь.");
         }
 
         track.RequestedBy =
