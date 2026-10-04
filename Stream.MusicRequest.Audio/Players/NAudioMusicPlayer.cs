@@ -399,7 +399,7 @@ public class NAudioMusicPlayer :
         // curve for local playback only. The OBS stream is
         // produced before WaveOut volume is applied, so OBS
         // remains at its original level.
-        return MathF.Pow(clampedVolume, 2.0f);
+        return 0.5f * MathF.Pow(clampedVolume, 2.0f);
     }
 
     public Track? GetCurrentTrack() => _currentTrack;
