@@ -31,6 +31,12 @@ public class TwitchService : ITwitchService
     private Task? _monitorTask;
     private readonly SemaphoreSlim _reconnectLock = new(1, 1);
 
+    private readonly SemaphoreSlim _chatMessageLock =
+        new(1, 1);
+
+    private DateTime _lastChatMessageSentUtc =
+        DateTime.MinValue;
+
     public TwitchUser? CurrentUser => _currentUser;
 
     public bool IsConnected => _isConnected;
@@ -132,6 +138,92 @@ public class TwitchService : ITwitchService
         {
             _connectionInProgress =
                 false;
+        }
+    }
+
+    public async Task<bool> SendChatMessageAsync(
+        string message,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        if (_currentUser == null)
+        {
+            FileLogger.Info(
+                "Twitch Chat: сообщение не отправлено, так как аккаунт стримера не подключён.");
+
+            return false;
+        }
+
+        var accessToken =
+            await _authService.GetValidAccessTokenAsync(
+                cancellationToken);
+
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            FileLogger.Info(
+                "Twitch Chat: сообщение не отправлено, так как OAuth-токен отсутствует.");
+
+            return false;
+        }
+
+        await _chatMessageLock.WaitAsync(
+            cancellationToken);
+
+        try
+        {
+            var elapsed =
+                DateTime.UtcNow -
+                _lastChatMessageSentUtc;
+
+            var minimumInterval =
+                TimeSpan.FromSeconds(1);
+
+            if (elapsed < minimumInterval)
+            {
+                await Task.Delay(
+                    minimumInterval - elapsed,
+                    cancellationToken);
+            }
+
+            var sent =
+                await _apiClient.SendChatMessageAsync(
+                    accessToken,
+                    _currentUser.Id,
+                    _currentUser.Id,
+                    message,
+                    cancellationToken);
+
+            if (sent)
+            {
+                _lastChatMessageSentUtc =
+                    DateTime.UtcNow;
+
+                FileLogger.Info(
+                    $"Twitch Chat: отправлено сообщение: {message}");
+            }
+            else
+            {
+                FileLogger.Info(
+                    "Twitch Chat: Twitch не подтвердил отправку сообщения.");
+            }
+
+            return sent;
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Error(
+                "Twitch Chat: не удалось отправить сообщение.",
+                ex);
+
+            return false;
+        }
+        finally
+        {
+            _chatMessageLock.Release();
         }
     }
 
