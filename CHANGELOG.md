@@ -12,6 +12,7 @@ All notable changes to Stream Music Request are documented here.
 
 ### Improved
 - Twitch request feedback is now configurable without changing the request processing logic.
+- OBS widget now shows the requester only for viewer-requested tracks; main music is displayed as artist and title only.
 
 ## [1.3.3] - 2026-10-04
 
