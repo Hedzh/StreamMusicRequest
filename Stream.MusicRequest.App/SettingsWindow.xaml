@@ -591,31 +591,9 @@
                         <TextBlock Text="Общие"
                                    Style="{StaticResource PageTitle}"/>
 
-                        <TextBlock Text="Основная информация о приложении."
+                        <TextBlock Text="Основные параметры приложения и диагностика."
                                    Style="{StaticResource PageDescription}"
                                    Margin="0,0,0,20"/>
-
-                        <Border Style="{StaticResource SettingsCard}">
-
-                            <StackPanel>
-
-                                <TextBlock Text="Stream Music Request"
-                                           FontSize="22"
-                                           FontWeight="SemiBold"
-                                           Foreground="#FFFFFF"/>
-
-                                <TextBlock Text="Управление музыкальными запросами зрителей Twitch."
-                                           FontSize="14"
-                                           Foreground="{StaticResource TextSecondary}"
-                                           Margin="0,8,0,0"/>
-
-                                <TextBlock Text="Приложение позволяет принимать музыкальные запросы, управлять очередью и воспроизводить музыку во время стрима."
-                                           Style="{StaticResource FieldDescription}"
-                                           Margin="0,14,0,0"/>
-
-                            </StackPanel>
-
-                        </Border>
 
                         <Border Style="{StaticResource SettingsCard}">
 
@@ -635,36 +613,6 @@
                                 </ComboBox>
 
                             </StackPanel>
-
-                        </Border>
-
-                        <Border Style="{StaticResource SettingsCard}">
-
-                            <Grid>
-
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
-
-                                <StackPanel>
-
-                                    <TextBlock Text="Версия приложения"
-                                               Style="{StaticResource FieldTitle}"/>
-
-                                    <TextBlock Text="Текущая версия установленного приложения."
-                                               Style="{StaticResource FieldDescription}"/>
-
-                                </StackPanel>
-
-                                <TextBlock Grid.Column="1"
-                                           Text="1.4.0"
-                                           FontSize="14"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource AccentBrush}"
-                                           VerticalAlignment="Center"/>
-
-                            </Grid>
 
                         </Border>
 
