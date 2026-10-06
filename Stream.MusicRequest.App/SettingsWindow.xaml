@@ -324,13 +324,6 @@
         <!-- NAVIGATION -->
         <!-- ====================================================== -->
 
-        <Style x:Key="NavigationGroupTitle"
-               TargetType="TextBlock">
-            <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
-            <Setter Property="FontSize" Value="10"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="12,14,12,6"/>
-        </Style>
 
         <Style x:Key="NavigationItemStyle"
                TargetType="ListBoxItem">
@@ -488,44 +481,20 @@
                          Margin="12,8,12,12"
                          Background="Transparent"
                          BorderThickness="0"
-                         SelectedIndex="1"
+                         SelectedIndex="0"
                          SelectionChanged="NavigationList_SelectionChanged"
                          ItemContainerStyle="{StaticResource NavigationItemStyle}">
 
-                    <ListBoxItem IsHitTestVisible="False">
-                        <TextBlock Text="ОСНОВНЫЕ"
-                                   Style="{StaticResource NavigationGroupTitle}"/>
-                    </ListBoxItem>
-                    <ListBoxItem Tag="0"><TextBlock Text="Общие"/></ListBoxItem>
-                    <ListBoxItem Tag="1"><TextBlock Text="Музыкальные источники"/></ListBoxItem>
-
-                    <ListBoxItem IsHitTestVisible="False">
-                        <TextBlock Text="ИНТЕГРАЦИИ"
-                                   Style="{StaticResource NavigationGroupTitle}"/>
-                    </ListBoxItem>
-                    <ListBoxItem Tag="2"><TextBlock Text="Donation Alerts"/></ListBoxItem>
-                    <ListBoxItem Tag="3"><TextBlock Text="Twitch"/></ListBoxItem>
-                    <ListBoxItem Tag="4"><TextBlock Text="Twitch-награды"/></ListBoxItem>
-
-                    <ListBoxItem IsHitTestVisible="False">
-                        <TextBlock Text="ВОСПРОИЗВЕДЕНИЕ"
-                                   Style="{StaticResource NavigationGroupTitle}"/>
-                    </ListBoxItem>
-                    <ListBoxItem Tag="5"><TextBlock Text="Воспроизведение и звук"/></ListBoxItem>
-                    <ListBoxItem Tag="6"><TextBlock Text="Баны"/></ListBoxItem>
-
-                    <ListBoxItem IsHitTestVisible="False">
-                        <TextBlock Text="ТРАНСЛЯЦИЯ"
-                                   Style="{StaticResource NavigationGroupTitle}"/>
-                    </ListBoxItem>
-                    <ListBoxItem Tag="7"><TextBlock Text="OBS / Виджет"/></ListBoxItem>
-
-                    <ListBoxItem IsHitTestVisible="False">
-                        <TextBlock Text="СПРАВКА"
-                                   Style="{StaticResource NavigationGroupTitle}"/>
-                    </ListBoxItem>
-                    <ListBoxItem Tag="8"><TextBlock Text="История изменений"/></ListBoxItem>
-                    <ListBoxItem Tag="9"><TextBlock Text="О программе"/></ListBoxItem>
+                    <ListBoxItem><TextBlock Text="Общие"/></ListBoxItem>
+                    <ListBoxItem><TextBlock Text="Музыкальные источники"/></ListBoxItem>
+                    <ListBoxItem><TextBlock Text="Donation Alerts"/></ListBoxItem>
+                    <ListBoxItem><TextBlock Text="Twitch"/></ListBoxItem>
+                    <ListBoxItem><TextBlock Text="Twitch-награды"/></ListBoxItem>
+                    <ListBoxItem><TextBlock Text="Баны"/></ListBoxItem>
+                    <ListBoxItem><TextBlock Text="Воспроизведение и звук"/></ListBoxItem>
+                    <ListBoxItem><TextBlock Text="OBS / Виджет"/></ListBoxItem>
+                    <ListBoxItem><TextBlock Text="История изменений"/></ListBoxItem>
+                    <ListBoxItem><TextBlock Text="О программе"/></ListBoxItem>
 
                 </ListBox>
 
