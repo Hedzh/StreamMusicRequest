@@ -4,10 +4,10 @@ using Stream.MusicRequest.DonationAlerts.Client;
 using Stream.MusicRequest.DonationAlerts.Services;
 using Stream.MusicRequest.DonationAlerts.Storage;
 using Stream.MusicRequest.Infrastructure.Storage;
+using Stream.MusicRequest.Infrastructure.Models;
 using Stream.MusicRequest.Yandex.Sources;
 using Stream.MusicRequest.Twitch.EventSub;
 using Stream.MusicRequest.Twitch.Models;
-using Stream.MusicRequest.Twitch.Configuration;
 using Stream.MusicRequest.Twitch.Services;
 using Stream.MusicRequest.Yandex.Services;
 
