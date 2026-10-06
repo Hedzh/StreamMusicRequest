@@ -843,11 +843,13 @@
 
                                 <CheckBox x:Name="TwitchChatSuccessMessagesCheckBox"
                                           Content="Отправлять сообщение при успешном заказе"
+                                          Style="{StaticResource SettingsCheckBox}"
                                           IsChecked="True"
                                           Margin="0,0,0,10"/>
 
                                 <CheckBox x:Name="TwitchChatErrorMessagesCheckBox"
                                           Content="Отправлять сообщение при отклонённом заказе"
+                                          Style="{StaticResource SettingsCheckBox}"
                                           IsChecked="True"
                                           Margin="0,0,0,14"/>
 
