@@ -74,14 +74,14 @@ public partial class SettingsWindow : Window
         [
             GeneralPage,
             MusicSourcesPage,
+            DonationAlertsPage,
             TwitchPage,
             TwitchRewardsPage,
-            DonationAlertsPage,
             BansPage,
             PlaybackPage,
             ObsPage,
-            AboutPage,
-            ChangelogPage
+            ChangelogPage,
+            AboutPage
         ];
 
         _appServices
