@@ -415,8 +415,6 @@ public sealed class ObsWidgetServer : IAsyncDisposable
 
                         if (requestedBy)
                             text += "  •  Заказал: " + requestedBy;
-                        else
-                            text += "  •  Основная музыка";
                     }
 
                     const key =
