@@ -192,6 +192,19 @@ public class TwitchAuthService
 
         try
         {
+            if (!snapshot.Scope.Contains(
+                    "user:write:chat",
+                    StringComparer.Ordinal))
+            {
+                await _storage.DeleteAsync();
+
+                AuthenticationStateChanged?.Invoke(
+                    this,
+                    false);
+
+                return null;
+            }
+
             var token =
                 new TwitchTokenResponse
                 {
