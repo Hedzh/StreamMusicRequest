@@ -1020,7 +1020,13 @@
                                                    Foreground="{StaticResource TextMuted}"
                                                    HorizontalAlignment="Right"/>
 
-                                        <TextBlock Text="v1.3.3"
+                                        <TextBlock Text="by Hedzh"
+                                                   FontSize="10"
+                                                   Foreground="{StaticResource TextMuted}"
+                                                   HorizontalAlignment="Right"
+                                                   Margin="0,2,0,0"/>
+
+                                        <TextBlock Text="v1.4.0"
                                                    FontSize="11"
                                                    Foreground="{StaticResource TextSecondary}"
                                                    HorizontalAlignment="Right"
