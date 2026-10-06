@@ -427,6 +427,110 @@ public class TwitchApiClient
         }
     }
 
+    public async Task<bool> SendChatMessageAsync(
+        string accessToken,
+        string broadcasterId,
+        string senderId,
+        string message,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(accessToken))
+        {
+            throw new ArgumentException(
+                "Access Token Twitch не указан.",
+                nameof(accessToken));
+        }
+
+        if (string.IsNullOrWhiteSpace(broadcasterId))
+        {
+            throw new ArgumentException(
+                "Broadcaster ID Twitch не указан.",
+                nameof(broadcasterId));
+        }
+
+        if (string.IsNullOrWhiteSpace(senderId))
+        {
+            throw new ArgumentException(
+                "Sender ID Twitch не указан.",
+                nameof(senderId));
+        }
+
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        if (message.Length > 500)
+        {
+            throw new ArgumentException(
+                "Сообщение Twitch не может быть длиннее 500 символов.",
+                nameof(message));
+        }
+
+        var requestBody =
+            new
+            {
+                broadcaster_id = broadcasterId,
+                sender_id = senderId,
+                message
+            };
+
+        var json =
+            JsonSerializer.Serialize(requestBody);
+
+        using var request =
+            new HttpRequestMessage(
+                HttpMethod.Post,
+                $"{ApiBaseUrl}chat/messages");
+
+        AddAuthenticationHeaders(
+            request,
+            accessToken);
+
+        request.Content =
+            new StringContent(
+                json,
+                Encoding.UTF8,
+                "application/json");
+
+        using var response =
+            await _httpClient.SendAsync(
+                request,
+                cancellationToken);
+
+        var responseContent =
+            await response.Content.ReadAsStringAsync(
+                cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException(
+                $"Twitch API не смог отправить сообщение в чат. " +
+                $"HTTP {(int)response.StatusCode}: " +
+                responseContent);
+        }
+
+        using var document =
+            JsonDocument.Parse(responseContent);
+
+        var data =
+            document.RootElement
+                .GetProperty("data");
+
+        if (data.GetArrayLength() == 0)
+        {
+            return false;
+        }
+
+        var result =
+            data[0];
+
+        return result.TryGetProperty(
+                   "is_sent",
+                   out var isSentProperty)
+               && isSentProperty.GetBoolean();
+    }
+
     private void AddAuthenticationHeaders(
         HttpRequestMessage request,
         string accessToken)
