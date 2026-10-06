@@ -1,3 +1,4 @@
+using Stream.MusicRequest.Infrastructure.Models;
 using Stream.MusicRequest.Core.Diagnostics;
 using System.Diagnostics;
 using System.IO;
