@@ -1,5 +1,5 @@
 using System.Text.Json;
-using Stream.MusicRequest.Twitch.Configuration;
+using Stream.MusicRequest.Infrastructure.Models;
 
 namespace Stream.MusicRequest.Infrastructure.Storage;
 
