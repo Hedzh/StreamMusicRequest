@@ -1705,6 +1705,8 @@
                                            Style="{StaticResource FieldDescription}"/>
                                 <TextBlock Text="• Авторство Hedzh отображается в нижней части главного окна."
                                            Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• OBS-виджет показывает имя заказавшего только для заявок зрителей, а основную музыку — только как «Исполнитель — Название трека»."
+                                           Style="{StaticResource FieldDescription}"/>
 
                             </StackPanel>
                         </Border>
