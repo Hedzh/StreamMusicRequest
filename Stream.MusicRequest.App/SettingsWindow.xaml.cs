@@ -1,3 +1,4 @@
+using Stream.MusicRequest.Core.Diagnostics;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
