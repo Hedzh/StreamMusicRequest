@@ -8,6 +8,7 @@ public class TwitchSettings
     public string[] Scopes { get; set; } =
     {
         "channel:read:redemptions",
-        "channel:manage:redemptions"
+        "channel:manage:redemptions",
+        "user:write:chat"
     };
 }
