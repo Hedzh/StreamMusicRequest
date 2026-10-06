@@ -7,6 +7,7 @@ using Stream.MusicRequest.Infrastructure.Storage;
 using Stream.MusicRequest.Yandex.Sources;
 using Stream.MusicRequest.Twitch.EventSub;
 using Stream.MusicRequest.Twitch.Models;
+using Stream.MusicRequest.Twitch.Configuration;
 using Stream.MusicRequest.Twitch.Services;
 using Stream.MusicRequest.Yandex.Services;
 
@@ -16,6 +17,9 @@ public class AppServices
 {
     private readonly TwitchRewardSettingsStorage
         _twitchRewardSettingsStorage;
+
+    private readonly TwitchChatSettingsStorage
+        _twitchChatSettingsStorage;
 
     public YandexAuthService YandexAuthService { get; }
 
@@ -32,6 +36,8 @@ public class AppServices
     public IReadOnlyList<TwitchRewardBinding>
         TwitchRewardBindings
     { get; }
+
+    public TwitchChatSettings TwitchChatSettings { get; private set; } = new();
 
     public AppServices(
         YandexAuthService yandexAuthService,
@@ -78,6 +84,15 @@ public class AppServices
                     .CreateDefaultSkipTrackBinding()
             };
 
+        _twitchChatSettingsStorage =
+            new TwitchChatSettingsStorage(
+                Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                    "StreamMusicRequest",
+                    "Settings"));
+
+        TwitchChatSettings = new TwitchChatSettings();
+
         var twitchEventSubClient =
             new TwitchEventSubClient();
 
@@ -119,6 +134,25 @@ public class AppServices
                 yandexMusicSource);
 
         DonationAlertsMusicService.LoadSettings();
+    }
+
+    public async Task LoadTwitchChatSettingsAsync()
+    {
+        TwitchChatSettings =
+            await _twitchChatSettingsStorage.LoadAsync();
+    }
+
+    public async Task SaveTwitchChatSettingsAsync(
+        bool successMessagesEnabled,
+        bool errorMessagesEnabled)
+    {
+        TwitchChatSettings.SuccessMessagesEnabled =
+            successMessagesEnabled;
+        TwitchChatSettings.ErrorMessagesEnabled =
+            errorMessagesEnabled;
+
+        await _twitchChatSettingsStorage.SaveAsync(
+            TwitchChatSettings);
     }
 
     public async Task LoadTwitchRewardSettingsAsync()
