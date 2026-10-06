@@ -11,4 +11,8 @@ public interface ITwitchService
         CancellationToken cancellationToken = default);
 
     Task DisconnectAsync();
+
+    Task<bool> SendChatMessageAsync(
+        string message,
+        CancellationToken cancellationToken = default);
 }
