@@ -138,16 +138,14 @@ public partial class SettingsWindow : Window
         if (!_isInitialized)
             return;
 
-        var selectedIndex =
-            NavigationList.SelectedIndex;
-
-        if (selectedIndex < 0 ||
-            selectedIndex >= _pages.Length)
+        if (NavigationList.SelectedItem is not ListBoxItem selectedItem ||
+            selectedItem.Tag is not string tag ||
+            !int.TryParse(tag, out var pageIndex))
         {
             return;
         }
 
-        ShowPage(selectedIndex);
+        ShowPage(pageIndex);
     }
 
     private void ShowPage(
