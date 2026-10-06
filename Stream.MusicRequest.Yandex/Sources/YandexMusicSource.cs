@@ -47,17 +47,27 @@ public class YandexMusicSource :
             return false;
         }
 
-        /*
-         * Если URL содержит /track/,
-         * он считается ссылкой именно на трек.
-         *
-         * Это важно для ссылок вида:
-         *
-         * /album/41545061/track/135395171
-         *
-         * Несмотря на наличие /album/,
-         * пользователь заказывает конкретный трек.
-         */
+        return true;
+    }
+
+    public bool CanHandleTrackUrl(
+        string url)
+    {
+        if (!Uri.TryCreate(
+                url,
+                UriKind.Absolute,
+                out var uri))
+        {
+            return false;
+        }
+
+        if (!uri.Host.Equals(
+                "music.yandex.ru",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
         return ContainsPathSegment(
             uri,
             "track");
@@ -144,7 +154,7 @@ public class YandexMusicSource :
     public async Task<CoreTrack?> ResolveTrackAsync(
         string url)
     {
-        if (!CanHandleUrl(url))
+        if (!CanHandleTrackUrl(url))
         {
             return null;
         }
