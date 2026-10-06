@@ -517,6 +517,10 @@
                     </ListBoxItem>
 
                     <ListBoxItem>
+                        <TextBlock Text="О программе"/>
+                    </ListBoxItem>
+
+                    <ListBoxItem>
                         <TextBlock Text="История изменений"/>
                     </ListBoxItem>
 
@@ -654,7 +658,7 @@
                                 </StackPanel>
 
                                 <TextBlock Grid.Column="1"
-                                           Text="1.3.3"
+                                           Text="1.4.0"
                                            FontSize="14"
                                            FontWeight="SemiBold"
                                            Foreground="{StaticResource AccentBrush}"
@@ -1678,6 +1682,74 @@
 
                     </StackPanel>
 
+                    <StackPanel x:Name="AboutPage"
+                                Visibility="Collapsed">
+
+                        <TextBlock Text="О программе"
+                                   Style="{StaticResource PageTitle}"/>
+
+                        <TextBlock Text="Информация о Stream Music Request и авторе приложения."
+                                   Style="{StaticResource PageDescription}"
+                                   Margin="0,0,0,20"/>
+
+                        <Border Style="{StaticResource SettingsCard}">
+                            <StackPanel>
+
+                                <TextBlock Text="Stream Music Request"
+                                           FontSize="24"
+                                           FontWeight="SemiBold"
+                                           Foreground="#FFFFFF"/>
+
+                                <TextBlock Text="Версия 1.4.0"
+                                           FontSize="14"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource AccentBrush}"
+                                           Margin="0,8,0,0"/>
+
+                                <TextBlock Text="Приложение для управления музыкальными запросами зрителей Twitch с воспроизведением музыки через Yandex Music."
+                                           Style="{StaticResource FieldDescription}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,14,0,0"/>
+
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource SettingsCard}">
+                            <StackPanel>
+
+                                <TextBlock Text="Автор"
+                                           Style="{StaticResource SectionTitle}"/>
+
+                                <TextBlock Text="Hedzh"
+                                           FontSize="18"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextPrimary}"
+                                           Margin="0,10,0,0"/>
+
+                                <TextBlock Text="Stream Music Request создан и поддерживается Hedzh."
+                                           Style="{StaticResource FieldDescription}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,6,0,0"/>
+
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource SettingsCard}">
+                            <StackPanel>
+
+                                <TextBlock Text="Назначение"
+                                           Style="{StaticResource SectionTitle}"/>
+
+                                <TextBlock Text="SMR предназначен для стримеров, которые хотят принимать заказы музыки через Twitch Channel Points и Donation Alerts, управлять очередью и воспроизводить музыку во время трансляции."
+                                           Style="{StaticResource FieldDescription}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,10,0,0"/>
+
+                            </StackPanel>
+                        </Border>
+
+                    </StackPanel>
+
                     <StackPanel x:Name="ChangelogPage"
                                 Visibility="Collapsed">
 
@@ -1687,6 +1759,35 @@
                         <TextBlock Text="История реализованных функций, исправлений и изменений Stream Music Request."
                                    Style="{StaticResource PageDescription}"
                                    Margin="0,0,0,20"/>
+
+                        <Border Style="{StaticResource SettingsCard}">
+                            <StackPanel>
+                                <TextBlock Text="1.4.0 — 06.10.2026"
+                                           FontSize="20"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextPrimary}"/>
+
+                                <TextBlock Text="Ответы Twitch в чат, настройки уведомлений и информация о программе"
+                                           FontSize="13"
+                                           Foreground="{StaticResource TextSecondary}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,10,0,0"/>
+
+                                <TextBlock Text="Добавлено"
+                                           Style="{StaticResource SectionTitle}"
+                                           Margin="0,18,0,10"/>
+
+                                <TextBlock Text="• Добавлены автоматические ответы в Twitch-чат при успешном или отклонённом заказе музыки."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• В настройках добавлено отдельное включение и отключение сообщений об успешных и отклонённых заказах."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Добавлен раздел «О программе» с информацией о приложении, версии и авторе."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Авторство Hedzh отображается в нижней части главного окна."
+                                           Style="{StaticResource FieldDescription}"/>
+
+                            </StackPanel>
+                        </Border>
 
                         <Border Style="{StaticResource SettingsCard}">
                             <StackPanel>
