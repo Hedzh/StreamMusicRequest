@@ -484,45 +484,25 @@
                          SelectionChanged="NavigationList_SelectionChanged"
                          ItemContainerStyle="{StaticResource NavigationItemStyle}">
 
-                    <ListBoxItem>
-                        <TextBlock Text="Общие"/>
-                    </ListBoxItem>
+                    <TextBlock Text="ОСНОВНЫЕ" Style="{StaticResource NavigationGroupTitle}"/>
+                    <ListBoxItem><TextBlock Text="Общие"/></ListBoxItem>
+                    <ListBoxItem><TextBlock Text="Музыкальные источники"/></ListBoxItem>
 
-                    <ListBoxItem>
-                        <TextBlock Text="Музыкальные источники"/>
-                    </ListBoxItem>
+                    <TextBlock Text="ИНТЕГРАЦИИ" Style="{StaticResource NavigationGroupTitle}"/>
+                    <ListBoxItem><TextBlock Text="Donation Alerts"/></ListBoxItem>
+                    <ListBoxItem><TextBlock Text="Twitch"/></ListBoxItem>
+                    <ListBoxItem><TextBlock Text="Twitch-награды"/></ListBoxItem>
 
-                    <ListBoxItem>
-                        <TextBlock Text="Donation Alerts"/>
-                    </ListBoxItem>
+                    <TextBlock Text="ВОСПРОИЗВЕДЕНИЕ" Style="{StaticResource NavigationGroupTitle}"/>
+                    <ListBoxItem><TextBlock Text="Воспроизведение и звук"/></ListBoxItem>
+                    <ListBoxItem><TextBlock Text="Баны"/></ListBoxItem>
 
-                    <ListBoxItem>
-                        <TextBlock Text="Twitch"/>
-                    </ListBoxItem>
+                    <TextBlock Text="ТРАНСЛЯЦИЯ" Style="{StaticResource NavigationGroupTitle}"/>
+                    <ListBoxItem><TextBlock Text="OBS / Виджет"/></ListBoxItem>
 
-                    <ListBoxItem>
-                        <TextBlock Text="Twitch → Награды"/>
-                    </ListBoxItem>
-
-                    <ListBoxItem>
-                        <TextBlock Text="Баны"/>
-                    </ListBoxItem>
-
-                    <ListBoxItem>
-                        <TextBlock Text="Воспроизведение и звук"/>
-                    </ListBoxItem>
-
-                    <ListBoxItem>
-                        <TextBlock Text="OBS / Виджет"/>
-                    </ListBoxItem>
-
-                    <ListBoxItem>
-                        <TextBlock Text="История изменений"/>
-                    </ListBoxItem>
-
-                    <ListBoxItem>
-                        <TextBlock Text="О программе"/>
-                    </ListBoxItem>
+                    <TextBlock Text="СПРАВКА" Style="{StaticResource NavigationGroupTitle}"/>
+                    <ListBoxItem><TextBlock Text="История изменений"/></ListBoxItem>
+                    <ListBoxItem><TextBlock Text="О программе"/></ListBoxItem>
 
                 </ListBox>
 
