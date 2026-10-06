@@ -113,6 +113,7 @@ public partial class SettingsWindow : Window
         LoadPlaybackSettingsUi();
 
         _ = UpdateTwitchUiAsync();
+        _ = LoadTwitchChatSettingsUiAsync();
         _ = LoadTwitchRewardSettingsUiAsync();
         LoadDonationAlertsSettingsUi();
 
@@ -351,6 +352,53 @@ public partial class SettingsWindow : Window
                 this,
                 $"Не удалось выйти из аккаунта Yandex Music.\n\n{ex.Message}",
                 "Yandex Music",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    private async Task LoadTwitchChatSettingsUiAsync()
+    {
+        try
+        {
+            await _appServices.LoadTwitchChatSettingsAsync();
+
+            TwitchChatSuccessMessagesCheckBox.IsChecked =
+                _appServices.TwitchChatSettings.SuccessMessagesEnabled;
+
+            TwitchChatErrorMessagesCheckBox.IsChecked =
+                _appServices.TwitchChatSettings.ErrorMessagesEnabled;
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Info(
+                $"Не удалось загрузить настройки ответов Twitch-чата: {ex.Message}");
+        }
+    }
+
+    private async void TwitchChatSettingsSaveButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        try
+        {
+            await _appServices.SaveTwitchChatSettingsAsync(
+                TwitchChatSuccessMessagesCheckBox.IsChecked == true,
+                TwitchChatErrorMessagesCheckBox.IsChecked == true);
+
+            AppMessageBox.Show(
+                this,
+                "Настройки ответов в Twitch-чат сохранены.",
+                "Twitch",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            AppMessageBox.Show(
+                this,
+                $"Не удалось сохранить настройки ответов в Twitch-чат.\n\n{ex.Message}",
+                "Twitch",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
