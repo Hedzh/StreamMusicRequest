@@ -1370,11 +1370,13 @@ public partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            AppMessageBox.Show(
-                $"Не удалось обработать Twitch-награду.\n\n{ex.Message}",
-                "Ошибка Twitch-награды",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+            FileLogger.Error(
+                "Не удалось обработать Twitch-награду.",
+                ex);
+
+            await SendTwitchOrderResponseAsync(
+                e.Redemption.UserName,
+                "Не удалось обработать заказ. Подробности записаны в журнал приложения.");
         }
     }
 
@@ -1386,6 +1388,10 @@ public partial class MainWindow : Window
 
         if (string.IsNullOrWhiteSpace(sourceUrl))
         {
+            await SendTwitchOrderResponseAsync(
+                redemption.UserName,
+                "Заказ не принят: не указана ссылка на трек Yandex Music.");
+
             return;
         }
 
@@ -1411,6 +1417,10 @@ public partial class MainWindow : Window
 
         if (!result.Success)
         {
+            await SendTwitchOrderResponseAsync(
+                redemption.UserName,
+                $"Заказ не принят: {result.Error ?? "не удалось обработать ссылку."}");
+
             return;
         }
 
@@ -1420,12 +1430,35 @@ public partial class MainWindow : Window
         if (item == null ||
             item.Track == null)
         {
+            await SendTwitchOrderResponseAsync(
+                redemption.UserName,
+                "Заказ не принят: не удалось получить данные трека.");
+
             return;
         }
 
-        await _playbackController
-            .AddViewerRequestAsync(
-                item);
+        try
+        {
+            await _playbackController
+                .AddViewerRequestAsync(
+                    item);
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Error(
+                $"Не удалось добавить заказ зрителя {redemption.UserName} в очередь.",
+                ex);
+
+            await SendTwitchOrderResponseAsync(
+                redemption.UserName,
+                "Заказ не принят: не удалось добавить трек в очередь.");
+
+            return;
+        }
+
+        await SendTwitchOrderResponseAsync(
+            redemption.UserName,
+            $"Трек «{item.Track.Title}» добавлен в очередь.");
 
         await Dispatcher.InvokeAsync(
             () =>
@@ -1434,6 +1467,28 @@ public partial class MainWindow : Window
                 UpdatePlaybackModeUi();
                 RefreshQueueUi();
             });
+    }
+
+    private async Task SendTwitchOrderResponseAsync(
+        string viewerName,
+        string message)
+    {
+        if (string.IsNullOrWhiteSpace(viewerName) ||
+            string.IsNullOrWhiteSpace(message))
+        {
+            return;
+        }
+
+        var cleanViewerName =
+            viewerName.Trim()
+                .TrimStart('@');
+
+        var chatMessage =
+            $"@{cleanViewerName} {message}";
+
+        await _appServices.TwitchService
+            .SendChatMessageAsync(
+                chatMessage);
     }
 
     private async Task HandleSkipTrackRewardAsync()
