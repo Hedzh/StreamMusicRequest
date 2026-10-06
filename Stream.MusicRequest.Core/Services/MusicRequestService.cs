@@ -44,7 +44,7 @@ public class MusicRequestService
         if (source == null)
         {
             return MusicRequestResult.Failed(
-                "Источник музыки не поддерживается.");
+                "Ссылка не распознана. Поддерживаются ссылки на треки Yandex Music.");
         }
 
         /*
@@ -71,6 +71,14 @@ public class MusicRequestService
                 "Зрители не могут заказывать плейлисты.");
         }
 
+        if (source is IPlayableMusicSource playableSource &&
+            !playableSource.CanHandleTrackUrl(
+                request.SourceUrl))
+        {
+            return MusicRequestResult.Failed(
+                "Ссылка не является ссылкой на отдельный трек Yandex Music.");
+        }
+
         var track =
             await source.ResolveTrackAsync(
                 request.SourceUrl);
@@ -78,7 +86,7 @@ public class MusicRequestService
         if (track == null)
         {
             return MusicRequestResult.Failed(
-                "Не удалось найти музыкальный трек.");
+                "Трек не найден в Yandex Music или недоступен.");
         }
 
         if (_banService.IsTrackBanned(
