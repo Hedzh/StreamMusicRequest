@@ -834,6 +834,32 @@
                         </Border>
 
                         <Border Style="{StaticResource SettingsCard}">
+                            <StackPanel>
+                                <TextBlock Text="Ответы в чат"
+                                           Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="Управление сообщениями о результатах заказов музыки."
+                                           Style="{StaticResource FieldDescription}"
+                                           Margin="0,0,0,14"/>
+
+                                <CheckBox x:Name="TwitchChatSuccessMessagesCheckBox"
+                                          Content="Отправлять сообщение при успешном заказе"
+                                          IsChecked="True"
+                                          Margin="0,0,0,10"/>
+
+                                <CheckBox x:Name="TwitchChatErrorMessagesCheckBox"
+                                          Content="Отправлять сообщение при отклонённом заказе"
+                                          IsChecked="True"
+                                          Margin="0,0,0,14"/>
+
+                                <Button Content="Сохранить"
+                                        Style="{StaticResource AccentButton}"
+                                        Width="105"
+                                        HorizontalAlignment="Left"
+                                        Click="TwitchChatSettingsSaveButton_Click"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource SettingsCard}">
 
                             <StackPanel>
 
