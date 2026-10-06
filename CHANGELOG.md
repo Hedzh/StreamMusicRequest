@@ -2,6 +2,17 @@
 
 All notable changes to Stream Music Request are documented here.
 
+## [1.4.0] - 2026-10-06
+
+### Added
+- Added Twitch chat responses for successful and rejected music requests.
+- Added separate settings to enable or disable success and error chat messages.
+- Added an "About" section with application information, version and author attribution.
+- Added "by Hedzh" attribution to the main window.
+
+### Improved
+- Twitch request feedback is now configurable without changing the request processing logic.
+
 ## [1.3.3] - 2026-10-04
 
 ### Fixed
