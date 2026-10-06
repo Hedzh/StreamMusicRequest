@@ -1,3 +1,4 @@
+using System.IO;
 using System.Net.Http;
 using Stream.MusicRequest.Core.Services;
 using Stream.MusicRequest.DonationAlerts.Client;
