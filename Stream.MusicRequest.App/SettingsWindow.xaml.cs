@@ -80,6 +80,7 @@ public partial class SettingsWindow : Window
             BansPage,
             PlaybackPage,
             ObsPage,
+            AboutPage,
             ChangelogPage
         ];
 
