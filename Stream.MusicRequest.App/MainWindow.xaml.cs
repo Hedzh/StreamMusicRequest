@@ -1378,7 +1378,8 @@ public partial class MainWindow : Window
 
             await SendTwitchOrderResponseAsync(
                 e.Redemption.UserName,
-                "Не удалось обработать заказ. Подробности записаны в журнал приложения.");
+                "Не удалось обработать заказ. Подробности записаны в журнал приложения.",
+                isError: true);
         }
     }
 
@@ -1392,7 +1393,8 @@ public partial class MainWindow : Window
         {
             await SendTwitchOrderResponseAsync(
                 redemption.UserName,
-                "Заказ не принят: не указана ссылка на трек Yandex Music.");
+                "Заказ не принят: не указана ссылка на трек Yandex Music.",
+                isError: true);
 
             return;
         }
@@ -1435,7 +1437,8 @@ public partial class MainWindow : Window
         {
             await SendTwitchOrderResponseAsync(
                 redemption.UserName,
-                "Заказ не принят: не удалось получить данные трека.");
+                "Заказ не принят: не удалось получить данные трека.",
+                isError: true);
 
             return;
         }
@@ -1454,7 +1457,8 @@ public partial class MainWindow : Window
 
             await SendTwitchOrderResponseAsync(
                 redemption.UserName,
-                "Заказ не принят: не удалось добавить трек в очередь.");
+                "Заказ не принят: не удалось добавить трек в очередь.",
+                isError: true);
 
             return;
         }
