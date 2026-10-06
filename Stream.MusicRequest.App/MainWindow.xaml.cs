@@ -1378,7 +1378,7 @@ public partial class MainWindow : Window
 
             await SendTwitchOrderResponseAsync(
                 e.Redemption.UserName,
-                "Не удалось обработать заказ. Подробности записаны в журнал приложения.",
+                "Не удалось обработать заказ: Yandex Music временно недоступен или произошла внутренняя ошибка. Попробуйте ещё раз.",
                 isError: true);
         }
     }
