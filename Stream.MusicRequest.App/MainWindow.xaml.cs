@@ -210,6 +210,8 @@ public partial class MainWindow : Window
                 _yandexMusicSource,
                 banService);
 
+        _ = _appServices.LoadTwitchChatSettingsAsync();
+
         _appServices.TwitchService.RewardActionReceived +=
             TwitchService_RewardActionReceived;
 
@@ -1419,7 +1421,8 @@ public partial class MainWindow : Window
         {
             await SendTwitchOrderResponseAsync(
                 redemption.UserName,
-                $"Заказ не принят: {result.Error ?? "не удалось обработать ссылку."}");
+                $"Заказ не принят: {result.Error ?? "не удалось обработать ссылку."}",
+                isError: true);
 
             return;
         }
@@ -1458,7 +1461,8 @@ public partial class MainWindow : Window
 
         await SendTwitchOrderResponseAsync(
             redemption.UserName,
-            $"Трек «{item.Track.Title}» добавлен в очередь.");
+            $"Трек «{item.Track.Title}» добавлен в очередь.",
+            isError: false);
 
         await Dispatcher.InvokeAsync(
             () =>
@@ -1471,10 +1475,21 @@ public partial class MainWindow : Window
 
     private async Task SendTwitchOrderResponseAsync(
         string viewerName,
-        string message)
+        string message,
+        bool isError)
     {
         if (string.IsNullOrWhiteSpace(viewerName) ||
             string.IsNullOrWhiteSpace(message))
+        {
+            return;
+        }
+
+        if (isError && !_appServices.TwitchChatSettings.ErrorMessagesEnabled)
+        {
+            return;
+        }
+
+        if (!isError && !_appServices.TwitchChatSettings.SuccessMessagesEnabled)
         {
             return;
         }
