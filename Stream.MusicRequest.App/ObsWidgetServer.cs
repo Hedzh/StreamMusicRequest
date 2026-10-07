@@ -446,6 +446,16 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                 text-shadow:0 2px 4px rgba(0,0,0,.75);
             }
 
+            @keyframes marquee {
+                from {
+                    transform:translateX(0);
+                }
+
+                to {
+                    transform:translateX(-50%);
+                }
+            }
+
             #viewport.mode-text #coverFrame {
                 display:none !important;
             }
@@ -461,9 +471,9 @@ public sealed class ObsWidgetServer : IAsyncDisposable
             }
 
             #viewport.mode-cover-bottom #coverFrame {
-                flex:0 0 140px;
-                width:140px;
-                height:140px;
+                flex:0 0 300px;
+                width:300px;
+                height:300px;
             }
 
             #viewport.mode-cover-bottom #textViewport {
