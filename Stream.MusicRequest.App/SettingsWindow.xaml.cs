@@ -939,13 +939,14 @@ public partial class SettingsWindow : Window
         ObsScrollSpeedTextBox.Text =
             _obsSettings.ScrollSpeed.ToString("0.##");
 
-        ObsDisplayModeComboBox.SelectedIndex =
-            _obsSettings.DisplayMode switch
-            {
-                "Text" => 0,
-                "CoverBottom" => 2,
-                _ => 1
-            };
+        ObsDisplayModeTextRadioButton.IsChecked =
+            _obsSettings.DisplayMode == "Text";
+
+        ObsDisplayModeCoverLeftRadioButton.IsChecked =
+            _obsSettings.DisplayMode == "CoverLeft";
+
+        ObsDisplayModeCoverBottomRadioButton.IsChecked =
+            _obsSettings.DisplayMode == "CoverBottom";
 
         UpdateObsUrlsUi();
     }
@@ -959,33 +960,113 @@ public partial class SettingsWindow : Window
             $"http://{_obsSettings.BindAddress}:{_obsSettings.AudioPort}/";
     }
 
-    private void ObsDisplayModeApplyButton_Click(
+    private async void ObsDisplayModeApplyButton_Click(
         object sender,
         RoutedEventArgs e)
     {
+        var bindAddress =
+            ObsBindAddressTextBox.Text.Trim();
+
+        if (!System.Net.IPAddress.TryParse(
+                bindAddress,
+                out var address) ||
+            address.AddressFamily !=
+            System.Net.Sockets.AddressFamily.InterNetwork)
+        {
+            AppMessageBox.Show(
+                this,
+                "Адрес привязки должен быть корректным IPv4-адресом, например 127.0.0.1 или 0.0.0.0.",
+                "OBS",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!int.TryParse(
+                ObsWidgetPortTextBox.Text.Trim(),
+                out var widgetPort) ||
+            widgetPort is < 1 or > 65535)
+        {
+            AppMessageBox.Show(
+                this,
+                "Порт виджета должен быть целым числом от 1 до 65535.",
+                "OBS",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!int.TryParse(
+                ObsAudioPortTextBox.Text.Trim(),
+                out var audioPort) ||
+            audioPort is < 1 or > 65535)
+        {
+            AppMessageBox.Show(
+                this,
+                "Порт аудио должен быть целым числом от 1 до 65535.",
+                "OBS",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
+        if (widgetPort == audioPort)
+        {
+            AppMessageBox.Show(
+                this,
+                "Порт виджета и порт аудио должны отличаться.",
+                "OBS",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!double.TryParse(
+                ObsScrollSpeedTextBox.Text.Trim(),
+                System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var scrollSpeed) &&
+            !double.TryParse(
+                ObsScrollSpeedTextBox.Text.Trim(),
+                out scrollSpeed))
+        {
+            AppMessageBox.Show(
+                this,
+                "Скорость текста должна быть числом.",
+                "OBS",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
+        scrollSpeed =
+            Math.Clamp(
+                scrollSpeed,
+                10.0,
+                300.0);
+
         var displayMode =
             GetSelectedObsDisplayMode();
 
-        _obsSettings.DisplayMode =
-            displayMode;
+        _obsSettings =
+            new ObsSettings
+            {
+                BindAddress = bindAddress,
+                WidgetPort = widgetPort,
+                AudioPort = audioPort,
+                ScrollSpeed = scrollSpeed,
+                DisplayMode = displayMode
+            };
 
-        _applyObsDisplayMode?.Invoke(
-            displayMode);
-
-        _ = SaveObsSettingsAfterApplyAsync(
-            displayMode);
-    }
-
-    private async Task SaveObsSettingsAfterApplyAsync(
-        string displayMode)
-    {
         try
         {
-            _obsSettings.DisplayMode =
-                displayMode;
-
             await _obsSettingsStorage
                 .SaveAsync(_obsSettings);
+
+            _applyObsDisplayMode?.Invoke(
+                displayMode);
+
+            LoadObsSettingsUi();
 
             AppMessageBox.Show(
                 this,
@@ -1004,6 +1085,7 @@ public partial class SettingsWindow : Window
                 MessageBoxImage.Error);
         }
     }
+
 
     private string GetSelectedObsDisplayMode()
     {
