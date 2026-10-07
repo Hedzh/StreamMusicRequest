@@ -934,6 +934,14 @@ public partial class SettingsWindow : Window
         ObsScrollSpeedTextBox.Text =
             _obsSettings.ScrollSpeed.ToString("0.##");
 
+        ObsDisplayModeComboBox.SelectedIndex =
+            _obsSettings.DisplayMode switch
+            {
+                "Text" => 0,
+                "CoverBottom" => 2,
+                _ => 1
+            };
+
         UpdateObsUrlsUi();
     }
 
@@ -1043,13 +1051,21 @@ public partial class SettingsWindow : Window
                 10.0,
                 300.0);
 
+        var displayMode =
+            ObsDisplayModeComboBox.SelectedItem
+                is ComboBoxItem selectedItem &&
+            selectedItem.Tag is string tag
+                ? tag
+                : "CoverLeft";
+
         _obsSettings =
             new ObsSettings
             {
                 BindAddress = bindAddress,
                 WidgetPort = widgetPort,
                 AudioPort = audioPort,
-                ScrollSpeed = scrollSpeed
+                ScrollSpeed = scrollSpeed,
+                DisplayMode = displayMode
             };
 
         await _obsSettingsStorage
