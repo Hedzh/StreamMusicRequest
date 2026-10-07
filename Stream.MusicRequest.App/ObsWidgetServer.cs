@@ -467,18 +467,20 @@ public sealed class ObsWidgetServer : IAsyncDisposable
             #viewport.mode-cover-bottom {
                 flex-direction:column;
                 justify-content:center;
+                align-items:center;
                 gap:10px;
             }
 
             #viewport.mode-cover-bottom #coverFrame {
-                flex:0 0 700px;
-                width:700px;
-                height:700px;
+                flex:0 0 min(700px, calc(100vw - 20px), calc(100vh - 60px));
+                width:min(700px, calc(100vw - 20px), calc(100vh - 60px));
+                height:min(700px, calc(100vw - 20px), calc(100vh - 60px));
             }
 
             #viewport.mode-cover-bottom #textViewport {
                 width:100%;
                 flex:0 0 auto;
+                min-height:38px;
             }
 
             .idle {
