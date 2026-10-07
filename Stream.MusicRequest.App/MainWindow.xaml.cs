@@ -952,17 +952,23 @@ public partial class MainWindow : Window
                         new MemoryStream(
                             bytes);
 
+                    /*
+                     * Do not use BitmapImage.EndInit() with
+                     * StreamSource here. WPF's internal
+                     * ImagingCache can throw ArgumentNullException
+                     * ("key") for a stream-backed BitmapImage
+                     * on some .NET/WPF environments.
+                     *
+                     * BitmapFrame.Create loads the image fully
+                     * from the stream and gives us a detached
+                     * frozen ImageSource.
+                     */
                     var image =
-                        new BitmapImage();
+                        BitmapFrame.Create(
+                            stream,
+                            BitmapCreateOptions.PreservePixelFormat,
+                            BitmapCacheOption.OnLoad);
 
-                    image.BeginInit();
-                    image.CacheOption =
-                        BitmapCacheOption.OnLoad;
-                    image.CreateOptions =
-                        BitmapCreateOptions.IgnoreImageCache;
-                    image.StreamSource =
-                        stream;
-                    image.EndInit();
                     image.Freeze();
 
                     CurrentCoverImage.Source =
