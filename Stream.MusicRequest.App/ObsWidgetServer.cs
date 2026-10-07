@@ -472,9 +472,9 @@ public sealed class ObsWidgetServer : IAsyncDisposable
             }
 
             #viewport.mode-cover-bottom #coverFrame {
-                flex:0 0 min(700px, calc(100vw - 20px), calc(100vh - 60px));
-                width:min(700px, calc(100vw - 20px), calc(100vh - 60px));
-                height:min(700px, calc(100vw - 20px), calc(100vh - 60px));
+                flex:0 0 min(600px, calc(100vw - 20px), calc(100vh - 60px));
+                width:min(600px, calc(100vw - 20px), calc(100vh - 60px));
+                height:min(600px, calc(100vw - 20px), calc(100vh - 60px));
             }
 
             #viewport.mode-cover-bottom #textViewport {
@@ -878,7 +878,9 @@ public sealed class ObsWidgetServer : IAsyncDisposable
             $"HTTP/1.1 {status}\r\n" +
             $"Content-Type: {contentType}\r\n" +
             $"Content-Length: {data.Length}\r\n" +
-            "Cache-Control: public, max-age=60\r\n" +
+            "Cache-Control: no-cache, no-store, must-revalidate\r\n" +
+            "Pragma: no-cache\r\n" +
+            "Expires: 0\r\n" +
             "Connection: close\r\n" +
             "\r\n";
 
