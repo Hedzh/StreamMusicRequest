@@ -27,12 +27,20 @@ public sealed class ObsWidgetServer : IAsyncDisposable
     private string _requestedBy = string.Empty;
     private string _coverUrl = string.Empty;
     private double _scrollSpeed = 60.0;
+    private string _displayMode = "CoverLeft";
     private bool _visible;
+
+    private readonly HttpClient _coverHttpClient = new();
+    private readonly SemaphoreSlim _coverCacheLock = new(1, 1);
+    private byte[]? _cachedCoverBytes;
+    private string? _cachedCoverUrl;
+    private string _cachedCoverContentType = "image/jpeg";
 
     public ObsWidgetServer(
         string bindAddress,
         int port,
-        double scrollSpeed)
+        double scrollSpeed,
+        string displayMode)
     {
         if (!IPAddress.TryParse(
                 bindAddress,
@@ -67,6 +75,9 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                 scrollSpeed,
                 10.0,
                 300.0);
+
+        _displayMode =
+            NormalizeDisplayMode(displayMode);
     }
 
     public string Url
@@ -156,6 +167,27 @@ public sealed class ObsWidgetServer : IAsyncDisposable
         }
     }
 
+    public void SetDisplayMode(
+        string displayMode)
+    {
+        lock (_stateLock)
+        {
+            _displayMode =
+                NormalizeDisplayMode(displayMode);
+        }
+    }
+
+    private static string NormalizeDisplayMode(
+        string? displayMode)
+    {
+        return displayMode switch
+        {
+            "Text" => "Text",
+            "CoverBottom" => "CoverBottom",
+            _ => "CoverLeft"
+        };
+    }
+
     public async ValueTask DisposeAsync()
     {
         if (!_started)
@@ -178,6 +210,9 @@ public sealed class ObsWidgetServer : IAsyncDisposable
         }
 
         _clients.Clear();
+
+        _coverHttpClient.Dispose();
+        _coverCacheLock.Dispose();
 
         if (_acceptTask != null)
         {
@@ -296,6 +331,18 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                     return;
                 }
 
+                if (string.Equals(
+                        request.Path,
+                        "/cover",
+                        StringComparison.OrdinalIgnoreCase))
+                {
+                    await WriteCoverAsync(
+                        stream,
+                        cancellationToken);
+
+                    return;
+                }
+
                 await WriteResponseAsync(
                     stream,
                     "404 Not Found",
@@ -387,7 +434,6 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                 width:max-content;
                 white-space:nowrap;
                 will-change:transform;
-                animation:marquee 10s linear infinite;
             }
 
             .item {
@@ -399,9 +445,29 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                 text-shadow:0 2px 4px rgba(0,0,0,.75);
             }
 
-            @keyframes marquee {
-                from { transform:translateX(0); }
-                to { transform:translateX(-50%); }
+            #viewport.mode-text #coverFrame {
+                display:none !important;
+            }
+
+            #viewport.mode-cover-left {
+                flex-direction:row;
+            }
+
+            #viewport.mode-cover-bottom {
+                flex-direction:column;
+                justify-content:center;
+                gap:10px;
+            }
+
+            #viewport.mode-cover-bottom #coverFrame {
+                flex:0 0 140px;
+                width:140px;
+                height:140px;
+            }
+
+            #viewport.mode-cover-bottom #textViewport {
+                width:100%;
+                flex:0 0 auto;
             }
 
             .idle {
@@ -410,7 +476,7 @@ public sealed class ObsWidgetServer : IAsyncDisposable
             </style>
             </head>
             <body>
-            <div id="viewport">
+            <div id="viewport" class="mode-cover-left">
                 <div id="coverFrame">
                     <img id="cover" alt="" />
                 </div>
@@ -424,6 +490,7 @@ public sealed class ObsWidgetServer : IAsyncDisposable
 
             <script>
             (() => {
+                const viewport = document.getElementById("viewport");
                 const coverFrame = document.getElementById("coverFrame");
                 const cover = document.getElementById("cover");
                 const marquee = document.getElementById("marquee");
@@ -431,7 +498,6 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                 const item2 = document.getElementById("item2");
 
                 let lastKey = "";
-                let timer = null;
 
                 const setState = state => {
                     if (state.visible === false) {
@@ -443,6 +509,14 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                     const title = (state.title || "").trim();
                     const requestedBy = (state.requestedBy || "").trim();
                     const coverUrl = (state.coverUrl || "").trim();
+                    const displayMode = state.displayMode || "CoverLeft";
+
+                    viewport.className =
+                        displayMode === "Text"
+                            ? "mode-text"
+                            : displayMode === "CoverBottom"
+                                ? "mode-cover-bottom"
+                                : "mode-cover-left";
 
                     let text = "";
 
@@ -461,6 +535,8 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                         "|" +
                         coverUrl +
                         "|" +
+                        displayMode +
+                        "|" +
                         String(state.scrollSpeed || 60);
 
                     if (key === lastKey)
@@ -471,9 +547,9 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                     item1.textContent = text;
                     item2.textContent = text;
 
-                    if (coverUrl) {
-                        cover.src = coverUrl;
-                        coverFrame.style.display = "flex";
+                    if (coverUrl && displayMode !== "Text") {
+                        cover.src = "/cover";
+                        coverFrame.style.display = "block";
                     } else {
                         cover.removeAttribute("src");
                         coverFrame.style.display = "none";
@@ -546,9 +622,7 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                 };
 
                 load();
-                timer = setInterval(
-                    load,
-                    500);
+                setInterval(load, 500);
             })();
             </script>
             </body>
@@ -563,6 +637,100 @@ public sealed class ObsWidgetServer : IAsyncDisposable
             cancellationToken);
     }
 
+    private async Task WriteCoverAsync(
+        NetworkStream stream,
+        CancellationToken cancellationToken)
+    {
+        string coverUrl;
+
+        lock (_stateLock)
+        {
+            coverUrl = _coverUrl;
+        }
+
+        if (string.IsNullOrWhiteSpace(coverUrl))
+        {
+            await WriteResponseAsync(
+                stream,
+                "404 Not Found",
+                "Not Found",
+                "text/plain; charset=utf-8",
+                cancellationToken);
+
+            return;
+        }
+
+        try
+        {
+            await _coverCacheLock.WaitAsync(
+                cancellationToken);
+
+            try
+            {
+                if (!string.Equals(
+                        _cachedCoverUrl,
+                        coverUrl,
+                        StringComparison.Ordinal) ||
+                    _cachedCoverBytes == null)
+                {
+                    using var request =
+                        new HttpRequestMessage(
+                            HttpMethod.Get,
+                            coverUrl);
+
+                    using var response =
+                        await _coverHttpClient.SendAsync(
+                            request,
+                            HttpCompletionOption.ResponseHeadersRead,
+                            cancellationToken);
+
+                    response.EnsureSuccessStatusCode();
+
+                    var contentType =
+                        response.Content.Headers.ContentType?.MediaType;
+
+                    var bytes =
+                        await response.Content.ReadAsByteArrayAsync(
+                            cancellationToken);
+
+                    if (bytes.Length == 0)
+                        throw new InvalidOperationException(
+                            "Сервер обложки вернул пустой файл.");
+
+                    _cachedCoverBytes = bytes;
+                    _cachedCoverUrl = coverUrl;
+                    _cachedCoverContentType =
+                        string.IsNullOrWhiteSpace(contentType)
+                            ? "image/jpeg"
+                            : contentType;
+                }
+
+                await WriteResponseBytesAsync(
+                    stream,
+                    "200 OK",
+                    _cachedCoverBytes,
+                    _cachedCoverContentType,
+                    cancellationToken);
+            }
+            finally
+            {
+                _coverCacheLock.Release();
+            }
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Info(
+                $"OBS: не удалось получить обложку через локальный прокси. URL: {coverUrl}. Ошибка: {ex.Message}");
+
+            await WriteResponseAsync(
+                stream,
+                "404 Not Found",
+                "Not Found",
+                "text/plain; charset=utf-8",
+                cancellationToken);
+        }
+    }
+
     private async Task WriteStateAsync(
         NetworkStream stream,
         CancellationToken cancellationToken)
@@ -572,6 +740,7 @@ public sealed class ObsWidgetServer : IAsyncDisposable
         string requestedBy;
         string coverUrl;
         double scrollSpeed;
+        string displayMode;
         bool visible;
 
         lock (_stateLock)
@@ -581,6 +750,7 @@ public sealed class ObsWidgetServer : IAsyncDisposable
             requestedBy = _requestedBy;
             coverUrl = _coverUrl;
             scrollSpeed = _scrollSpeed;
+            displayMode = _displayMode;
             visible = _visible;
         }
 
@@ -593,6 +763,7 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                     requestedBy,
                     coverUrl,
                     scrollSpeed,
+                    displayMode,
                     visible
                 });
 
@@ -681,6 +852,33 @@ public sealed class ObsWidgetServer : IAsyncDisposable
         }
 
         return false;
+    }
+
+    private static async Task WriteResponseBytesAsync(
+        NetworkStream stream,
+        string status,
+        byte[] data,
+        string contentType,
+        CancellationToken cancellationToken)
+    {
+        var header =
+            $"HTTP/1.1 {status}\r\n" +
+            $"Content-Type: {contentType}\r\n" +
+            $"Content-Length: {data.Length}\r\n" +
+            "Cache-Control: public, max-age=60\r\n" +
+            "Connection: close\r\n" +
+            "\r\n";
+
+        await stream.WriteAsync(
+            Encoding.ASCII.GetBytes(header),
+            cancellationToken);
+
+        await stream.WriteAsync(
+            data,
+            cancellationToken);
+
+        await stream.FlushAsync(
+            cancellationToken);
     }
 
     private static async Task WriteResponseAsync(
