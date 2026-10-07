@@ -25,6 +25,7 @@ public sealed class ObsWidgetServer : IAsyncDisposable
     private string _title = string.Empty;
     private string _artist = string.Empty;
     private string _requestedBy = string.Empty;
+    private string _coverUrl = string.Empty;
     private double _scrollSpeed = 60.0;
     private bool _visible;
 
@@ -117,6 +118,7 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                 _title = string.Empty;
                 _artist = string.Empty;
                 _requestedBy = string.Empty;
+                _coverUrl = string.Empty;
                 _visible = false;
                 return;
             }
@@ -133,6 +135,10 @@ public sealed class ObsWidgetServer : IAsyncDisposable
 
             _requestedBy =
                 track.RequestedBy?.Trim()
+                ?? string.Empty;
+
+            _coverUrl =
+                track.CoverUrl?.Trim()
                 ?? string.Empty;
         }
     }
@@ -349,6 +355,31 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                 overflow:hidden;
                 display:flex;
                 align-items:center;
+                gap:18px;
+            }
+
+            #coverFrame {
+                flex:0 0 96px;
+                width:96px;
+                height:96px;
+                border-radius:10px;
+                overflow:hidden;
+                background:rgba(20,24,30,.85);
+                box-shadow:0 2px 8px rgba(0,0,0,.45);
+                display:none;
+            }
+
+            #cover {
+                width:100%;
+                height:100%;
+                object-fit:cover;
+                display:block;
+            }
+
+            #textViewport {
+                flex:1 1 auto;
+                min-width:0;
+                overflow:hidden;
             }
 
             #marquee {
@@ -380,14 +411,21 @@ public sealed class ObsWidgetServer : IAsyncDisposable
             </head>
             <body>
             <div id="viewport">
-                <div id="marquee" class="idle">
-                    <span id="item1" class="item"></span>
-                    <span id="item2" class="item"></span>
+                <div id="coverFrame">
+                    <img id="cover" alt="" />
+                </div>
+                <div id="textViewport">
+                    <div id="marquee" class="idle">
+                        <span id="item1" class="item"></span>
+                        <span id="item2" class="item"></span>
+                    </div>
                 </div>
             </div>
 
             <script>
             (() => {
+                const coverFrame = document.getElementById("coverFrame");
+                const cover = document.getElementById("cover");
                 const marquee = document.getElementById("marquee");
                 const item1 = document.getElementById("item1");
                 const item2 = document.getElementById("item2");
@@ -404,6 +442,7 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                     const artist = (state.artist || "").trim();
                     const title = (state.title || "").trim();
                     const requestedBy = (state.requestedBy || "").trim();
+                    const coverUrl = (state.coverUrl || "").trim();
 
                     let text = "";
 
@@ -418,7 +457,11 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                     }
 
                     const key =
-                        text + "|" + String(state.scrollSpeed || 60);
+                        text +
+                        "|" +
+                        coverUrl +
+                        "|" +
+                        String(state.scrollSpeed || 60);
 
                     if (key === lastKey)
                         return;
@@ -427,6 +470,14 @@ public sealed class ObsWidgetServer : IAsyncDisposable
 
                     item1.textContent = text;
                     item2.textContent = text;
+
+                    if (coverUrl) {
+                        cover.src = coverUrl;
+                        coverFrame.style.display = "flex";
+                    } else {
+                        cover.removeAttribute("src");
+                        coverFrame.style.display = "none";
+                    }
 
                     marquee.classList.remove("idle");
                     marquee.style.animation = "none";
@@ -465,10 +516,17 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                     item1.textContent = "";
                     item2.textContent = "";
 
+                    cover.removeAttribute("src");
+                    coverFrame.style.display = "none";
+
                     marquee.classList.add("idle");
                     marquee.style.animation = "none";
                     marquee.style.transform = "translateX(0)";
                 };
+
+                cover.addEventListener("error", () => {
+                    coverFrame.style.display = "none";
+                });
 
                 const load = async () => {
                     try {
@@ -512,6 +570,7 @@ public sealed class ObsWidgetServer : IAsyncDisposable
         string title;
         string artist;
         string requestedBy;
+        string coverUrl;
         double scrollSpeed;
         bool visible;
 
@@ -520,6 +579,7 @@ public sealed class ObsWidgetServer : IAsyncDisposable
             title = _title;
             artist = _artist;
             requestedBy = _requestedBy;
+            coverUrl = _coverUrl;
             scrollSpeed = _scrollSpeed;
             visible = _visible;
         }
@@ -531,6 +591,7 @@ public sealed class ObsWidgetServer : IAsyncDisposable
                     title,
                     artist,
                     requestedBy,
+                    coverUrl,
                     scrollSpeed,
                     visible
                 });
