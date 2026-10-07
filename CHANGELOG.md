@@ -2,17 +2,25 @@
 
 All notable changes to Stream Music Request are documented here.
 
-## [1.4.0] - 2026-10-06
+## [1.4.0] - 2026-10-07
 
 ### Added
 - Added Twitch chat responses for successful and rejected music requests.
 - Added separate settings to enable or disable success and error chat messages.
 - Added an "About" section with application information, version and author attribution.
 - Added "by Hedzh" attribution to the main window.
+- Added current-track cover display in the main window.
+- Added cover display to the OBS widget.
+- Added three OBS widget display modes: text only, cover left with text right, and cover as a full-size background with text overlaid at the bottom.
+- Added graphical preview selection for OBS widget display modes in Settings.
+- OBS background-cover mode now uses large, readable text with a black outline.
 
 ### Improved
 - Twitch request feedback is now configurable without changing the request processing logic.
 - OBS widget now shows the requester only for viewer-requested tracks; main music is displayed as artist and title only.
+- OBS widget cover loading now goes through a local proxy and avoids stale browser caching when the current track changes.
+- Changing the OBS display mode is saved and applied from a single "Применить" button.
+- OBS background-cover mode is designed for an 800×800 Browser Source and scales the cover to the available widget area.
 
 ## [1.3.3] - 2026-10-04
 
