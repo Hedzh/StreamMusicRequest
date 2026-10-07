@@ -499,12 +499,14 @@ public sealed class ObsWidgetServer : IAsyncDisposable
 
             #viewport.mode-cover-bottom .item {
                 color:#fff;
+                font-size:64px;
+                line-height:1.15;
                 text-shadow:
-                    -2px -2px 0 #000,
-                    2px -2px 0 #000,
-                    -2px 2px 0 #000,
-                    2px 2px 0 #000,
-                    0 2px 5px rgba(0,0,0,.9);
+                    -3px -3px 0 #000,
+                    3px -3px 0 #000,
+                    -3px 3px 0 #000,
+                    3px 3px 0 #000,
+                    0 3px 7px rgba(0,0,0,.9);
             }
 
             .idle {
