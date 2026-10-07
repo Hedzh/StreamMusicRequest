@@ -13,19 +13,24 @@ All notable changes to Stream Music Request are documented here.
 - Added cover display to the OBS widget.
 - Added three OBS widget display modes: text only, cover left with text right, and cover as a full-size background with text overlaid at the bottom.
 - Added graphical preview selection for OBS widget display modes in Settings.
-- OBS background-cover mode now uses large, readable text with a black outline.
+- Added a single "Применить" button for selecting and saving the OBS display mode.
+- Added large 64 px text with a black outline and shadow for the OBS background-cover mode.
 
 ### Improved
 - Twitch request feedback is now configurable without changing the request processing logic.
 - OBS widget now shows the requester only for viewer-requested tracks; main music is displayed as artist and title only.
 - OBS widget cover loading now goes through a local proxy and avoids stale browser caching when the current track changes.
+- OBS background-cover mode uses an 800×800 Browser Source as the intended display area and scales the cover to the available widget area.
 - Changing the OBS display mode is saved and applied from a single "Применить" button.
-- OBS background-cover mode is designed for an 800×800 Browser Source and scales the cover to the available widget area.
+
+### Notes
+- After changing the OBS display mode or other widget presentation settings, an already loaded OBS Browser Source may need to be refreshed so the page reloads the current settings and visual state.
+- Version 1.4.0 remains the current application version.
 
 ## [1.3.3] - 2026-10-04
 
 ### Fixed
-- Yandex Music playback startup now retries up to three times when Media Foundation fails to open the direct audio stream with network timeout `0x80072EE2`.
+- Yandex Music playback startup now retries up to three times when Media Foundation fails to open the direct audio stream with network timeout 0x80072EE2.
 - Each retry requests a fresh Yandex Music direct playback URL before reopening the audio stream.
 - A track is skipped only after all playback startup attempts are exhausted or when a non-retryable playback error occurs.
 
@@ -56,6 +61,24 @@ All notable changes to Stream Music Request are documented here.
 ### Improved
 - Increased Twitch reward selector text size and field height.
 - Twitch ban controls are unavailable while main music is playing.
+
+## [1.3.0] - 2026-10-04
+
+### Added
+- Added persistent user and track bans.
+- Added ban management in Settings.
+- Added controls for blocking the current track and current requester.
+- Blocked users cannot create new music requests and blocked tracks cannot be added to the queue.
+- Blocking the current track or requester removes related queued requests and correctly continues playback.
+
+### Fixed
+- Ban storage operations no longer block the UI while saving or changing bans.
+- Confirmation dialog button results are handled correctly.
+- Main music is restored after a playback startup error.
+- Temporary Yandex Music stream-opening errors can trigger fresh direct URL resolution before a track is skipped.
+- Playback volume is preserved correctly after seeking.
+- Local playback volume uses a softer curve and does not affect the OBS audio stream.
+- Opening Settings no longer resets the current main-window volume to the saved default.
 
 ## [1.2.3] - 2026-10-03
 
