@@ -46,6 +46,7 @@ public partial class MainWindow : Window
 
     private CancellationTokenSource? _coverLoadCts;
     private string? _loadedCoverUrl;
+    private string? _failedCoverUrl;
 
     private DeviceAuthorizationWindow? _twitchAuthorizationWindow;
 
@@ -868,6 +869,7 @@ public partial class MainWindow : Window
             _coverLoadCts?.Cancel();
             _coverLoadCts = null;
             _loadedCoverUrl = null;
+            _failedCoverUrl = null;
 
             CurrentCoverImage.Source = null;
             CurrentCoverImage.Visibility =
@@ -881,6 +883,10 @@ public partial class MainWindow : Window
 
         if (string.Equals(
                 _loadedCoverUrl,
+                coverUrl,
+                StringComparison.Ordinal) ||
+            string.Equals(
+                _failedCoverUrl,
                 coverUrl,
                 StringComparison.Ordinal))
         {
@@ -970,6 +976,8 @@ public partial class MainWindow : Window
 
                     _loadedCoverUrl =
                         coverUrl;
+
+                    _failedCoverUrl = null;
                 });
         }
         catch (OperationCanceledException)
@@ -991,9 +999,11 @@ public partial class MainWindow : Window
                     Visibility.Visible;
 
                 _loadedCoverUrl = null;
+                _failedCoverUrl = coverUrl;
 
                 FileLogger.Info(
-                    $"Не удалось загрузить обложку трека: {ex.Message}");
+                    $"Не удалось загрузить обложку трека. URL: {coverUrl}. " +
+                    $"Исключение: {ex}");
             }
         }
         finally
