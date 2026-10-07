@@ -471,9 +471,9 @@ public sealed class ObsWidgetServer : IAsyncDisposable
             }
 
             #viewport.mode-cover-bottom #coverFrame {
-                flex:0 0 300px;
-                width:300px;
-                height:300px;
+                flex:0 0 700px;
+                width:700px;
+                height:700px;
             }
 
             #viewport.mode-cover-bottom #textViewport {
