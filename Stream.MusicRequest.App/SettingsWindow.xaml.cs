@@ -1104,13 +1104,6 @@ public partial class SettingsWindow : Window
             displayMode);
 
         LoadObsSettingsUi();
-
-        AppMessageBox.Show(
-            this,
-            "Настройки OBS сохранены. Режим отображения применён сразу. Адрес и порты будут применены после перезапуска приложения.",
-            "OBS",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
     }
 
     private void ObsOpenWidgetButton_Click(
