@@ -465,22 +465,46 @@ public sealed class ObsWidgetServer : IAsyncDisposable
             }
 
             #viewport.mode-cover-bottom {
+                position:relative;
                 flex-direction:column;
-                justify-content:center;
-                align-items:center;
-                gap:10px;
+                justify-content:flex-end;
+                align-items:stretch;
+                gap:0;
             }
 
             #viewport.mode-cover-bottom #coverFrame {
-                flex:0 0 min(600px, calc(100vw - 20px), calc(100vh - 60px));
-                width:min(600px, calc(100vw - 20px), calc(100vh - 60px));
-                height:min(600px, calc(100vw - 20px), calc(100vh - 60px));
+                position:absolute;
+                inset:0;
+                width:100%;
+                height:100%;
+                flex:none;
+                border-radius:0;
+                box-shadow:none;
             }
 
             #viewport.mode-cover-bottom #textViewport {
+                position:relative;
+                z-index:2;
                 width:100%;
                 flex:0 0 auto;
-                min-height:38px;
+                min-height:44px;
+                padding:0 18px 18px;
+                box-sizing:border-box;
+                overflow:hidden;
+            }
+
+            #viewport.mode-cover-bottom #marquee {
+                font-size:32px;
+            }
+
+            #viewport.mode-cover-bottom .item {
+                color:#fff;
+                text-shadow:
+                    -2px -2px 0 #000,
+                    2px -2px 0 #000,
+                    -2px 2px 0 #000,
+                    2px 2px 0 #000,
+                    0 2px 5px rgba(0,0,0,.9);
             }
 
             .idle {
