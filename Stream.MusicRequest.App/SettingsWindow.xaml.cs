@@ -17,6 +17,7 @@ public partial class SettingsWindow : Window
     private readonly AppServices _appServices;
     private readonly YandexMusicSource _yandexMusicSource;
     private readonly Action<float>? _setPlaybackVolume;
+    private readonly Action<string>? _applyObsDisplayMode;
 
     private readonly StackPanel[] _pages;
 
@@ -38,7 +39,8 @@ public partial class SettingsWindow : Window
     public SettingsWindow(
         AppServices appServices,
         YandexMusicSource yandexMusicSource,
-        Action<float>? setPlaybackVolume = null)
+        Action<float>? setPlaybackVolume = null,
+        Action<string>? applyObsDisplayMode = null)
     {
         InitializeComponent();
 
@@ -54,6 +56,9 @@ public partial class SettingsWindow : Window
 
         _setPlaybackVolume =
             setPlaybackVolume;
+
+        _applyObsDisplayMode =
+            applyObsDisplayMode;
 
         var settingsDirectory =
             Path.Combine(
@@ -954,6 +959,34 @@ public partial class SettingsWindow : Window
             $"http://{_obsSettings.BindAddress}:{_obsSettings.AudioPort}/";
     }
 
+    private void ObsDisplayModeApplyButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        var displayMode =
+            GetSelectedObsDisplayMode();
+
+        _applyObsDisplayMode?.Invoke(
+            displayMode);
+
+        AppMessageBox.Show(
+            this,
+            "Режим отображения виджета применён.",
+            "OBS",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
+    private string GetSelectedObsDisplayMode()
+    {
+        return
+            ObsDisplayModeComboBox.SelectedItem
+                is ComboBoxItem selectedItem &&
+            selectedItem.Tag is string tag
+                ? tag
+                : "CoverLeft";
+    }
+
     private void ObsResetButton_Click(
         object sender,
         RoutedEventArgs e)
@@ -1052,11 +1085,7 @@ public partial class SettingsWindow : Window
                 300.0);
 
         var displayMode =
-            ObsDisplayModeComboBox.SelectedItem
-                is ComboBoxItem selectedItem &&
-            selectedItem.Tag is string tag
-                ? tag
-                : "CoverLeft";
+            GetSelectedObsDisplayMode();
 
         _obsSettings =
             new ObsSettings
@@ -1071,11 +1100,14 @@ public partial class SettingsWindow : Window
         await _obsSettingsStorage
             .SaveAsync(_obsSettings);
 
+        _applyObsDisplayMode?.Invoke(
+            displayMode);
+
         LoadObsSettingsUi();
 
         AppMessageBox.Show(
             this,
-            "Настройки OBS сохранены. Адрес и порты будут применены после перезапуска приложения.",
+            "Настройки OBS сохранены. Режим отображения применён сразу. Адрес и порты будут применены после перезапуска приложения.",
             "OBS",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
