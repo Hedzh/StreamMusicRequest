@@ -90,6 +90,9 @@ public class ObsSettings
 
     public double ScrollSpeed { get; set; } =
         60.0;
+
+    public string DisplayMode { get; set; } =
+        "CoverLeft";
 }
 
 public class PlaybackSettingsStorage
