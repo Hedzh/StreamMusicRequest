@@ -1509,11 +1509,6 @@
                                             Margin="0,0,8,0"
                                             Click="ObsResetButton_Click"/>
 
-                                    <Button Content="Сохранить"
-                                            Style="{StaticResource AccentButton}"
-                                            Width="110"
-                                            Click="ObsSaveButton_Click"/>
-
                                 </StackPanel>
 
                             </StackPanel>
