@@ -1104,6 +1104,13 @@ public partial class SettingsWindow : Window
             displayMode);
 
         LoadObsSettingsUi();
+
+        AppMessageBox.Show(
+            this,
+            "Настройки OBS успешно сохранены.",
+            "OBS",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
     }
 
     private void ObsOpenWidgetButton_Click(
