@@ -484,14 +484,45 @@
                                                       Margin="0,22,0,20">
 
                                                         <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="190"/>
                                                                 <ColumnDefinition Width="*"/>
                                                         </Grid.ColumnDefinitions>
 
+                                                        <!-- COVER -->
+
+                                                        <Border Grid.Column="0"
+                                                                Width="170"
+                                                                Height="170"
+                                                                HorizontalAlignment="Left"
+                                                                VerticalAlignment="Center"
+                                                                Background="#15191F"
+                                                                BorderBrush="{StaticResource BorderBrushDark}"
+                                                                BorderThickness="1"
+                                                                CornerRadius="10"
+                                                                ClipToBounds="True">
+
+                                                                <Grid>
+
+                                                                        <Image x:Name="CurrentCoverImage"
+                                                                               Stretch="UniformToFill"
+                                                                               Visibility="Collapsed"/>
+
+                                                                        <TextBlock x:Name="CurrentCoverPlaceholder"
+                                                                                   Text="♪"
+                                                                                   FontSize="52"
+                                                                                   Foreground="#454D59"
+                                                                                   HorizontalAlignment="Center"
+                                                                                   VerticalAlignment="Center"/>
+
+                                                                </Grid>
+
+                                                        </Border>
+
                                                         <!-- TRACK INFO -->
 
-                                                        <StackPanel Grid.Column="0"
+                                                        <StackPanel Grid.Column="1"
                                                                     VerticalAlignment="Center"
-                                                                    Margin="0,0,0,0">
+                                                                    Margin="18,0,0,0">
 
                                                                 <TextBlock Text="Исполнитель"
                                                                            Style="{StaticResource SmallLabel}"
