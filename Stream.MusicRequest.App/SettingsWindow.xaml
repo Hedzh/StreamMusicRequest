@@ -1792,12 +1792,12 @@
 
                         <Border Style="{StaticResource SettingsCard}">
                             <StackPanel>
-                                <TextBlock Text="1.4.0 — 06.10.2026"
+                                <TextBlock Text="1.4.0 — 07.10.2026"
                                            FontSize="20"
                                            FontWeight="SemiBold"
                                            Foreground="{StaticResource AccentBrush}"/>
 
-                                <TextBlock Text="Ответы Twitch в чат, настройки уведомлений и информация о программе"
+                                <TextBlock Text="Ответы Twitch в чат, OBS-виджет и улучшения интерфейса"
                                            FontSize="13"
                                            Foreground="{StaticResource TextSecondary}"
                                            TextWrapping="Wrap"
@@ -1813,9 +1813,31 @@
                                            Style="{StaticResource FieldDescription}"/>
                                 <TextBlock Text="• Добавлен раздел «О программе» с информацией о приложении, версии и авторе."
                                            Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Авторство Hedzh отображается в нижней части главного окна."
+                                <TextBlock Text="• Добавлено отображение текущей обложки в главном окне и OBS-виджете."
                                            Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• OBS-виджет показывает имя заказавшего только для заявок зрителей, а основную музыку — только как «Исполнитель — Название трека»."
+                                <TextBlock Text="• Добавлены три режима OBS-виджета: «Просто текст», «Картинка слева, текст справа» и «Картинка на фоне»."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Добавлены графические превью режимов OBS в настройках с выбором через RadioButton."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Кнопка «Применить» для OBS теперь одновременно применяет и сохраняет выбранный режим."
+                                           Style="{StaticResource FieldDescription}"/>
+
+                                <TextBlock Text="Изменено"
+                                           Style="{StaticResource SectionTitle}"
+                                           Margin="0,20,0,12"/>
+                                <TextBlock Text="• В режиме «Картинка на фоне» обложка занимает весь квадрат 800×800, а текст располагается поверх нижней части изображения."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Для фонового режима используется увеличенный текст 64 px с чёрной обводкой и небольшой тенью."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• OBS-виджет показывает имя заказавшего только для заявок зрителей, а основную музыку — как «Исполнитель — Название трека»."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Загрузка обложки OBS выполняется через локальный прокси и защищена от устаревшего браузерного кэша."
+                                           Style="{StaticResource FieldDescription}"/>
+
+                                <TextBlock Text="Примечания"
+                                           Style="{StaticResource SectionTitle}"
+                                           Margin="0,20,0,12"/>
+                                <TextBlock Text="• После изменения режима отображения уже открытый Browser Source в OBS может потребовать обновления страницы, чтобы получить актуальное состояние виджета."
                                            Style="{StaticResource FieldDescription}"/>
 
                             </StackPanel>
