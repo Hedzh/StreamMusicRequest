@@ -406,9 +406,51 @@ public class YandexMusicSource :
             Duration =
                 TimeSpan.FromMilliseconds(
                     yandexTrack.DurationMs),
+
+            CoverUrl =
+                BuildCoverUrl(
+                    yandexTrack.CoverUri),
+
             SourceUrl =
                 null
         };
+    }
+
+    private static string? BuildCoverUrl(
+        string? coverUri)
+    {
+        if (string.IsNullOrWhiteSpace(
+                coverUri))
+        {
+            return null;
+        }
+
+        var normalized =
+            coverUri.Trim();
+
+        if (!normalized.StartsWith(
+                "http://",
+                StringComparison.OrdinalIgnoreCase) &&
+            !normalized.StartsWith(
+                "https://",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            normalized =
+                "https://" + normalized;
+        }
+
+        if (normalized.Contains(
+                "%%",
+                StringComparison.Ordinal))
+        {
+            normalized =
+                normalized.Replace(
+                    "%%",
+                    "400x400",
+                    StringComparison.Ordinal);
+        }
+
+        return normalized;
     }
 
     private static string? ExtractTrackId(
