@@ -1255,6 +1255,11 @@ public partial class MainWindow : Window
                     _musicPlayer.SetVolume(volume);
                     VolumeSlider.Value =
                         volume * 100.0;
+                },
+                displayMode =>
+                {
+                    _obsWidgetServer.SetDisplayMode(
+                        displayMode);
                 })
             {
                 Owner = this
