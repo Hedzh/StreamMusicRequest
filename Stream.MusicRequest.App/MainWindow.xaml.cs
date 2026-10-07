@@ -154,7 +154,8 @@ public partial class MainWindow : Window
             new ObsWidgetServer(
                 obsSettings.BindAddress,
                 obsSettings.WidgetPort,
-                obsSettings.ScrollSpeed);
+                obsSettings.ScrollSpeed,
+                obsSettings.DisplayMode);
 
         _obsWidgetServer.Start();
 

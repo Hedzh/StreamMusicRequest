@@ -1524,10 +1524,10 @@
 
                             <StackPanel>
 
-                                <TextBlock Text="Текстовый виджет"
+                                <TextBlock Text="Виджет"
                                            Style="{StaticResource SectionTitle}"/>
 
-                                <TextBlock Text="Виджет показывает название трека, исполнителя и имя зрителя, заказавшего трек. Для основной музыки строка помечается как «Основная музыка»."
+                                <TextBlock Text="Локальный виджет для OBS. Он отображает текущий трек и автоматически получает обложку через само приложение, поэтому OBS не зависит от прямого доступа к серверу Yandex Music."
                                            Style="{StaticResource FieldDescription}"
                                            Margin="0,0,0,14"/>
 
@@ -1578,21 +1578,40 @@
                                 <TextBlock Text="Отображение"
                                            Style="{StaticResource SectionTitle}"/>
 
-                                <TextBlock Text="Строка прокручивается плавно и автоматически обновляется при смене трека."
+                                <TextBlock Text="Выберите внешний вид виджета в OBS."
                                            Style="{StaticResource FieldDescription}"/>
 
-                                <TextBlock Text="Формат"
+                                <TextBlock Text="Режим отображения"
                                            Style="{StaticResource FieldTitle}"
                                            Margin="0,14,0,5"/>
+
+                                <ComboBox x:Name="ObsDisplayModeComboBox"
+                                          Style="{StaticResource ComboBoxStyle}"
+                                          Width="420"
+                                          HorizontalAlignment="Left">
+
+                                    <ComboBoxItem Content="Просто текст"
+                                                  Tag="Text"/>
+
+                                    <ComboBoxItem Content="Картинка слева, текст справа"
+                                                  Tag="CoverLeft"/>
+
+                                    <ComboBoxItem Content="Картинка сверху, текст снизу"
+                                                  Tag="CoverBottom"/>
+
+                                </ComboBox>
+
+                                <TextBlock Text="Во всех режимах текст остаётся бегущей строкой. В режиме «Картинка сверху, текст снизу» текст прокручивается под обложкой."
+                                           Style="{StaticResource FieldDescription}"
+                                           Margin="0,8,0,0"/>
+
+                                <TextBlock Text="Формат текста"
+                                           Style="{StaticResource FieldTitle}"
+                                           Margin="0,16,0,5"/>
 
                                 <TextBlock Text="Исполнитель — Название трека  •  Заказал: Имя зрителя"
                                            FontSize="13"
                                            Foreground="{StaticResource TextSecondary}"/>
-
-                                <TextBlock Text="Для основной музыки: Исполнитель — Название трека  •  Основная музыка"
-                                           FontSize="13"
-                                           Foreground="{StaticResource TextSecondary}"
-                                           Margin="0,6,0,0"/>
 
                             </StackPanel>
 
