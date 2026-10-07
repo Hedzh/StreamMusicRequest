@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Stream.MusicRequest.Audio.Players;
 using Stream.MusicRequest.Core.Diagnostics;
@@ -40,7 +41,11 @@ public partial class MainWindow : Window
     private readonly NAudioMusicPlayer _musicPlayer;
     private readonly ObsWidgetServer _obsWidgetServer;
     private readonly PlaybackSettingsStorage _playbackSettingsStorage;
+    private readonly HttpClient _coverHttpClient = new();
     private PlaybackSettings _playbackSettings = new();
+
+    private CancellationTokenSource? _coverLoadCts;
+    private string? _loadedCoverUrl;
 
     private DeviceAuthorizationWindow? _twitchAuthorizationWindow;
 
@@ -238,6 +243,7 @@ public partial class MainWindow : Window
         RefreshQueueUi();
         UpdatePlaybackModeUi();
         UpdateMainMusicUi();
+        UpdatePlaybackUi();
         UpdateObsWidgetState();
 
         Loaded +=
@@ -755,6 +761,9 @@ public partial class MainWindow : Window
             CurrentAlbumText.Text =
                 "—";
 
+            UpdatePlaybackCover(
+                null);
+
             CurrentPositionText.Text =
                 "00:00";
 
@@ -792,6 +801,9 @@ public partial class MainWindow : Window
             CurrentTitleText.Text =
                 track.Title;
         }
+
+        UpdatePlaybackCover(
+            track);
 
         var requestSource =
             string.IsNullOrWhiteSpace(track.RequestSource)
@@ -843,6 +855,158 @@ public partial class MainWindow : Window
             _musicPlayer.IsPlaying
                 ? "Ⅱ"
                 : "▶");
+    }
+
+    private void UpdatePlaybackCover(
+        Stream.MusicRequest.Core.Models.Track? track)
+    {
+        var coverUrl =
+            track?.CoverUrl?.Trim();
+
+        if (string.IsNullOrWhiteSpace(coverUrl))
+        {
+            _coverLoadCts?.Cancel();
+            _coverLoadCts = null;
+            _loadedCoverUrl = null;
+
+            CurrentCoverImage.Source = null;
+            CurrentCoverImage.Visibility =
+                Visibility.Collapsed;
+
+            CurrentCoverPlaceholder.Visibility =
+                Visibility.Visible;
+
+            return;
+        }
+
+        if (string.Equals(
+                _loadedCoverUrl,
+                coverUrl,
+                StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _coverLoadCts?.Cancel();
+
+        var cts =
+            new CancellationTokenSource();
+
+        _coverLoadCts =
+            cts;
+
+        _ = LoadPlaybackCoverAsync(
+            coverUrl,
+            cts);
+    }
+
+    private async Task LoadPlaybackCoverAsync(
+        string coverUrl,
+        CancellationTokenSource cts)
+    {
+        try
+        {
+            if (!Uri.TryCreate(
+                    coverUrl,
+                    UriKind.Absolute,
+                    out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttps &&
+                 uri.Scheme != Uri.UriSchemeHttp))
+            {
+                throw new InvalidOperationException(
+                    "Некорректный URL обложки.");
+            }
+
+            using var timeoutCts =
+                CancellationTokenSource.CreateLinkedTokenSource(
+                    cts.Token);
+
+            timeoutCts.CancelAfter(
+                TimeSpan.FromSeconds(5));
+
+            var bytes =
+                await _coverHttpClient
+                    .GetByteArrayAsync(
+                        uri,
+                        timeoutCts.Token);
+
+            cts.Token.ThrowIfCancellationRequested();
+
+            await Dispatcher.InvokeAsync(
+                () =>
+                {
+                    if (!ReferenceEquals(
+                            _coverLoadCts,
+                            cts))
+                    {
+                        return;
+                    }
+
+                    using var stream =
+                        new MemoryStream(
+                            bytes);
+
+                    var image =
+                        new BitmapImage();
+
+                    image.BeginInit();
+                    image.CacheOption =
+                        BitmapCacheOption.OnLoad;
+                    image.CreateOptions =
+                        BitmapCreateOptions.IgnoreImageCache;
+                    image.StreamSource =
+                        stream;
+                    image.EndInit();
+                    image.Freeze();
+
+                    CurrentCoverImage.Source =
+                        image;
+
+                    CurrentCoverImage.Visibility =
+                        Visibility.Visible;
+
+                    CurrentCoverPlaceholder.Visibility =
+                        Visibility.Collapsed;
+
+                    _loadedCoverUrl =
+                        coverUrl;
+                });
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            if (ReferenceEquals(
+                    _coverLoadCts,
+                    cts))
+            {
+                CurrentCoverImage.Source =
+                    null;
+
+                CurrentCoverImage.Visibility =
+                    Visibility.Collapsed;
+
+                CurrentCoverPlaceholder.Visibility =
+                    Visibility.Visible;
+
+                _loadedCoverUrl = null;
+
+                FileLogger.Info(
+                    $"Не удалось загрузить обложку трека: {ex.Message}");
+            }
+        }
+        finally
+        {
+            if (ReferenceEquals(
+                    _coverLoadCts,
+                    cts))
+            {
+                _coverLoadCts = null;
+            }
+
+            cts.Dispose();
+        }
     }
 
     private void ShuffleMainMusicButton_Click(
@@ -2131,6 +2295,11 @@ public partial class MainWindow : Window
         EventArgs e)
     {
         _playbackUiTimer.Stop();
+
+        _coverLoadCts?.Cancel();
+        _coverLoadCts = null;
+        _coverHttpClient.Dispose();
+
         _yandexAuthService.AuthenticationStateChanged -=
             YandexAuthService_AuthenticationStateChanged;
 
