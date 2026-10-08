@@ -112,18 +112,25 @@ if (!response.IsSuccessStatusCode)
 using var json = JsonDocument.Parse(responseText);
 var root = json.RootElement;
 
-var radioSessionId = root.TryGetProperty("radioSessionId", out var sessionIdElement)
+if (!root.TryGetProperty("result", out var result) ||
+    result.ValueKind != JsonValueKind.Object)
+{
+    Console.WriteLine("ОШИБКА: в ответе отсутствует объект result.");
+    return 4;
+}
+
+var radioSessionId = result.TryGetProperty("radioSessionId", out var sessionIdElement)
     ? sessionIdElement.GetString()
     : null;
 
-var batchId = root.TryGetProperty("batchId", out var batchIdElement)
+var batchId = result.TryGetProperty("batchId", out var batchIdElement)
     ? batchIdElement.GetString()
     : null;
 
 if (string.IsNullOrWhiteSpace(radioSessionId))
 {
-    Console.WriteLine("ОШИБКА: в ответе отсутствует radioSessionId.");
-    return 4;
+    Console.WriteLine("ОШИБКА: в result отсутствует radioSessionId.");
+    return 5;
 }
 
 Console.WriteLine("==========================================");
@@ -134,10 +141,10 @@ Console.WriteLine($"Radio Session ID: {radioSessionId}");
 Console.WriteLine($"Batch ID:         {batchId ?? "не найден"}");
 Console.WriteLine();
 
-if (!root.TryGetProperty("sequence", out var sequence) ||
+if (!result.TryGetProperty("sequence", out var sequence) ||
     sequence.ValueKind != JsonValueKind.Array)
 {
-    Console.WriteLine("В ответе нет sequence.");
+    Console.WriteLine("В result нет sequence.");
     Console.WriteLine("Это не обязательно ошибка: тест запрашивал includeTracksInResponse=true,");
     Console.WriteLine("но сервер мог вернуть сессию без начальной последовательности.");
     Console.WriteLine();
