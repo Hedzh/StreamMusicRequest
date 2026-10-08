@@ -95,7 +95,7 @@ try
 
             Console.WriteLine(
                 $"{i + 1}. {artists} — {track.Title} " +
-                $"[{TimeSpan.FromMilliseconds(track.DurationMs):mm\\:ss}]");
+                $"[{TimeSpan.FromMilliseconds(track.DurationMs):mm\:ss}]");
         }
 
         Console.WriteLine();
@@ -175,10 +175,7 @@ try
 
         try
         {
-            await client.Radio.SendStationFeedbackTrackStartedAsync(
-                station,
-                selected.Id,
-                batch.BatchId);
+            Console.WriteLine("trackStarted feedback пропущен для диагностики API.");
 
             await player.PlayAsync(coreTrack);
 
