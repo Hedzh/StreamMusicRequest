@@ -72,10 +72,8 @@ var player = new NAudioMusicPlayer();
 
 try
 {
-    await client.Radio.SendStationFeedbackRadioStartedAsync(
-        station,
-        radioFrom,
-        batch.BatchId);
+    Console.WriteLine("Первичный radioStarted feedback пропущен для диагностики API.");
+    Console.WriteLine();
 
     while (true)
     {
