@@ -12,6 +12,7 @@ Console.WriteLine();
 await using var client = new YandexMusicClient();
 
 var token = Environment.GetEnvironmentVariable("YANDEX_MUSIC_TOKEN");
+YandexMusic.Authentication.OAuthToken? authenticatedToken = null;
 
 if (!string.IsNullOrWhiteSpace(token))
 {
@@ -24,7 +25,7 @@ else
     Console.WriteLine("Запускаю авторизацию Yandex Music через код устройства.");
     Console.WriteLine();
 
-    await client.Authentication.SignInWithDeviceFlowAsync(
+    authenticatedToken = await client.Authentication.SignInWithDeviceFlowAsync(
         code =>
         {
             Console.WriteLine("Откройте:");
@@ -83,6 +84,18 @@ async Task SendJsonFeedbackAsync(string type, string? trackId = null, double? to
         fields["totalPlayedSeconds"] = totalPlayedSeconds;
 
     using var http = new HttpClient();
+
+    var accessToken = token ?? authenticatedToken?.AccessToken;
+
+    if (string.IsNullOrWhiteSpace(accessToken))
+    {
+        Console.WriteLine("ОШИБКА: OAuth-токен для JSON feedback не найден.");
+        return;
+    }
+
+    http.DefaultRequestHeaders.Authorization =
+        new System.Net.Http.Headers.AuthenticationHeaderValue("OAuth", accessToken);
+
     var json = System.Text.Json.JsonSerializer.Serialize(fields);
     using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
@@ -99,6 +112,7 @@ var player = new NAudioMusicPlayer();
 try
 {
     Console.WriteLine("JSON feedback включён для диагностики протокола.");
+    Console.WriteLine("Используется авторизованный OAuth-запрос.");
     await SendJsonFeedbackAsync("radioStarted");
     Console.WriteLine();
 
