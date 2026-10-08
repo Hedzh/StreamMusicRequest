@@ -3,10 +3,15 @@ using Stream.MusicRequest.Core.Models;
 using YandexMusic;
 
 const string station = "user:onyourwave";
+const int testTrackSeconds = 10;
+const int testTracks = 3;
 
 Console.WriteLine("==========================================");
 Console.WriteLine(" Stream Music Request — тест «Моя волна»");
 Console.WriteLine("==========================================");
+Console.WriteLine();
+Console.WriteLine($"Автоматический режим: {testTracks} трека по {testTrackSeconds} секунд.");
+Console.WriteLine("Тест специально не ждёт полного окончания треков.");
 Console.WriteLine();
 
 await using var client = new YandexMusicClient();
@@ -66,7 +71,7 @@ Console.WriteLine();
 
 async Task SendJsonFeedbackAsync(string type, string? trackId = null, double? totalPlayedSeconds = null)
 {
-    Console.WriteLine($"\n[FEEDBACK] {type}");
+    Console.WriteLine($"[FEEDBACK] {type}");
 
     var fields = new Dictionary<string, object?>
     {
@@ -85,21 +90,28 @@ async Task SendJsonFeedbackAsync(string type, string? trackId = null, double? to
     if (string.IsNullOrWhiteSpace(accessToken))
     {
         Console.WriteLine("ОШИБКА: OAuth-токен для JSON feedback не найден.");
-        return;
+        return false;
     }
 
     using var http = new HttpClient();
-    http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("OAuth", accessToken);
+    http.DefaultRequestHeaders.Authorization =
+        new System.Net.Http.Headers.AuthenticationHeaderValue("OAuth", accessToken);
 
     var json = System.Text.Json.JsonSerializer.Serialize(fields);
     using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
-    var url = $"https://api.music.yandex.net/rotor/station/{Uri.EscapeDataString(station)}/feedback?batch-id={Uri.EscapeDataString(batch.BatchId)}";
+    var url =
+        $"https://api.music.yandex.net/rotor/station/{Uri.EscapeDataString(station)}/feedback" +
+        $"?batch-id={Uri.EscapeDataString(batch.BatchId)}";
+
     var response = await http.PostAsync(url, content);
     var responseText = await response.Content.ReadAsStringAsync();
 
-    Console.WriteLine($"HTTP {(int)response.StatusCode} {response.StatusCode}");
-    Console.WriteLine($"Ответ: {responseText}");
+    Console.WriteLine($"  HTTP {(int)response.StatusCode} {response.StatusCode}");
+    Console.WriteLine($"  Ответ: {responseText}");
+
+    return response.IsSuccessStatusCode &&
+           responseText.Contains(""result":"ok"", StringComparison.OrdinalIgnoreCase);
 }
 
 var player = new NAudioMusicPlayer();
@@ -108,115 +120,107 @@ try
 {
     Console.WriteLine("JSON feedback включён для диагностики протокола.");
     Console.WriteLine("Используется авторизованный OAuth-запрос.");
+    Console.WriteLine();
+
     await SendJsonFeedbackAsync("radioStarted");
     Console.WriteLine();
 
-    while (true)
+    string? lastProcessedTrackId = null;
+
+    for (var testIndex = 1; testIndex <= testTracks; testIndex++)
     {
-        Console.WriteLine("Треки текущей пачки:");
-        for (var i = 0; i < batch.Sequence.Count; i++)
-        {
-            var track = batch.Sequence[i].Track;
-            if (track == null)
-            {
-                Console.WriteLine($"{i + 1}. [не трек]");
-                continue;
-            }
+        Console.WriteLine($"========== ТЕСТОВЫЙ ТРЕК {testIndex}/{testTracks} ==========");
 
-            var artists = track.Artists.Count > 0 ? string.Join(", ", track.Artists.Select(a => a.Name)) : "Неизвестный исполнитель";
-            Console.WriteLine($"{i + 1}. {artists} — {track.Title} [{(int)TimeSpan.FromMilliseconds(track.DurationMs).TotalMinutes:00}:{TimeSpan.FromMilliseconds(track.DurationMs).Seconds:00}]");
+        if (batch.Sequence.Count == 0)
+        {
+            Console.WriteLine("ОШИБКА: текущая пачка пуста.");
+            break;
         }
 
-        Console.WriteLine();
-        Console.Write("Выберите номер трека для воспроизведения (Q — выход): ");
-        var input = Console.ReadLine()?.Trim();
-        if (string.Equals(input, "q", StringComparison.OrdinalIgnoreCase)) break;
-        if (!int.TryParse(input, out var selectedIndex) || selectedIndex < 1 || selectedIndex > batch.Sequence.Count)
-        {
-            Console.WriteLine("Некорректный номер.");
-            Console.WriteLine();
-            continue;
-        }
+        var sequenceItem = batch.Sequence.FirstOrDefault(x => x.Track != null && x.Track.Id != lastProcessedTrackId)
+                           ?? batch.Sequence.FirstOrDefault(x => x.Track != null);
 
-        var selected = batch.Sequence[selectedIndex - 1].Track;
+        var selected = sequenceItem?.Track;
         if (selected == null)
         {
-            Console.WriteLine("Выбранный элемент не является треком.");
-            Console.WriteLine();
-            continue;
+            Console.WriteLine("ОШИБКА: в пачке нет пригодного трека.");
+            break;
         }
 
-        var artistsForPlayback = selected.Artists.Count > 0 ? string.Join(", ", selected.Artists.Select(a => a.Name)) : "Неизвестный исполнитель";
+        lastProcessedTrackId = selected.Id;
+
+        var artists = selected.Artists.Count > 0
+            ? string.Join(", ", selected.Artists.Select(a => a.Name))
+            : "Неизвестный исполнитель";
+
+        Console.WriteLine($"Выбран: {artists} — {selected.Title}");
+        Console.WriteLine($"Длительность: {TimeSpan.FromMilliseconds(selected.DurationMs):mm\\:ss}");
         Console.WriteLine();
-        Console.WriteLine($"Выбран: {artistsForPlayback} — {selected.Title}");
-        await SendJsonFeedbackAsync("trackStarted", selected.Id);
+
+        if (!await SendJsonFeedbackAsync("trackStarted", selected.Id))
+        {
+            Console.WriteLine("ВНИМАНИЕ: trackStarted не подтверждён.");
+        }
 
         Console.WriteLine("Получаю прямую ссылку на аудио...");
         var playbackUrl = await client.Tracks.GetDirectLinkAsync(selected.Id);
+
         if (string.IsNullOrWhiteSpace(playbackUrl))
         {
             Console.WriteLine("ОШИБКА: прямая ссылка не получена.");
-            Console.WriteLine();
-            continue;
+            break;
         }
 
         Console.WriteLine("Прямая ссылка получена.");
-        Console.WriteLine("Начинаю воспроизведение.");
-        Console.WriteLine("Enter — пропустить трек, Q — остановить тест.");
+        Console.WriteLine($"Начинаю воспроизведение на {testTrackSeconds} секунд.");
 
-        var coreTrack = new Track { Id = selected.Id, Title = selected.Title, Artist = artistsForPlayback, Duration = TimeSpan.FromMilliseconds(selected.DurationMs), SourceUrl = playbackUrl };
-        var playbackFinished = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        EventHandler? finishedHandler = (_, _) => playbackFinished.TrySetResult(true);
-        player.PlaybackFinished += finishedHandler;
-
-        try
+        var coreTrack = new Track
         {
-            await player.PlayAsync(coreTrack);
-            while (!playbackFinished.Task.IsCompleted)
-            {
-                if (Console.KeyAvailable)
-                {
-                    var key = Console.ReadKey(intercept: true);
-                    if (key.Key == ConsoleKey.Enter)
-                    {
-                        Console.WriteLine();
-                        Console.WriteLine("Трек пропущен.");
-                        await SendJsonFeedbackAsync("skip", selected.Id, 0.1);
-                        await player.StopAsync();
-                        break;
-                    }
-                    if (key.Key == ConsoleKey.Q)
-                    {
-                        Console.WriteLine();
-                        await player.StopAsync();
-                        return 0;
-                    }
-                }
-                await Task.Delay(100);
-            }
+            Id = selected.Id,
+            Title = selected.Title,
+            Artist = artists,
+            Duration = TimeSpan.FromMilliseconds(selected.DurationMs),
+            SourceUrl = playbackUrl
+        };
 
-            if (playbackFinished.Task.IsCompleted)
-            {
-                Console.WriteLine();
-                Console.WriteLine("Трек завершён.");
-                await SendJsonFeedbackAsync("trackFinished", selected.Id, selected.DurationMs / 1000.0);
-            }
-        }
-        finally
+        await player.PlayAsync(coreTrack);
+
+        var playbackStartedAt = DateTimeOffset.UtcNow;
+        await Task.Delay(TimeSpan.FromSeconds(testTrackSeconds));
+        var playedSeconds = Math.Max(
+            0.1,
+            (DateTimeOffset.UtcNow - playbackStartedAt).TotalSeconds);
+
+        await player.StopAsync();
+
+        Console.WriteLine($"Тестовое воспроизведение остановлено после {playedSeconds:F1} сек.");
+        Console.WriteLine("Отправляю trackFinished...");
+
+        if (!await SendJsonFeedbackAsync("trackFinished", selected.Id, playedSeconds))
         {
-            player.PlaybackFinished -= finishedHandler;
+            Console.WriteLine("ВНИМАНИЕ: trackFinished не подтверждён.");
         }
 
         Console.WriteLine();
+
+        if (testIndex >= testTracks)
+            break;
+
         Console.WriteLine("Запрашиваю следующую пачку «Моей волны»...");
-        var nextBatch = await client.Radio.GetStationTracksAsync(station, queue: selected.Id);
+        var nextBatch = await client.Radio.GetStationTracksAsync(
+            station,
+            queue: selected.Id);
+
         if (nextBatch == null || nextBatch.Sequence.Count == 0)
         {
             Console.WriteLine("ОШИБКА: следующая пачка не получена.");
             break;
         }
+
         batch = nextBatch;
+
         Console.WriteLine($"Новая пачка получена: {batch.Sequence.Count} треков.");
+        Console.WriteLine($"Новый Batch ID: {batch.BatchId}");
         Console.WriteLine();
     }
 }
@@ -226,5 +230,5 @@ finally
 }
 
 Console.WriteLine();
-Console.WriteLine("Тест завершён.");
+Console.WriteLine("Автоматический тест «Моей волны» завершён.");
 return 0;
