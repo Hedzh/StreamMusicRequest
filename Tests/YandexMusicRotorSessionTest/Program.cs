@@ -172,7 +172,7 @@ Console.WriteLine();
 Console.WriteLine("Исследуем подтверждённый в сторонних реализациях запрос:");
 Console.WriteLine($"POST /rotor/session/{radioSessionId}/tracks");
 Console.WriteLine("Body:");
-Console.WriteLine($"{{ "queue": ["{firstTrackId}"] }}");
+Console.WriteLine($"{{ \"queue\": [\"{firstTrackId}\"] }}");
 Console.WriteLine();
 Console.WriteLine("Важно: это НЕ создание новой сессии.");
 Console.WriteLine("Используется тот же radioSessionId.");
