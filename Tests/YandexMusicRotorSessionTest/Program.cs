@@ -65,7 +65,7 @@ Console.WriteLine(
 
 Console.WriteLine();
 Console.WriteLine("==========================================");
-Console.WriteLine(" СОЗДАНИЕ ROTOR SESSION");
+Console.WriteLine(" ЭТАП 1: СОЗДАНИЕ ROTOR SESSION");
 Console.WriteLine("==========================================");
 Console.WriteLine();
 Console.WriteLine($"Seed: {station}");
@@ -145,67 +145,162 @@ if (!result.TryGetProperty("sequence", out var sequence) ||
     sequence.ValueKind != JsonValueKind.Array)
 {
     Console.WriteLine("В result нет sequence.");
-    Console.WriteLine("Это не обязательно ошибка: тест запрашивал includeTracksInResponse=true,");
-    Console.WriteLine("но сервер мог вернуть сессию без начальной последовательности.");
-    Console.WriteLine();
-    Console.WriteLine("Первый этап rotor/session завершён успешно.");
-    return 0;
+    Console.WriteLine("Тест продолжения невозможно выполнить без начальной последовательности.");
+    return 6;
 }
 
-var tracks = sequence
-    .EnumerateArray()
-    .Select(item =>
-    {
-        if (!item.TryGetProperty("track", out var track) ||
-            track.ValueKind != JsonValueKind.Object)
-        {
-            return null;
-        }
+var tracks = ParseTracks(sequence);
 
-        var id = track.TryGetProperty("id", out var idElement)
-            ? idElement.GetString()
-            : null;
-
-        var title = track.TryGetProperty("title", out var titleElement)
-            ? titleElement.GetString()
-            : null;
-
-        var artists = track.TryGetProperty("artists", out var artistsElement) &&
-                      artistsElement.ValueKind == JsonValueKind.Array
-            ? string.Join(
-                ", ",
-                artistsElement
-                    .EnumerateArray()
-                    .Select(artist =>
-                        artist.TryGetProperty("name", out var name)
-                            ? name.GetString()
-                            : null)
-                    .Where(name => !string.IsNullOrWhiteSpace(name)))
-            : "Неизвестный исполнитель";
-
-        return new
-        {
-            Id = id,
-            Title = title,
-            Artists = artists
-        };
-    })
-    .Where(track => track != null)
-    .ToList();
-
-Console.WriteLine($"Получено треков в sequence: {tracks.Count}");
+Console.WriteLine($"Получено треков в первой sequence: {tracks.Count}");
 Console.WriteLine();
 
-for (var index = 0; index < tracks.Count; index++)
+PrintTracks(tracks);
+
+if (tracks.Count == 0 || string.IsNullOrWhiteSpace(tracks[0].Id))
 {
-    var track = tracks[index]!;
-
-    Console.WriteLine(
-        $"{index + 1}. {track.Artists} — {track.Title} [{track.Id}]");
+    Console.WriteLine("ОШИБКА: первая sequence не содержит пригодного trackId.");
+    return 7;
 }
 
+var firstTrackId = tracks[0].Id!;
+
 Console.WriteLine();
-Console.WriteLine("Первый этап проверки rotor/session завершён.");
-Console.WriteLine("Пока feedback, воспроизведение и получение следующей пачки");
-Console.WriteLine("намеренно НЕ выполняются — сначала проверяем сам механизм создания сессии.");
+Console.WriteLine("==========================================");
+Console.WriteLine(" ЭТАП 2: ПРОДОЛЖЕНИЕ ТОЙ ЖЕ ROTOR SESSION");
+Console.WriteLine("==========================================");
+Console.WriteLine();
+Console.WriteLine("Исследуем подтверждённый в сторонних реализациях запрос:");
+Console.WriteLine($"POST /rotor/session/{radioSessionId}/tracks");
+Console.WriteLine("Body:");
+Console.WriteLine($"{{ "queue": ["{firstTrackId}"] }}");
+Console.WriteLine();
+Console.WriteLine("Важно: это НЕ создание новой сессии.");
+Console.WriteLine("Используется тот же radioSessionId.");
+Console.WriteLine();
+
+var nextRequestBody = new
+{
+    queue = new[] { firstTrackId }
+};
+
+var nextRequestJson = JsonSerializer.Serialize(nextRequestBody);
+
+using var nextContent = new StringContent(
+    nextRequestJson,
+    Encoding.UTF8,
+    "application/json");
+
+using var nextResponse = await http.PostAsync(
+    $"{apiBaseUrl}/rotor/session/{Uri.EscapeDataString(radioSessionId)}/tracks",
+    nextContent);
+
+var nextResponseText = await nextResponse.Content.ReadAsStringAsync();
+
+Console.WriteLine($"HTTP {(int)nextResponse.StatusCode} {nextResponse.StatusCode}");
+Console.WriteLine("Ответ:");
+Console.WriteLine(nextResponseText);
+Console.WriteLine();
+
+if (!nextResponse.IsSuccessStatusCode)
+{
+    Console.WriteLine("ОШИБКА: rotor/session/{id}/tracks не принял запрос.");
+    return 8;
+}
+
+using var nextJson = JsonDocument.Parse(nextResponseText);
+var nextRoot = nextJson.RootElement;
+
+if (!nextRoot.TryGetProperty("result", out var nextResult) ||
+    nextResult.ValueKind != JsonValueKind.Object)
+{
+    Console.WriteLine("ОШИБКА: в ответе продолжения отсутствует объект result.");
+    return 9;
+}
+
+if (!nextResult.TryGetProperty("sequence", out var nextSequence) ||
+    nextSequence.ValueKind != JsonValueKind.Array)
+{
+    Console.WriteLine("ОШИБКА: в ответе продолжения отсутствует sequence.");
+    return 10;
+}
+
+var nextTracks = ParseTracks(nextSequence);
+
+Console.WriteLine("==========================================");
+Console.WriteLine(" ПРОДОЛЖЕНИЕ ROTOR SESSION ПОЛУЧЕНО");
+Console.WriteLine("==========================================");
+Console.WriteLine();
+Console.WriteLine($"Получено треков во второй sequence: {nextTracks.Count}");
+Console.WriteLine();
+
+PrintTracks(nextTracks);
+
+var nextBatchId = nextResult.TryGetProperty("batchId", out var nextBatchElement)
+    ? nextBatchElement.GetString()
+    : null;
+
+Console.WriteLine();
+Console.WriteLine($"Batch ID первой sequence:  {batchId ?? "не найден"}");
+Console.WriteLine($"Batch ID второй sequence:  {nextBatchId ?? "не найден"}");
+Console.WriteLine($"Radio Session ID сохранён: {radioSessionId}");
+Console.WriteLine();
+
+Console.WriteLine("Этапы 1–2 завершены.");
+Console.WriteLine("Создание сессии и получение следующей sequence внутри той же");
+Console.WriteLine("rotor session подтверждены.");
+Console.WriteLine();
+Console.WriteLine("Feedback и воспроизведение пока НЕ выполняются.");
 return 0;
+
+static List<TrackInfo> ParseTracks(JsonElement sequence)
+{
+    return sequence
+        .EnumerateArray()
+        .Select(item =>
+        {
+            if (!item.TryGetProperty("track", out var track) ||
+                track.ValueKind != JsonValueKind.Object)
+            {
+                return null;
+            }
+
+            var id = track.TryGetProperty("id", out var idElement)
+                ? idElement.GetString()
+                : null;
+
+            var title = track.TryGetProperty("title", out var titleElement)
+                ? titleElement.GetString()
+                : null;
+
+            var artists = track.TryGetProperty("artists", out var artistsElement) &&
+                          artistsElement.ValueKind == JsonValueKind.Array
+                ? string.Join(
+                    ", ",
+                    artistsElement
+                        .EnumerateArray()
+                        .Select(artist =>
+                            artist.TryGetProperty("name", out var name)
+                                ? name.GetString()
+                                : null)
+                        .Where(name => !string.IsNullOrWhiteSpace(name)))
+                : "Неизвестный исполнитель";
+
+            return new TrackInfo(id, title, artists);
+        })
+        .Where(track => track != null)
+        .Select(track => track!)
+        .ToList();
+}
+
+static void PrintTracks(IEnumerable<TrackInfo> tracks)
+{
+    var index = 1;
+
+    foreach (var track in tracks)
+    {
+        Console.WriteLine(
+            $"{index++}. {track.Artists} — {track.Title} [{track.Id}]");
+    }
+}
+
+record TrackInfo(string? Id, string? Title, string Artists);
