@@ -93,7 +93,7 @@ try
 
             Console.WriteLine(
                 $"{i + 1}. {artists} — {track.Title} " +
-                $"[{TimeSpan.FromMilliseconds(track.DurationMs):mm\:ss}]");
+                $"[{TimeSpan.FromMilliseconds(track.DurationMs).ToString(@"mm\\:ss")}]");
         }
 
         Console.WriteLine();
