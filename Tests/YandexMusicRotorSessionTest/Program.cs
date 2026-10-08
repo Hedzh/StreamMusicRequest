@@ -63,6 +63,10 @@ var status = await client.Account.GetStatusAsync();
 Console.WriteLine(
     $"Аккаунт: {status?.Account?.DisplayName ?? status?.Account?.Login ?? "не удалось определить"}");
 
+using var http = new HttpClient();
+http.DefaultRequestHeaders.Authorization =
+    new AuthenticationHeaderValue("OAuth", accessToken);
+
 Console.WriteLine();
 Console.WriteLine("==========================================");
 Console.WriteLine(" ЭТАП 1: СОЗДАНИЕ ROTOR SESSION");
@@ -71,10 +75,6 @@ Console.WriteLine();
 Console.WriteLine($"Seed: {station}");
 Console.WriteLine("includeTracksInResponse: true");
 Console.WriteLine();
-
-using var http = new HttpClient();
-http.DefaultRequestHeaders.Authorization =
-    new AuthenticationHeaderValue("OAuth", accessToken);
 
 var requestBody = new
 {
@@ -133,124 +133,203 @@ if (string.IsNullOrWhiteSpace(radioSessionId))
     return 5;
 }
 
+if (!result.TryGetProperty("sequence", out var sequence) ||
+    sequence.ValueKind != JsonValueKind.Array)
+{
+    Console.WriteLine("В result нет sequence.");
+    return 6;
+}
+
+var firstTracks = ParseTracks(sequence);
+
 Console.WriteLine("==========================================");
 Console.WriteLine(" ROTOR SESSION СОЗДАНА");
 Console.WriteLine("==========================================");
 Console.WriteLine();
 Console.WriteLine($"Radio Session ID: {radioSessionId}");
 Console.WriteLine($"Batch ID:         {batchId ?? "не найден"}");
+Console.WriteLine($"Получено треков в первой sequence: {firstTracks.Count}");
 Console.WriteLine();
 
-if (!result.TryGetProperty("sequence", out var sequence) ||
-    sequence.ValueKind != JsonValueKind.Array)
+PrintTracks(firstTracks);
+
+if (firstTracks.Count == 0 || string.IsNullOrWhiteSpace(firstTracks[^1].Id))
 {
-    Console.WriteLine("В result нет sequence.");
-    Console.WriteLine("Тест продолжения невозможно выполнить без начальной последовательности.");
-    return 6;
-}
-
-var tracks = ParseTracks(sequence);
-
-Console.WriteLine($"Получено треков в первой sequence: {tracks.Count}");
-Console.WriteLine();
-
-PrintTracks(tracks);
-
-if (tracks.Count == 0 || string.IsNullOrWhiteSpace(tracks[0].Id))
-{
-    Console.WriteLine("ОШИБКА: первая sequence не содержит пригодного trackId.");
+    Console.WriteLine("ОШИБКА: первая sequence не содержит пригодного последнего trackId.");
     return 7;
 }
 
-var firstTrackId = tracks[0].Id!;
+Console.WriteLine();
+Console.WriteLine("Для следующего запроса будет использован ПОСЛЕДНИЙ трек первой sequence.");
+Console.WriteLine($"Queue trackId: {firstTracks[^1].Id}");
 
-Console.WriteLine();
-Console.WriteLine("==========================================");
-Console.WriteLine(" ЭТАП 2: ПРОДОЛЖЕНИЕ ТОЙ ЖЕ ROTOR SESSION");
-Console.WriteLine("==========================================");
-Console.WriteLine();
-Console.WriteLine("Исследуем подтверждённый в сторонних реализациях запрос:");
-Console.WriteLine($"POST /rotor/session/{radioSessionId}/tracks");
-Console.WriteLine("Body:");
-Console.WriteLine($"{{ \"queue\": [\"{firstTrackId}\"] }}");
-Console.WriteLine();
-Console.WriteLine("Важно: это НЕ создание новой сессии.");
-Console.WriteLine("Используется тот же radioSessionId.");
-Console.WriteLine();
+var secondResult = await RequestNextSequenceAsync(
+    http,
+    radioSessionId,
+    firstTracks[^1].Id!,
+    2);
 
-var nextRequestBody = new
+if (secondResult == null)
 {
-    queue = new[] { firstTrackId }
-};
-
-var nextRequestJson = JsonSerializer.Serialize(nextRequestBody);
-
-using var nextContent = new StringContent(
-    nextRequestJson,
-    Encoding.UTF8,
-    "application/json");
-
-using var nextResponse = await http.PostAsync(
-    $"{apiBaseUrl}/rotor/session/{Uri.EscapeDataString(radioSessionId)}/tracks",
-    nextContent);
-
-var nextResponseText = await nextResponse.Content.ReadAsStringAsync();
-
-Console.WriteLine($"HTTP {(int)nextResponse.StatusCode} {nextResponse.StatusCode}");
-Console.WriteLine("Ответ:");
-Console.WriteLine(nextResponseText);
-Console.WriteLine();
-
-if (!nextResponse.IsSuccessStatusCode)
-{
-    Console.WriteLine("ОШИБКА: rotor/session/{id}/tracks не принял запрос.");
     return 8;
 }
 
-using var nextJson = JsonDocument.Parse(nextResponseText);
-var nextRoot = nextJson.RootElement;
+var secondTracks = secondResult.Value.Tracks;
+var secondBatchId = secondResult.Value.BatchId;
 
-if (!nextRoot.TryGetProperty("result", out var nextResult) ||
-    nextResult.ValueKind != JsonValueKind.Object)
+Console.WriteLine();
+Console.WriteLine("==========================================");
+Console.WriteLine(" ЭТАП 2: ВТОРАЯ SEQUENCE ТОЙ ЖЕ SESSION");
+Console.WriteLine("==========================================");
+Console.WriteLine();
+Console.WriteLine($"Radio Session ID: {radioSessionId}");
+Console.WriteLine($"Batch ID второй sequence: {secondBatchId ?? "не найден"}");
+Console.WriteLine($"Получено треков: {secondTracks.Count}");
+Console.WriteLine();
+
+PrintTracks(secondTracks);
+
+if (secondTracks.Count == 0 || string.IsNullOrWhiteSpace(secondTracks[^1].Id))
 {
-    Console.WriteLine("ОШИБКА: в ответе продолжения отсутствует объект result.");
+    Console.WriteLine("ОШИБКА: вторая sequence не содержит пригодного последнего trackId.");
     return 9;
 }
 
-if (!nextResult.TryGetProperty("sequence", out var nextSequence) ||
-    nextSequence.ValueKind != JsonValueKind.Array)
+Console.WriteLine();
+Console.WriteLine("Для следующего запроса будет использован ПОСЛЕДНИЙ трек второй sequence.");
+Console.WriteLine($"Queue trackId: {secondTracks[^1].Id}");
+
+var thirdResult = await RequestNextSequenceAsync(
+    http,
+    radioSessionId,
+    secondTracks[^1].Id!,
+    3);
+
+if (thirdResult == null)
 {
-    Console.WriteLine("ОШИБКА: в ответе продолжения отсутствует sequence.");
     return 10;
 }
 
-var nextTracks = ParseTracks(nextSequence);
+var thirdTracks = thirdResult.Value.Tracks;
+var thirdBatchId = thirdResult.Value.BatchId;
 
+Console.WriteLine();
 Console.WriteLine("==========================================");
-Console.WriteLine(" ПРОДОЛЖЕНИЕ ROTOR SESSION ПОЛУЧЕНО");
+Console.WriteLine(" ЭТАП 3: ТРЕТЬЯ SEQUENCE ТОЙ ЖЕ SESSION");
 Console.WriteLine("==========================================");
 Console.WriteLine();
-Console.WriteLine($"Получено треков во второй sequence: {nextTracks.Count}");
+Console.WriteLine($"Radio Session ID: {radioSessionId}");
+Console.WriteLine($"Batch ID третьей sequence: {thirdBatchId ?? "не найден"}");
+Console.WriteLine($"Получено треков: {thirdTracks.Count}");
 Console.WriteLine();
 
-PrintTracks(nextTracks);
-
-var nextBatchId = nextResult.TryGetProperty("batchId", out var nextBatchElement)
-    ? nextBatchElement.GetString()
-    : null;
+PrintTracks(thirdTracks);
 
 Console.WriteLine();
-Console.WriteLine($"Batch ID первой sequence:  {batchId ?? "не найден"}");
-Console.WriteLine($"Batch ID второй sequence:  {nextBatchId ?? "не найден"}");
-Console.WriteLine($"Radio Session ID сохранён: {radioSessionId}");
+Console.WriteLine("==========================================");
+Console.WriteLine(" ИТОГ ИССЛЕДОВАНИЯ");
+Console.WriteLine("==========================================");
 Console.WriteLine();
-
-Console.WriteLine("Этапы 1–2 завершены.");
-Console.WriteLine("Создание сессии и получение следующей sequence внутри той же");
-Console.WriteLine("rotor session подтверждены.");
+Console.WriteLine($"Radio Session ID один и тот же: {radioSessionId}");
+Console.WriteLine($"Batch ID #1: {batchId ?? "не найден"}");
+Console.WriteLine($"Batch ID #2: {secondBatchId ?? "не найден"}");
+Console.WriteLine($"Batch ID #3: {thirdBatchId ?? "не найден"}");
+Console.WriteLine();
+Console.WriteLine("Сравните последовательности на:");
+Console.WriteLine("  • повторяющиеся треки;");
+Console.WriteLine("  • изменение рекомендаций;");
+Console.WriteLine("  • изменение batchId;");
+Console.WriteLine("  • наличие terminated/unknownSession в ответах;");
+Console.WriteLine("  • влияние передачи ПОСЛЕДНЕГО trackId предыдущей sequence.");
 Console.WriteLine();
 Console.WriteLine("Feedback и воспроизведение пока НЕ выполняются.");
+Console.WriteLine("Тест завершён.");
+
 return 0;
+
+static async Task<SequenceResult?> RequestNextSequenceAsync(
+    HttpClient http,
+    string radioSessionId,
+    string trackId,
+    int stage)
+{
+    Console.WriteLine();
+    Console.WriteLine("==========================================");
+    Console.WriteLine($" ЭТАП {stage}: ПРОДОЛЖЕНИЕ ROTOR SESSION");
+    Console.WriteLine("==========================================");
+    Console.WriteLine();
+    Console.WriteLine($"POST /rotor/session/{radioSessionId}/tracks");
+    Console.WriteLine("Body:");
+    Console.WriteLine(JsonSerializer.Serialize(new { queue = new[] { trackId } }));
+    Console.WriteLine();
+    Console.WriteLine($"Используем последний trackId предыдущей sequence: {trackId}");
+    Console.WriteLine();
+
+    var requestBody = new
+    {
+        queue = new[] { trackId }
+    };
+
+    var requestJson = JsonSerializer.Serialize(requestBody);
+
+    using var content = new StringContent(
+        requestJson,
+        Encoding.UTF8,
+        "application/json");
+
+    using var response = await http.PostAsync(
+        $"{apiBaseUrl}/rotor/session/{Uri.EscapeDataString(radioSessionId)}/tracks",
+        content);
+
+    var responseText = await response.Content.ReadAsStringAsync();
+
+    Console.WriteLine($"HTTP {(int)response.StatusCode} {response.StatusCode}");
+    Console.WriteLine("Ответ:");
+    Console.WriteLine(responseText);
+    Console.WriteLine();
+
+    if (!response.IsSuccessStatusCode)
+    {
+        Console.WriteLine($"ОШИБКА: продолжение rotor session на этапе {stage} не принято.");
+        return null;
+    }
+
+    using var json = JsonDocument.Parse(responseText);
+    var root = json.RootElement;
+
+    if (!root.TryGetProperty("result", out var result) ||
+        result.ValueKind != JsonValueKind.Object)
+    {
+        Console.WriteLine("ОШИБКА: в ответе продолжения отсутствует объект result.");
+        return null;
+    }
+
+    if (!result.TryGetProperty("sequence", out var sequence) ||
+        sequence.ValueKind != JsonValueKind.Array)
+    {
+        Console.WriteLine("ОШИБКА: в ответе продолжения отсутствует sequence.");
+        return null;
+    }
+
+    var tracks = ParseTracks(sequence);
+
+    var batchId = result.TryGetProperty("batchId", out var batchElement)
+        ? batchElement.GetString()
+        : null;
+
+    var terminated = result.TryGetProperty("terminated", out var terminatedElement) &&
+                     terminatedElement.ValueKind == JsonValueKind.True;
+
+    var unknownSession = result.TryGetProperty("unknownSession", out var unknownSessionElement) &&
+                         unknownSessionElement.ValueKind == JsonValueKind.True;
+
+    Console.WriteLine($"Разобрано треков: {tracks.Count}");
+    Console.WriteLine($"terminated: {terminated}");
+    Console.WriteLine($"unknownSession: {unknownSession}");
+    Console.WriteLine($"batchId: {batchId ?? "не найден"}");
+
+    return new SequenceResult(tracks, batchId);
+}
 
 static List<TrackInfo> ParseTracks(JsonElement sequence)
 {
@@ -304,3 +383,5 @@ static void PrintTracks(IEnumerable<TrackInfo> tracks)
 }
 
 record TrackInfo(string? Id, string? Title, string Artists);
+
+record SequenceResult(List<TrackInfo> Tracks, string? BatchId);
