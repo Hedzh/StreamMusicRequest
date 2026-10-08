@@ -278,7 +278,7 @@ static async Task<SequenceResult?> RequestNextSequenceAsync(
         "application/json");
 
     using var response = await http.PostAsync(
-        $"{apiBaseUrl}/rotor/session/{Uri.EscapeDataString(radioSessionId)}/tracks",
+        $"https://api.music.yandex.net/rotor/session/{Uri.EscapeDataString(radioSessionId)}/tracks",
         content);
 
     var responseText = await response.Content.ReadAsStringAsync();
