@@ -111,7 +111,7 @@ async Task SendJsonFeedbackAsync(string type, string? trackId = null, double? to
     Console.WriteLine($"  Ответ: {responseText}");
 
     return response.IsSuccessStatusCode &&
-           responseText.Contains(""result":"ok"", StringComparison.OrdinalIgnoreCase);
+           responseText.Contains("\"result\":\"ok\"", StringComparison.OrdinalIgnoreCase);
 }
 
 var player = new NAudioMusicPlayer();
