@@ -174,8 +174,8 @@ if (secondResult == null)
     return 8;
 }
 
-var secondTracks = secondResult.Value.Tracks;
-var secondBatchId = secondResult.Value.BatchId;
+var secondTracks = secondResult.Tracks;
+var secondBatchId = secondResult.BatchId;
 
 Console.WriteLine();
 Console.WriteLine("==========================================");
@@ -210,8 +210,8 @@ if (thirdResult == null)
     return 10;
 }
 
-var thirdTracks = thirdResult.Value.Tracks;
-var thirdBatchId = thirdResult.Value.BatchId;
+var thirdTracks = thirdResult.Tracks;
+var thirdBatchId = thirdResult.BatchId;
 
 Console.WriteLine();
 Console.WriteLine("==========================================");
