@@ -66,11 +66,40 @@ Console.WriteLine($"Получено треков: {batch.Sequence.Count}");
 Console.WriteLine($"Batch ID: {batch.BatchId}");
 Console.WriteLine();
 
+async Task SendJsonFeedbackAsync(string type, string? trackId = null, double? totalPlayedSeconds = null)
+{
+    Console.WriteLine($"\n[FEEDBACK] {type}");
+
+    var fields = new Dictionary<string, object?>
+    {
+        ["type"] = type,
+        ["timestamp"] = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
+    };
+
+    if (!string.IsNullOrWhiteSpace(trackId))
+        fields["trackId"] = trackId;
+
+    if (totalPlayedSeconds is not null)
+        fields["totalPlayedSeconds"] = totalPlayedSeconds;
+
+    using var http = new HttpClient();
+    var json = System.Text.Json.JsonSerializer.Serialize(fields);
+    using var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+    var url = $"https://api.music.yandex.net/rotor/station/{Uri.EscapeDataString(station)}/feedback?batch-id={Uri.EscapeDataString(batch.BatchId)}";
+    var response = await http.PostAsync(url, content);
+    var responseText = await response.Content.ReadAsStringAsync();
+
+    Console.WriteLine($"HTTP {(int)response.StatusCode} {response.StatusCode}");
+    Console.WriteLine($"Ответ: {responseText}");
+}
+
 var player = new NAudioMusicPlayer();
 
 try
 {
-    Console.WriteLine("Все radio feedback-события пропущены для диагностики API.");
+    Console.WriteLine("JSON feedback включён для диагностики протокола.");
+    await SendJsonFeedbackAsync("radioStarted");
     Console.WriteLine();
 
     while (true)
@@ -132,6 +161,8 @@ try
         Console.WriteLine(
             $"Выбран: {artistsForPlayback} — {selected.Title}");
 
+        await SendJsonFeedbackAsync("trackStarted", selected.Id);
+
         Console.WriteLine("Получаю прямую ссылку на аудио...");
 
         var playbackUrl =
@@ -188,6 +219,7 @@ try
                     {
                         Console.WriteLine();
                         Console.WriteLine("Трек пропущен.");
+                        await SendJsonFeedbackAsync("skip", selected.Id, 0.1);
 
                         await player.StopAsync();
 
@@ -209,6 +241,7 @@ try
             {
                 Console.WriteLine();
                 Console.WriteLine("Трек завершён.");
+                await SendJsonFeedbackAsync("trackFinished", selected.Id, selected.DurationMs / 1000.0);
             }
         }
         finally
