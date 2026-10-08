@@ -69,7 +69,7 @@ Console.WriteLine($"Получено треков: {batch.Sequence.Count}");
 Console.WriteLine($"Batch ID: {batch.BatchId}");
 Console.WriteLine();
 
-async Task SendJsonFeedbackAsync(string type, string? trackId = null, double? totalPlayedSeconds = null)
+async Task<bool> SendJsonFeedbackAsync(string type, string? trackId = null, double? totalPlayedSeconds = null)
 {
     Console.WriteLine($"[FEEDBACK] {type}");
 
