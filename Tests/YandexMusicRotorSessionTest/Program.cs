@@ -7,12 +7,18 @@ const string station = "user:onyourwave";
 const string apiBaseUrl = "https://api.music.yandex.net";
 
 Console.WriteLine("====================================================");
-Console.WriteLine(" Stream Music Request — тест семантики queue");
-Console.WriteLine(" Yandex Music rotor/session");
+Console.WriteLine(" Stream Music Request — тест feedback rotor/session");
+Console.WriteLine(" Yandex Music «Моя волна»");
 Console.WriteLine("====================================================");
 Console.WriteLine();
 Console.WriteLine("Отдельный диагностический тест.");
 Console.WriteLine("Основная архитектура SMR и тест «Моя волна» не изменяются.");
+Console.WriteLine();
+Console.WriteLine("Тестирует:");
+Console.WriteLine("  • trackStarted");
+Console.WriteLine("  • trackFinished");
+Console.WriteLine("  • skip");
+Console.WriteLine("После feedback запрашивается следующая sequence через queue: [].");
 Console.WriteLine();
 
 await using var client = new YandexMusicClient();
@@ -70,158 +76,156 @@ http.DefaultRequestHeaders.Authorization =
 
 Console.WriteLine();
 Console.WriteLine("==========================================");
-Console.WriteLine(" ТЕСТ A: ПЕРВАЯ SEQUENCE + ПУСТОЙ QUEUE");
+Console.WriteLine(" СОЗДАНИЕ ROTOR SESSION");
 Console.WriteLine("==========================================");
 Console.WriteLine();
-Console.WriteLine("Создаём новую session и получаем первую sequence.");
-Console.WriteLine("Затем отправляем queue: [] в ТОЙ ЖЕ session.");
-Console.WriteLine();
 
-var firstSession = await CreateSessionAsync(http, "A");
-if (firstSession == null)
+var session = await CreateSessionAsync(http);
+
+if (session == null)
 {
     return 3;
 }
 
-PrintSessionSummary(firstSession, "Первая sequence");
+PrintSessionSummary(session, "Первая sequence");
 
-Console.WriteLine();
-Console.WriteLine("Отправляем продолжение с ПУСТЫМ queue.");
-Console.WriteLine();
-
-var emptyQueueResult = await RequestNextSequenceAsync(
-    http,
-    firstSession.RadioSessionId,
-    Array.Empty<string>(),
-    "A / пустой queue");
-
-if (emptyQueueResult == null)
+if (session.Tracks.Count < 3 ||
+    session.Tracks.Take(3).Any(track => string.IsNullOrWhiteSpace(track.Id)))
 {
+    Console.WriteLine("ОШИБКА: для feedback нужно минимум 3 трека с trackId.");
     return 4;
 }
 
-PrintSessionSummary(emptyQueueResult, "Sequence после пустого queue");
+var firstTrack = session.Tracks[0];
+var secondTrack = session.Tracks[1];
+var thirdTrack = session.Tracks[2];
 
 Console.WriteLine();
 Console.WriteLine("==========================================");
-Console.WriteLine(" ТЕСТ B: НОВАЯ SESSION + ВСЕ 5 TRACK ID");
+Console.WriteLine(" FEEDBACK");
 Console.WriteLine("==========================================");
 Console.WriteLine();
-Console.WriteLine("Создаём ДРУГУЮ session.");
-Console.WriteLine("Получаем её первую sequence.");
-Console.WriteLine("Затем передаём queue со всеми trackId этой sequence.");
-Console.WriteLine();
 
-var secondSession = await CreateSessionAsync(http, "B");
-if (secondSession == null)
+Console.WriteLine("1) trackStarted — первый трек");
+if (!await SendFeedbackAsync(
+        http,
+        session.RadioSessionId,
+        session.BatchId,
+        firstTrack.Id!,
+        "trackStarted",
+        totalPlayedSeconds: null))
 {
     return 5;
 }
 
-PrintSessionSummary(secondSession, "Первая sequence новой session");
-
-if (secondSession.Tracks.Count == 0 ||
-    secondSession.Tracks.Any(track => string.IsNullOrWhiteSpace(track.Id)))
+Console.WriteLine();
+Console.WriteLine("2) trackFinished — первый трек, условно проиграно 30 секунд");
+if (!await SendFeedbackAsync(
+        http,
+        session.RadioSessionId,
+        session.BatchId,
+        firstTrack.Id!,
+        "trackFinished",
+        totalPlayedSeconds: 30))
 {
-    Console.WriteLine("ОШИБКА: первая sequence теста B не содержит полный набор trackId.");
     return 6;
 }
 
-var allTrackIds = secondSession.Tracks
-    .Select(track => track.Id!)
-    .ToArray();
-
 Console.WriteLine();
-Console.WriteLine("Передаём ВСЕ trackId первой sequence:");
-Console.WriteLine(JsonSerializer.Serialize(allTrackIds));
-Console.WriteLine();
-
-var allQueueResult = await RequestNextSequenceAsync(
-    http,
-    secondSession.RadioSessionId,
-    allTrackIds,
-    "B / все trackId первой sequence");
-
-if (allQueueResult == null)
+Console.WriteLine("3) trackStarted — второй трек");
+if (!await SendFeedbackAsync(
+        http,
+        session.RadioSessionId,
+        session.BatchId,
+        secondTrack.Id!,
+        "trackStarted",
+        totalPlayedSeconds: null))
 {
     return 7;
 }
 
-PrintSessionSummary(allQueueResult, "Sequence после queue из всех 5 trackId");
-
 Console.WriteLine();
-Console.WriteLine("==========================================");
-Console.WriteLine(" ТЕСТ C: НОВАЯ SESSION + НЕСКОЛЬКО TRACK ID");
-Console.WriteLine("==========================================");
-Console.WriteLine();
-Console.WriteLine("Для дополнительной проверки передаём первые 2 trackId");
-Console.WriteLine("третьей session.");
-Console.WriteLine();
-
-var thirdSession = await CreateSessionAsync(http, "C");
-if (thirdSession == null)
+Console.WriteLine("4) skip — второй трек, условно проиграно 5 секунд");
+if (!await SendFeedbackAsync(
+        http,
+        session.RadioSessionId,
+        session.BatchId,
+        secondTrack.Id!,
+        "skip",
+        totalPlayedSeconds: 5))
 {
     return 8;
 }
 
-PrintSessionSummary(thirdSession, "Первая sequence третьей session");
-
-var multipleTrackIds = thirdSession.Tracks
-    .Where(track => !string.IsNullOrWhiteSpace(track.Id))
-    .Take(2)
-    .Select(track => track.Id!)
-    .ToArray();
-
-if (multipleTrackIds.Length == 0)
+Console.WriteLine();
+Console.WriteLine("5) trackStarted — третий трек");
+if (!await SendFeedbackAsync(
+        http,
+        session.RadioSessionId,
+        session.BatchId,
+        thirdTrack.Id!,
+        "trackStarted",
+        totalPlayedSeconds: null))
 {
-    Console.WriteLine("ОШИБКА: в тесте C не найдено trackId.");
     return 9;
 }
 
 Console.WriteLine();
-Console.WriteLine("Передаём несколько trackId:");
-Console.WriteLine(JsonSerializer.Serialize(multipleTrackIds));
-Console.WriteLine();
-
-var multipleQueueResult = await RequestNextSequenceAsync(
-    http,
-    thirdSession.RadioSessionId,
-    multipleTrackIds,
-    "C / несколько trackId");
-
-if (multipleQueueResult == null)
+Console.WriteLine("6) trackFinished — третий трек, условно проиграно 30 секунд");
+if (!await SendFeedbackAsync(
+        http,
+        session.RadioSessionId,
+        session.BatchId,
+        thirdTrack.Id!,
+        "trackFinished",
+        totalPlayedSeconds: 30))
 {
     return 10;
 }
 
-PrintSessionSummary(multipleQueueResult, "Sequence после queue из нескольких trackId");
+Console.WriteLine();
+Console.WriteLine("==========================================");
+Console.WriteLine(" ПРОДОЛЖЕНИЕ ПОСЛЕ FEEDBACK");
+Console.WriteLine("==========================================");
+Console.WriteLine();
+Console.WriteLine("Запрашиваем следующую sequence с queue: [].");
+Console.WriteLine("Смотрим, изменился ли состав рекомендаций после feedback.");
+Console.WriteLine();
+
+var nextSession = await RequestNextSequenceAsync(
+    http,
+    session.RadioSessionId,
+    Array.Empty<string>());
+
+if (nextSession == null)
+{
+    return 11;
+}
+
+PrintSessionSummary(nextSession, "Sequence после feedback");
 
 Console.WriteLine();
 Console.WriteLine("==========================================");
-Console.WriteLine(" ИТОГ ИССЛЕДОВАНИЯ");
+Console.WriteLine(" ИТОГ");
 Console.WriteLine("==========================================");
 Console.WriteLine();
-Console.WriteLine("Проверены три варианта:");
-Console.WriteLine("  A. queue: [] в уже существующей session;");
-Console.WriteLine("  B. queue со всеми trackId первой sequence в новой session;");
-Console.WriteLine("  C. queue с несколькими trackId в новой session.");
+Console.WriteLine("В одной rotor session отправлены:");
+Console.WriteLine("  • trackStarted для первого трека;");
+Console.WriteLine("  • trackFinished для первого трека;");
+Console.WriteLine("  • trackStarted для второго трека;");
+Console.WriteLine("  • skip для второго трека;");
+Console.WriteLine("  • trackStarted для третьего трека;");
+Console.WriteLine("  • trackFinished для третьего трека.");
 Console.WriteLine();
-Console.WriteLine("Сравнивать нужно:");
-Console.WriteLine("  • состав и порядок рекомендаций;");
-Console.WriteLine("  • повторяющиеся треки;");
-Console.WriteLine("  • batchId;");
-Console.WriteLine("  • terminated;");
-Console.WriteLine("  • unknownSession;");
-Console.WriteLine("  • влияние количества trackId в queue.");
+Console.WriteLine("После этого запрошена следующая sequence.");
+Console.WriteLine("Нужно сравнить её с первой sequence и посмотреть,");
+Console.WriteLine("как feedback повлиял на дальнейшие рекомендации.");
 Console.WriteLine();
-Console.WriteLine("Feedback и воспроизведение пока НЕ выполняются.");
 Console.WriteLine("Тест завершён.");
 
 return 0;
 
-static async Task<SessionResult?> CreateSessionAsync(
-    HttpClient http,
-    string testName)
+static async Task<SessionResult?> CreateSessionAsync(HttpClient http)
 {
     var requestBody = new
     {
@@ -231,7 +235,7 @@ static async Task<SessionResult?> CreateSessionAsync(
 
     var requestJson = JsonSerializer.Serialize(requestBody);
 
-    Console.WriteLine($"POST /rotor/session/new [{testName}]");
+    Console.WriteLine("POST /rotor/session/new");
     Console.WriteLine($"Body: {requestJson}");
     Console.WriteLine();
 
@@ -253,7 +257,7 @@ static async Task<SessionResult?> CreateSessionAsync(
 
     if (!response.IsSuccessStatusCode)
     {
-        Console.WriteLine($"ОШИБКА: создание session для теста {testName} не принято.");
+        Console.WriteLine("ОШИБКА: создание rotor session не принято.");
         return null;
     }
 
@@ -304,14 +308,67 @@ static async Task<SessionResult?> CreateSessionAsync(
         unknownSession);
 }
 
+static async Task<bool> SendFeedbackAsync(
+    HttpClient http,
+    string radioSessionId,
+    string? batchId,
+    string trackId,
+    string eventType,
+    double? totalPlayedSeconds)
+{
+    var eventData = new Dictionary<string, object?>
+    {
+        ["type"] = eventType,
+        ["trackId"] = trackId,
+        ["timestamp"] = DateTimeOffset.UtcNow.ToString("O")
+    };
+
+    if (totalPlayedSeconds.HasValue)
+    {
+        eventData["totalPlayedSeconds"] = totalPlayedSeconds.Value;
+    }
+
+    var requestBody = new
+    {
+        @event = eventData,
+        batchId
+    };
+
+    var requestJson = JsonSerializer.Serialize(requestBody);
+
+    Console.WriteLine($"POST /rotor/session/{radioSessionId}/feedback");
+    Console.WriteLine($"Event: {eventType}");
+    Console.WriteLine($"Body: {requestJson}");
+
+    using var content = new StringContent(
+        requestJson,
+        Encoding.UTF8,
+        "application/json");
+
+    using var response = await http.PostAsync(
+        $"{apiBaseUrl}/rotor/session/{Uri.EscapeDataString(radioSessionId)}/feedback",
+        content);
+
+    var responseText = await response.Content.ReadAsStringAsync();
+
+    Console.WriteLine($"HTTP {(int)response.StatusCode} {response.StatusCode}");
+    Console.WriteLine($"Ответ: {responseText}");
+    Console.WriteLine();
+
+    if (!response.IsSuccessStatusCode)
+    {
+        Console.WriteLine($"ОШИБКА: feedback {eventType} не принят.");
+        return false;
+    }
+
+    return true;
+}
+
 static async Task<SessionResult?> RequestNextSequenceAsync(
     HttpClient http,
     string radioSessionId,
-    IReadOnlyCollection<string> trackIds,
-    string testLabel)
+    IReadOnlyCollection<string> trackIds)
 {
-    Console.WriteLine($"POST /rotor/session/{radioSessionId}/tracks [{testLabel}]");
-
     var requestBody = new
     {
         queue = trackIds
@@ -319,8 +376,8 @@ static async Task<SessionResult?> RequestNextSequenceAsync(
 
     var requestJson = JsonSerializer.Serialize(requestBody);
 
-    Console.WriteLine("Body:");
-    Console.WriteLine(requestJson);
+    Console.WriteLine($"POST /rotor/session/{radioSessionId}/tracks");
+    Console.WriteLine($"Body: {requestJson}");
     Console.WriteLine();
 
     using var content = new StringContent(
@@ -341,7 +398,7 @@ static async Task<SessionResult?> RequestNextSequenceAsync(
 
     if (!response.IsSuccessStatusCode)
     {
-        Console.WriteLine($"ОШИБКА: запрос {testLabel} не принят.");
+        Console.WriteLine("ОШИБКА: запрос следующей sequence не принят.");
         return null;
     }
 
