@@ -66,13 +66,15 @@ Console.WriteLine($"Получено треков: {batch.Sequence.Count}");
 Console.WriteLine($"Batch ID: {batch.BatchId}");
 Console.WriteLine();
 
+var radioFrom = $"mobile-radio-user-{status?.Account?.Uid ?? 0}";
+
 var player = new NAudioMusicPlayer();
 
 try
 {
     await client.Radio.SendStationFeedbackRadioStartedAsync(
         station,
-        "user-onyourwave",
+        radioFrom,
         batch.BatchId);
 
     while (true)
