@@ -66,13 +66,11 @@ Console.WriteLine($"Получено треков: {batch.Sequence.Count}");
 Console.WriteLine($"Batch ID: {batch.BatchId}");
 Console.WriteLine();
 
-var radioFrom = $"mobile-radio-user-{status?.Account?.Uid ?? 0}";
-
 var player = new NAudioMusicPlayer();
 
 try
 {
-    Console.WriteLine("Первичный radioStarted feedback пропущен для диагностики API.");
+    Console.WriteLine("Все radio feedback-события пропущены для диагностики API.");
     Console.WriteLine();
 
     while (true)
@@ -95,7 +93,7 @@ try
 
             Console.WriteLine(
                 $"{i + 1}. {artists} — {track.Title} " +
-                $"[{TimeSpan.FromMilliseconds(track.DurationMs):mm\\:ss}]");
+                $"[{TimeSpan.FromMilliseconds(track.DurationMs):mm\:ss}]");
         }
 
         Console.WriteLine();
@@ -171,12 +169,8 @@ try
 
         player.PlaybackFinished += finishedHandler;
 
-        var startedAt = DateTimeOffset.UtcNow;
-
         try
         {
-            Console.WriteLine("trackStarted feedback пропущен для диагностики API.");
-
             await player.PlayAsync(coreTrack);
 
             while (true)
@@ -192,19 +186,8 @@ try
 
                     if (key.Key == ConsoleKey.Enter)
                     {
-                        var playedSeconds =
-                            Math.Max(
-                                0,
-                                (DateTimeOffset.UtcNow - startedAt).TotalSeconds);
-
                         Console.WriteLine();
                         Console.WriteLine("Трек пропущен.");
-
-                        await client.Radio.SendStationFeedbackSkipAsync(
-                            station,
-                            selected.Id,
-                            playedSeconds,
-                            batch.BatchId);
 
                         await player.StopAsync();
 
@@ -224,19 +207,8 @@ try
 
             if (playbackFinished.Task.IsCompleted)
             {
-                var playedSeconds =
-                    Math.Max(
-                        0,
-                        (DateTimeOffset.UtcNow - startedAt).TotalSeconds);
-
                 Console.WriteLine();
                 Console.WriteLine("Трек завершён.");
-
-                await client.Radio.SendStationFeedbackTrackFinishedAsync(
-                    station,
-                    selected.Id,
-                    playedSeconds,
-                    batch.BatchId);
             }
         }
         finally
