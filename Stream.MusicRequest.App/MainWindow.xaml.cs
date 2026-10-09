@@ -38,6 +38,7 @@ public partial class MainWindow : Window
     private readonly TwitchApiClient _twitchApiClient;
 
     private readonly YandexMusicSource _yandexMusicSource;
+    private readonly YandexMyWaveMusicSource _myWaveSource;
     private readonly NAudioMusicPlayer _musicPlayer;
     private readonly ObsWidgetServer _obsWidgetServer;
     private readonly PlaybackSettingsStorage _playbackSettingsStorage;
@@ -94,6 +95,10 @@ public partial class MainWindow : Window
 
         _yandexMusicSource =
             new YandexMusicSource(
+                _yandexClient);
+
+        _myWaveSource =
+            new YandexMyWaveMusicSource(
                 _yandexClient);
 
         var sourceResolver =
@@ -1260,7 +1265,8 @@ public partial class MainWindow : Window
                 {
                     _obsWidgetServer.SetDisplayMode(
                         displayMode);
-                })
+                },
+                ApplyPlaybackSettingsAsync)
             {
                 Owner = this
             };
@@ -1297,61 +1303,118 @@ public partial class MainWindow : Window
 
     private async Task LoadDefaultPlaylistOnStartupAsync()
     {
-        if (!_playbackSettings.LoadDefaultPlaylistOnStartup ||
-            string.IsNullOrWhiteSpace(
-                _playbackSettings.DefaultPlaylistUrl))
+        if (string.Equals(
+                _playbackSettings.MainMusicSource,
+                "MyWave",
+                StringComparison.OrdinalIgnoreCase))
         {
+            if (!_yandexAuthService.IsAuthenticated)
+            {
+                FileLogger.Info("Автозапуск «Моей волны» пропущен: Yandex Music не подключён.");
+                return;
+            }
+
+            try
+            {
+                var waveAlbum = await _myWaveSource.CreateAlbumAsync();
+                await _playbackController.SetMainMusicAsync(waveAlbum);
+                var started = await _playbackController.StartMainMusicAsync();
+                if (!started)
+                    FileLogger.Info("«Моя волна» загружена, но первый трек не удалось запустить.");
+                UpdateMainMusicUi();
+                UpdatePlaybackUi();
+                UpdatePlaybackModeUi();
+            }
+            catch (Exception ex)
+            {
+                FileLogger.Error("Не удалось автоматически запустить «Мою волну».", ex);
+            }
+
             return;
         }
 
+        if (!_playbackSettings.LoadDefaultPlaylistOnStartup ||
+            string.IsNullOrWhiteSpace(_playbackSettings.DefaultPlaylistUrl))
+            return;
+
         if (!_yandexAuthService.IsAuthenticated)
         {
-            FileLogger.Info(
-                "Автозагрузка плейлиста пропущена: Yandex Music не подключён.");
+            FileLogger.Info("Автозагрузка плейлиста пропущена: Yandex Music не подключён.");
             return;
         }
 
         try
         {
-            FileLogger.Info(
-                "Загрузка плейлиста по умолчанию при запуске.");
+            FileLogger.Info("Загрузка плейлиста по умолчанию при запуске.");
+            var url = _playbackSettings.DefaultPlaylistUrl;
+            var album = _yandexMusicSource.CanHandlePlaylistUrl(url)
+                ? await _yandexMusicSource.ResolvePlaylistAsync(url)
+                : await _yandexMusicSource.ResolveAlbumAsync(url);
 
-            var album =
-                await _yandexMusicSource.ResolvePlaylistAsync(
-                    _playbackSettings.DefaultPlaylistUrl);
-
-            if (album == null ||
-                album.Tracks.Count == 0)
+            if (album == null || album.Tracks.Count == 0)
             {
-                FileLogger.Info(
-                    "Плейлист по умолчанию не удалось загрузить или он пуст.");
+                FileLogger.Info("Основной плейлист/альбом не удалось загрузить или он пуст.");
                 return;
             }
 
-            _mainMusicService.SetAlbum(album);
-
-            var started =
-                await _mainMusicService.PlayAsync();
-
+            await _playbackController.SetMainMusicAsync(album);
+            var started = await _playbackController.StartMainMusicAsync();
             if (!started)
             {
-                FileLogger.Info(
-                    "Плейлист по умолчанию загружен, но первый трек не удалось запустить.");
+                FileLogger.Info("Основной плейлист загружен, но первый трек не удалось запустить.");
                 return;
             }
 
             UpdatePlaybackUi();
             UpdatePlaybackModeUi();
-
-            FileLogger.Info(
-                $"Плейлист по умолчанию запущен: {album.Title}. Треков: {album.Tracks.Count}");
+            FileLogger.Info($"Основная музыка запущена: {album.Title}. Треков: {album.Tracks.Count}");
         }
         catch (Exception ex)
         {
-            FileLogger.Error(
-                "Не удалось автоматически загрузить плейлист по умолчанию.",
-                ex);
+            FileLogger.Error("Не удалось автоматически загрузить основной источник.", ex);
         }
+    }
+
+    private async Task ApplyPlaybackSettingsAsync(PlaybackSettings settings)
+    {
+        _playbackSettings = settings;
+        _musicPlayer.SetVolume(settings.Volume);
+        VolumeSlider.Value = settings.Volume * 100.0;
+
+        if (!_yandexAuthService.IsAuthenticated)
+            throw new InvalidOperationException("Сначала подключите Yandex Music.");
+
+        if (string.Equals(settings.MainMusicSource, "MyWave", StringComparison.OrdinalIgnoreCase))
+        {
+            var album = await _myWaveSource.CreateAlbumAsync();
+            await _playbackController.SetMainMusicAsync(album);
+        }
+        else
+        {
+            var url = settings.DefaultPlaylistUrl?.Trim();
+            if (string.IsNullOrWhiteSpace(url))
+                throw new InvalidOperationException("Укажите ссылку на плейлист или альбом Yandex Music.");
+
+            var album = _yandexMusicSource.CanHandlePlaylistUrl(url)
+                ? await _yandexMusicSource.ResolvePlaylistAsync(url)
+                : await _yandexMusicSource.ResolveAlbumAsync(url);
+
+            if (album == null || album.Tracks.Count == 0)
+                throw new InvalidOperationException("Не удалось загрузить указанный плейлист или альбом.");
+
+            await _playbackController.SetMainMusicAsync(album);
+        }
+
+        if (!_playbackController.IsViewerModeActive)
+        {
+            var started = await _playbackController.StartMainMusicAsync();
+            if (!started)
+                throw new InvalidOperationException("Источник загружен, но первый трек не удалось запустить.");
+        }
+
+        UpdateMainMusicUi();
+        UpdatePlaybackUi();
+        UpdatePlaybackModeUi();
     }
 
     private async Task RestoreYandexAuthenticationAsync()
