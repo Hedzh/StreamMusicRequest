@@ -1035,7 +1035,8 @@ public partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
-        if (!_playbackController.HasMainMusic)
+        if (!_playbackController.HasMainMusic ||
+            IsMyWaveSelected())
         {
             return;
         }
@@ -1046,8 +1047,29 @@ public partial class MainWindow : Window
         UpdateShuffleButtonUi();
     }
 
+    private bool IsMyWaveSelected() =>
+        string.Equals(
+            _playbackController.CurrentMainMusic?.SourceUrl,
+            "mywave://onyourwave",
+            StringComparison.OrdinalIgnoreCase);
+
     private void UpdateShuffleButtonUi()
     {
+        var isMyWave = IsMyWaveSelected();
+        ShuffleMainMusicButton.Visibility =
+            isMyWave ? Visibility.Collapsed : Visibility.Visible;
+
+        ShuffleMainMusicButton.IsEnabled =
+            !isMyWave && _playbackController.HasMainMusic;
+
+        if (isMyWave)
+        {
+            ShuffleMainMusicButton.Foreground =
+                (Brush)FindResource("TextPrimary");
+            ShuffleMainMusicButton.ToolTip = null;
+            return;
+        }
+
         if (!_mainMusicService.IsShuffleEnabled)
         {
             ShuffleMainMusicButton.Foreground =
@@ -1109,6 +1131,13 @@ public partial class MainWindow : Window
             MainAlbumInfoText.Text =
                 "Добавьте альбом или плейлист Yandex Music";
 
+            return;
+        }
+
+        if (IsMyWaveSelected())
+        {
+            MainAlbumTitleText.Text = "Моя волна";
+            MainAlbumInfoText.Text = "Персональная радиостанция Yandex Music";
             return;
         }
 
