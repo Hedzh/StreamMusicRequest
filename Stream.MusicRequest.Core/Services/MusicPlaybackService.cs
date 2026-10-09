@@ -330,6 +330,9 @@ public async Task PauseAsync()
         FileLogger.Info(
             "MusicPlaybackService.SkipAsync вызван.");
 
+        var skippedItem =
+            _currentItem;
+
         await _player.SkipAsync();
 
         _isPlaying =
@@ -340,7 +343,10 @@ public async Task PauseAsync()
         FileLogger.Info(
             "Текущий трек пропущен.");
 
-        if (!AutoAdvanceEnabled)
+        // Приоритетный трек всегда передаёт выбор следующего элемента контроллеру,
+        // даже если AutoAdvanceEnabled оказался включён побочным событием.
+        if (!AutoAdvanceEnabled ||
+            skippedItem?.QueuePriority >= 100)
         {
             // Во время SUPER-PRIORITY контроллер сам решает, что запускать дальше:
             // следующий SUPER-PRIORITY, сохранённый Twitch-трек или основную музыку.
@@ -437,6 +443,9 @@ public async Task PauseAsync()
                 "Получено событие PlaybackFinished " +
                 "от музыкального плеера.");
 
+            var finishedItem =
+                _currentItem;
+
             _isPlaying =
                 false;
 
@@ -446,7 +455,10 @@ public async Task PauseAsync()
                 $"Перед запуском следующего: " +
                 $"QueueCount: {_queue.Count}");
 
-            if (!AutoAdvanceEnabled)
+            // После естественного окончания SUPER-PRIORITY контроллер должен
+            // проверить приоритетную очередь и восстановить прерванный трек.
+            if (!AutoAdvanceEnabled ||
+                finishedItem?.QueuePriority >= 100)
             {
                 FileLogger.Info(
                     "Автоматический запуск следующего трека очереди временно отключён контроллером.");
