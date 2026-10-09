@@ -60,6 +60,10 @@ public class MusicPlaybackController
     public QueueItem? CurrentViewerItem =>
         _viewerMusic.CurrentItem;
 
+    // Только для отображения: до восстановления трек остаётся вне рабочей очереди.
+    public QueueItem? PriorityResumeViewerItem =>
+        _priorityResumeViewerItem;
+
     public async Task SetMainMusicAsync(MusicAlbum album)
     {
         await _operationGate.WaitAsync().ConfigureAwait(false);
