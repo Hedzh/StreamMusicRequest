@@ -22,6 +22,7 @@ public sealed class YandexMyWaveMusicSource : IPlayableMusicSource, IContinuousM
     private readonly HttpClient _httpClient;
     private readonly SemaphoreSlim _sessionGate = new(1, 1);
     private readonly Dictionary<string, string?> _batchByTrackId = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _sessionByTrackId = new(StringComparer.Ordinal);
     private string? _radioSessionId;
     private string? _currentBatchId;
     private bool _disposed;
@@ -63,6 +64,7 @@ public sealed class YandexMyWaveMusicSource : IPlayableMusicSource, IContinuousM
             _radioSessionId = session.RadioSessionId;
             _currentBatchId = session.BatchId;
             _batchByTrackId.Clear();
+            _sessionByTrackId.Clear();
 
             var album = new MusicAlbum
             {
@@ -150,8 +152,9 @@ public sealed class YandexMyWaveMusicSource : IPlayableMusicSource, IContinuousM
 
         try
         {
-            if (_batchByTrackId.TryGetValue(track.Id, out var batchId))
-                await SendFeedbackAsync(track.Id, "trackStarted", null, batchId).ConfigureAwait(false);
+            if (_batchByTrackId.TryGetValue(track.Id, out var batchId) &&
+                _sessionByTrackId.TryGetValue(track.Id, out var sessionId))
+                await SendFeedbackAsync(sessionId, track.Id, "trackStarted", null, batchId).ConfigureAwait(false);
 
             return await _client.Tracks.GetDirectLinkAsync(track.Id).ConfigureAwait(false);
         }
@@ -171,12 +174,14 @@ public sealed class YandexMyWaveMusicSource : IPlayableMusicSource, IContinuousM
     private async Task SendTrackFeedbackForTrackAsync(Track track, string type, TimeSpan played)
     {
         if (string.IsNullOrWhiteSpace(track.Id) ||
-            !_batchByTrackId.TryGetValue(track.Id, out var batchId))
+            !_batchByTrackId.TryGetValue(track.Id, out var batchId) ||
+            !_sessionByTrackId.TryGetValue(track.Id, out var sessionId))
             return;
 
         try
         {
             await SendFeedbackAsync(
+                sessionId,
                 track.Id,
                 type,
                 Math.Max(0, played.TotalSeconds),
@@ -215,9 +220,9 @@ public sealed class YandexMyWaveMusicSource : IPlayableMusicSource, IContinuousM
         return ParseSession(body);
     }
 
-    private async Task SendFeedbackAsync(string trackId, string type, double? playedSeconds, string? batchId)
+    private async Task SendFeedbackAsync(string sessionId, string trackId, string type, double? playedSeconds, string? batchId)
     {
-        if (string.IsNullOrWhiteSpace(_radioSessionId) || string.IsNullOrWhiteSpace(batchId))
+        if (string.IsNullOrWhiteSpace(sessionId) || string.IsNullOrWhiteSpace(batchId))
             return;
 
         var eventData = new Dictionary<string, object?>
@@ -232,7 +237,7 @@ public sealed class YandexMyWaveMusicSource : IPlayableMusicSource, IContinuousM
         var json = JsonSerializer.Serialize(new { @event = eventData, batchId });
         using var content = new StringContent(json, Encoding.UTF8, "application/json");
         using var response = await _httpClient.PostAsync(
-            $"{ApiBaseUrl}/rotor/session/{Uri.EscapeDataString(_radioSessionId)}/feedback",
+            $"{ApiBaseUrl}/rotor/session/{Uri.EscapeDataString(sessionId)}/feedback",
             content).ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
         FileLogger.Info($"Моя волна: feedback {type} отправлен для трека {trackId}.");
@@ -259,6 +264,7 @@ public sealed class YandexMyWaveMusicSource : IPlayableMusicSource, IContinuousM
             };
             album.Tracks.Add(track);
             _batchByTrackId[track.Id] = session.BatchId;
+            _sessionByTrackId[track.Id] = session.RadioSessionId;
         }
     }
 
