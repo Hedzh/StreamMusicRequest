@@ -770,6 +770,15 @@ public partial class SettingsWindow : Window
         RoutedEventArgs e)
     {
         UpdateMainMusicSourceUi();
+
+        // При выборе режима «Плейлист» автоматически включаем
+        // автозагрузку. Пользователь по-прежнему может снять галочку вручную.
+        if (!_isLoadingPlaybackSettings &&
+            sender == MainMusicSourcePlaylistRadioButton &&
+            MainMusicSourcePlaylistRadioButton.IsChecked == true)
+        {
+            LoadDefaultPlaylistOnStartupCheckBox.IsChecked = true;
+        }
     }
 
     private void UpdateMainMusicSourceUi()
