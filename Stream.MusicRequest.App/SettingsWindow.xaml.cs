@@ -874,6 +874,22 @@ public partial class SettingsWindow : Window
             DefaultPlaylistUrlTextBox.Text.Trim();
 
         if (!isMyWaveSelected &&
+            string.IsNullOrWhiteSpace(url) &&
+            string.Equals(
+                _playbackSettings.MainMusicSource,
+                "MyWave",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            AppMessageBox.Show(
+                this,
+                "Перед переключением на плейлист укажите ссылку на альбом или плейлист Yandex Music.",
+                "Воспроизведение",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!isMyWaveSelected &&
             !string.IsNullOrWhiteSpace(url) &&
             !_appServices.YandexAuthService.IsAuthenticated)
         {
