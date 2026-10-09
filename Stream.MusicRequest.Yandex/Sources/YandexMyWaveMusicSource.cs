@@ -232,7 +232,9 @@ public sealed class YandexMyWaveMusicSource : IPlayableMusicSource, IContinuousM
             content).ConfigureAwait(false);
         var body = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
         response.EnsureSuccessStatusCode();
-        return ParseSession(body);
+        // Для ответа /tracks radioSessionId обычно не возвращается: сессия уже
+        // однозначно задана в URL запроса. Сохраняем переданный идентификатор.
+        return ParseSession(body, sessionId);
     }
 
     private async Task SendFeedbackAsync(string sessionId, string trackId, string type, double? playedSeconds, string? batchId)
@@ -283,7 +285,7 @@ public sealed class YandexMyWaveMusicSource : IPlayableMusicSource, IContinuousM
         }
     }
 
-    private static SessionResponse ParseSession(string json)
+    private static SessionResponse ParseSession(string json, string? fallbackSessionId = null)
     {
         using var document = JsonDocument.Parse(json);
         var root = document.RootElement;
@@ -292,7 +294,9 @@ public sealed class YandexMyWaveMusicSource : IPlayableMusicSource, IContinuousM
 
         var sessionId = GetString(result, "radioSessionId");
         if (string.IsNullOrWhiteSpace(sessionId))
-            throw new InvalidOperationException("Rotor не вернул radioSessionId.");
+            sessionId = fallbackSessionId;
+        if (string.IsNullOrWhiteSpace(sessionId))
+            throw new InvalidOperationException("Rotor не вернул radioSessionId при создании сессии.");
 
         var tracks = new List<RotorTrack>();
         if (result.TryGetProperty("sequence", out var sequence) && sequence.ValueKind == JsonValueKind.Array)
