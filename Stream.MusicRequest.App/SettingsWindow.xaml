@@ -1289,38 +1289,77 @@
 
                             <StackPanel>
 
-                                <TextBlock Text="Основной плейлист"
+                                <TextBlock Text="Основной источник"
                                            Style="{StaticResource SectionTitle}"/>
 
-                                <TextBlock Text="Ссылка на плейлист Yandex Music, который можно автоматически загружать при запуске приложения."
+                                <TextBlock Text="Выберите, откуда будет играть основная музыка стримера."
                                            Style="{StaticResource FieldDescription}"
                                            Margin="0,0,0,12"/>
 
-                                <TextBox x:Name="DefaultPlaylistUrlTextBox"
-                                         Style="{StaticResource InputBox}"/>
-
-                                <CheckBox x:Name="LoadDefaultPlaylistOnStartupCheckBox"
-                                          Content="Загружать этот плейлист при запуске приложения"
-                                          Style="{StaticResource SettingsCheckBox}"
-                                          Margin="0,10,0,0"/>
-
                                 <StackPanel Orientation="Horizontal"
-                                            Margin="0,8,0,0">
+                                            Margin="0,0,0,12">
 
-                                    <Button Content="Проверить"
-                                            Click="DefaultPlaylistCheckButton_Click"
-                                            Style="{StaticResource ActionButton}"
-                                            Margin="0,0,8,0"/>
+                                    <RadioButton x:Name="MainMusicSourcePlaylistRadioButton"
+                                                 Content="Плейлист"
+                                                 GroupName="MainMusicSource"
+                                                 Style="{StaticResource SettingsRadioButton}"
+                                                 Checked="MainMusicSourceRadioButton_Checked"
+                                                 Margin="0,0,24,0"/>
 
-                                    <Button Content="Очистить"
-                                            Click="DefaultPlaylistClearButton_Click"
-                                            Style="{StaticResource ActionButton}"/>
+                                    <RadioButton x:Name="MainMusicSourceMyWaveRadioButton"
+                                                 Content="Моя волна"
+                                                 GroupName="MainMusicSource"
+                                                 Style="{StaticResource SettingsRadioButton}"
+                                                 Checked="MainMusicSourceRadioButton_Checked"/>
 
                                 </StackPanel>
 
-                                <TextBlock x:Name="DefaultPlaylistStatusText"
+                                <StackPanel x:Name="DefaultPlaylistSettingsPanel">
+
+                                    <TextBlock Text="Ссылка на плейлист Yandex Music, который можно автоматически загружать при запуске приложения."
+                                               Style="{StaticResource FieldDescription}"
+                                               Margin="0,0,0,12"/>
+
+                                    <TextBox x:Name="DefaultPlaylistUrlTextBox"
+                                             Style="{StaticResource InputBox}"/>
+
+                                    <CheckBox x:Name="LoadDefaultPlaylistOnStartupCheckBox"
+                                              Content="Загружать этот плейлист при запуске приложения"
+                                              Style="{StaticResource SettingsCheckBox}"
+                                              Margin="0,10,0,0"/>
+
+                                    <StackPanel Orientation="Horizontal"
+                                                Margin="0,8,0,0">
+
+                                        <Button Content="Проверить"
+                                                Click="DefaultPlaylistCheckButton_Click"
+                                                Style="{StaticResource ActionButton}"
+                                                Margin="0,0,8,0"/>
+
+                                        <Button Content="Очистить"
+                                                Click="DefaultPlaylistClearButton_Click"
+                                                Style="{StaticResource ActionButton}"/>
+
+                                    </StackPanel>
+
+                                    <TextBlock x:Name="DefaultPlaylistStatusText"
+                                               Style="{StaticResource FieldDescription}"
+                                               Margin="0,10,0,0"/>
+
+                                </StackPanel>
+
+                                <TextBlock x:Name="MyWaveInfoText"
+                                           Text="При применении настроек приложение будет запускать персональную радиостанцию «Моя волна»."
                                            Style="{StaticResource FieldDescription}"
-                                           Margin="0,10,0,0"/>
+                                           Visibility="Collapsed"
+                                           Margin="0,4,0,0"/>
+
+                                <Button Content="Применить"
+                                        Click="PlaybackModeApplyButton_Click"
+                                        Style="{StaticResource AccentButton}"
+                                        Width="140"
+                                        HorizontalAlignment="Left"
+                                        Margin="0,16,0,0"/>
 
                             </StackPanel>
 
@@ -1358,32 +1397,18 @@
 
                                 </Grid>
 
-                                <TextBlock Text="Изменение ползунка применяется к текущему воспроизведению сразу. Сохранение требуется только для запоминания значения между запусками."
+                                <TextBlock Text="Изменение ползунка применяется к текущему воспроизведению сразу. Нажмите «Сохранить», чтобы запомнить громкость по умолчанию между запусками."
                                            Style="{StaticResource FieldDescription}"
-                                           Margin="0,8,0,0"/>
+                                           Margin="0,8,0,14"/>
 
-                            </StackPanel>
-
-                        </Border>
-
-                        <Border Style="{StaticResource SettingsCard}">
-
-                            <StackPanel>
-
-                                <TextBlock Text="Сохранение"
-                                           Style="{StaticResource SectionTitle}"/>
-
-                                <TextBlock Text="Сохраняется громкость и ссылка на плейлист с выбранным режимом автозагрузки."
-                                           Style="{StaticResource FieldDescription}"
-                                           Margin="0,0,0,14"/>
-
-                                <Button Content="Сохранить настройки"
+                                <Button Content="Сохранить"
                                         Click="PlaybackSettingsSaveButton_Click"
                                         Style="{StaticResource AccentButton}"
-                                        Width="190"
+                                        Width="140"
                                         HorizontalAlignment="Left"/>
 
                             </StackPanel>
+
 
                         </Border>
 
