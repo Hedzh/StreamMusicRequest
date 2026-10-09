@@ -44,6 +44,7 @@ public partial class MainWindow : Window
     private readonly PlaybackSettingsStorage _playbackSettingsStorage;
     private readonly HttpClient _coverHttpClient = new();
     private PlaybackSettings _playbackSettings = new();
+    private readonly SemaphoreSlim _playbackSettingsApplyGate = new(1, 1);
 
     private CancellationTokenSource? _coverLoadCts;
     private string? _loadedCoverUrl;
@@ -1409,51 +1410,111 @@ public partial class MainWindow : Window
 
     private async Task ApplyPlaybackSettingsAsync(PlaybackSettings settings)
     {
-        _playbackSettings = settings;
-        _musicPlayer.SetVolume(settings.Volume);
-        VolumeSlider.Value = settings.Volume * 100.0;
+        await _playbackSettingsApplyGate.WaitAsync();
 
-        if (!_yandexAuthService.IsAuthenticated)
-            throw new InvalidOperationException("Сначала подключите Yandex Music.");
+        try
+        {
+            var requestedSourceIsMyWave =
+                string.Equals(
+                    settings.MainMusicSource,
+                    "MyWave",
+                    StringComparison.OrdinalIgnoreCase);
 
-        if (string.Equals(settings.MainMusicSource, "MyWave", StringComparison.OrdinalIgnoreCase))
-        {
-            var album = await _myWaveSource.CreateAlbumAsync();
-            await _playbackController.SetMainMusicAsync(album);
-        }
-        else
-        {
-            var url = settings.DefaultPlaylistUrl?.Trim();
-            if (string.IsNullOrWhiteSpace(url))
+            var currentAlbum = _playbackController.CurrentMainMusic;
+            var currentSourceIsMyWave =
+                currentAlbum?.Source is YandexMyWaveMusicSource;
+
+            var requestedPlaylistUrl = settings.DefaultPlaylistUrl?.Trim();
+            var currentPlaylistUrl = currentAlbum?.SourceUrl?.Trim();
+
+            // Повторное сохранение тех же настроек не должно создавать новую
+            // Rotor-сессию или перезапускать уже работающий источник.
+            var sameSourceAlreadyLoaded =
+                _playbackController.HasMainMusic &&
+                requestedSourceIsMyWave == currentSourceIsMyWave &&
+                (requestedSourceIsMyWave ||
+                 (!string.IsNullOrWhiteSpace(requestedPlaylistUrl) &&
+                  string.Equals(
+                      requestedPlaylistUrl,
+                      currentPlaylistUrl,
+                      StringComparison.OrdinalIgnoreCase)));
+
+            _musicPlayer.SetVolume(settings.Volume);
+            VolumeSlider.Value = settings.Volume * 100.0;
+
+            if (sameSourceAlreadyLoaded)
             {
-                // Сохранение громкости и других настроек без заданного URL
-                // не должно сбрасывать уже играющую музыку.
+                _playbackSettings = settings;
                 UpdateMainMusicUi();
                 UpdatePlaybackUi();
                 UpdatePlaybackModeUi();
+                FileLogger.Info("Настройки воспроизведения обновлены без пересоздания текущего источника.");
                 return;
             }
 
-            var album = _yandexMusicSource.CanHandlePlaylistUrl(url)
-                ? await _yandexMusicSource.ResolvePlaylistAsync(url)
-                : await _yandexMusicSource.ResolveAlbumAsync(url);
+            if (!_yandexAuthService.IsAuthenticated)
+                throw new InvalidOperationException("Сначала подключите Yandex Music.");
 
-            if (album == null || album.Tracks.Count == 0)
-                throw new InvalidOperationException("Не удалось загрузить указанный плейлист или альбом.");
+            FileLogger.Info(
+                $"Начато переключение основного источника на {(requestedSourceIsMyWave ? "Мою волну" : "плейлист")}.");
 
+            // Сначала подготавливаем новый альбом. Если сетевой запрос завершится
+            // ошибкой, текущий источник останется установленным.
+            Stream.MusicRequest.Core.Models.MusicAlbum album;
+
+            if (requestedSourceIsMyWave)
+            {
+                album = await _myWaveSource.CreateAlbumAsync();
+            }
+            else
+            {
+                var url = requestedPlaylistUrl;
+                if (string.IsNullOrWhiteSpace(url))
+                {
+                    // Не сбрасываем текущую музыку, если URL не задан.
+                    _playbackSettings = settings;
+                    UpdateMainMusicUi();
+                    UpdatePlaybackUi();
+                    UpdatePlaybackModeUi();
+                    return;
+                }
+
+                var resolvedAlbum = _yandexMusicSource.CanHandlePlaylistUrl(url)
+                    ? await _yandexMusicSource.ResolvePlaylistAsync(url)
+                    : await _yandexMusicSource.ResolveAlbumAsync(url);
+
+                if (resolvedAlbum == null || resolvedAlbum.Tracks.Count == 0)
+                    throw new InvalidOperationException("Не удалось загрузить указанный плейлист или альбом.");
+
+                album = resolvedAlbum;
+            }
+
+            // Коммитим новые настройки только после успешной подготовки альбома.
+            _playbackSettings = settings;
             await _playbackController.SetMainMusicAsync(album);
-        }
 
-        if (!_playbackController.IsViewerModeActive)
+            if (!_playbackController.IsViewerModeActive)
+            {
+                var started = await _playbackController.StartMainMusicAsync();
+                if (!started)
+                    throw new InvalidOperationException("Источник загружен, но первый трек не удалось запустить.");
+            }
+
+            UpdateMainMusicUi();
+            UpdatePlaybackUi();
+            UpdatePlaybackModeUi();
+
+            FileLogger.Info($"Переключение основного источника завершено: {album.Title}.");
+        }
+        catch (Exception ex)
         {
-            var started = await _playbackController.StartMainMusicAsync();
-            if (!started)
-                throw new InvalidOperationException("Источник загружен, но первый трек не удалось запустить.");
+            FileLogger.Error("Не удалось применить настройки основного источника.", ex);
+            throw;
         }
-
-        UpdateMainMusicUi();
-        UpdatePlaybackUi();
-        UpdatePlaybackModeUi();
+        finally
+        {
+            _playbackSettingsApplyGate.Release();
+        }
     }
 
     private async Task RestoreYandexAuthenticationAsync()
