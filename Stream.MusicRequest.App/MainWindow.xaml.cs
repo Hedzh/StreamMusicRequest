@@ -1439,8 +1439,9 @@ public partial class MainWindow : Window
                       currentPlaylistUrl,
                       StringComparison.OrdinalIgnoreCase)));
 
-            _musicPlayer.SetVolume(settings.Volume);
-            VolumeSlider.Value = settings.Volume * 100.0;
+            // Применение режима воспроизведения не должно менять громкость:
+            // её текущим значением управляет главный ползунок, а настройка
+            // громкости по умолчанию сохраняется отдельной кнопкой.
 
             if (sameSourceAlreadyLoaded)
             {
