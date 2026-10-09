@@ -330,6 +330,9 @@ public async Task PauseAsync()
         FileLogger.Info(
             "MusicPlaybackService.SkipAsync вызван.");
 
+        var skippedItem =
+            _currentItem;
+
         await _player.SkipAsync();
 
         _isPlaying =
@@ -338,8 +341,26 @@ public async Task PauseAsync()
         _currentItem = null;
 
         FileLogger.Info(
-            "Текущий трек пропущен. " +
-            "Попытка запуска следующего.");
+            "Текущий трек пропущен.");
+
+        // Приоритетный трек всегда передаёт выбор следующего элемента контроллеру,
+        // даже если AutoAdvanceEnabled оказался включён побочным событием.
+        if (!AutoAdvanceEnabled ||
+            skippedItem?.QueuePriority >= 100)
+        {
+            // Во время SUPER-PRIORITY контроллер сам решает, что запускать дальше:
+            // следующий SUPER-PRIORITY, сохранённый Twitch-трек или основную музыку.
+            // Нельзя безусловно брать следующий элемент обычной очереди здесь.
+            FileLogger.Info(
+                "Автопереход отключён контроллером. " +
+                "Передаём ему управление очередью после пропуска.");
+
+            RaiseQueuePlaybackFinished();
+            return;
+        }
+
+        FileLogger.Info(
+            "Попытка запуска следующего элемента очереди.");
 
         await StartNextCoreAsync();
     
@@ -422,6 +443,9 @@ public async Task PauseAsync()
                 "Получено событие PlaybackFinished " +
                 "от музыкального плеера.");
 
+            var finishedItem =
+                _currentItem;
+
             _isPlaying =
                 false;
 
@@ -431,7 +455,10 @@ public async Task PauseAsync()
                 $"Перед запуском следующего: " +
                 $"QueueCount: {_queue.Count}");
 
-            if (!AutoAdvanceEnabled)
+            // После естественного окончания SUPER-PRIORITY контроллер должен
+            // проверить приоритетную очередь и восстановить прерванный трек.
+            if (!AutoAdvanceEnabled ||
+                finishedItem?.QueuePriority >= 100)
             {
                 FileLogger.Info(
                     "Автоматический запуск следующего трека очереди временно отключён контроллером.");
@@ -467,7 +494,7 @@ public async Task PauseAsync()
     private void RaiseQueuePlaybackFinished()
     {
         FileLogger.Info(
-            "Очередь зрительских заявок полностью закончилась.");
+            "Событие завершения трека/передачи управления очередью зрителей.");
 
         QueuePlaybackFinished?.Invoke(
             this,

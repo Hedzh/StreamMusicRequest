@@ -966,7 +966,8 @@
 
                                                 <StackPanel>
 
-                                                        <TextBlock Text="ОСНОВНОЙ АЛЬБОМ"
+                                                        <TextBlock x:Name="MainAlbumSectionTitleText"
+                                                                   Text="ОСНОВНОЙ АЛЬБОМ"
                                                                    Style="{StaticResource SmallLabel}"
                                                                    Foreground="{StaticResource AccentBrush}"/>
 

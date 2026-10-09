@@ -38,11 +38,13 @@ public partial class MainWindow : Window
     private readonly TwitchApiClient _twitchApiClient;
 
     private readonly YandexMusicSource _yandexMusicSource;
+    private readonly YandexMyWaveMusicSource _myWaveSource;
     private readonly NAudioMusicPlayer _musicPlayer;
     private readonly ObsWidgetServer _obsWidgetServer;
     private readonly PlaybackSettingsStorage _playbackSettingsStorage;
     private readonly HttpClient _coverHttpClient = new();
     private PlaybackSettings _playbackSettings = new();
+    private readonly SemaphoreSlim _playbackSettingsApplyGate = new(1, 1);
 
     private CancellationTokenSource? _coverLoadCts;
     private string? _loadedCoverUrl;
@@ -94,6 +96,10 @@ public partial class MainWindow : Window
 
         _yandexMusicSource =
             new YandexMusicSource(
+                _yandexClient);
+
+        _myWaveSource =
+            new YandexMyWaveMusicSource(
                 _yandexClient);
 
         var sourceResolver =
@@ -1030,7 +1036,8 @@ public partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
-        if (!_playbackController.HasMainMusic)
+        if (!_playbackController.HasMainMusic ||
+            IsMyWaveSelected())
         {
             return;
         }
@@ -1041,8 +1048,29 @@ public partial class MainWindow : Window
         UpdateShuffleButtonUi();
     }
 
+    private bool IsMyWaveSelected() =>
+        string.Equals(
+            _playbackController.CurrentMainMusic?.SourceUrl,
+            "mywave://onyourwave",
+            StringComparison.OrdinalIgnoreCase);
+
     private void UpdateShuffleButtonUi()
     {
+        var isMyWave = IsMyWaveSelected();
+        ShuffleMainMusicButton.Visibility =
+            isMyWave ? Visibility.Collapsed : Visibility.Visible;
+
+        ShuffleMainMusicButton.IsEnabled =
+            !isMyWave && _playbackController.HasMainMusic;
+
+        if (isMyWave)
+        {
+            ShuffleMainMusicButton.Foreground =
+                (Brush)FindResource("TextPrimary");
+            ShuffleMainMusicButton.ToolTip = null;
+            return;
+        }
+
         if (!_mainMusicService.IsShuffleEnabled)
         {
             ShuffleMainMusicButton.Foreground =
@@ -1098,6 +1126,7 @@ public partial class MainWindow : Window
 
         if (album == null)
         {
+            MainAlbumSectionTitleText.Text = "ОСНОВНОЙ АЛЬБОМ";
             MainAlbumTitleText.Text =
                 "Не выбран";
 
@@ -1107,6 +1136,15 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (IsMyWaveSelected())
+        {
+            MainAlbumSectionTitleText.Text = "ОСНОВНОЙ ИСТОЧНИК";
+            MainAlbumTitleText.Text = "Моя волна";
+            MainAlbumInfoText.Text = "Персональная радиостанция Yandex Music";
+            return;
+        }
+
+        MainAlbumSectionTitleText.Text = "ОСНОВНОЙ АЛЬБОМ";
         MainAlbumTitleText.Text =
             album.Title;
 
@@ -1260,7 +1298,8 @@ public partial class MainWindow : Window
                 {
                     _obsWidgetServer.SetDisplayMode(
                         displayMode);
-                })
+                },
+                ApplyPlaybackSettingsAsync)
             {
                 Owner = this
             };
@@ -1297,60 +1336,185 @@ public partial class MainWindow : Window
 
     private async Task LoadDefaultPlaylistOnStartupAsync()
     {
-        if (!_playbackSettings.LoadDefaultPlaylistOnStartup ||
-            string.IsNullOrWhiteSpace(
-                _playbackSettings.DefaultPlaylistUrl))
+        if (string.Equals(
+                _playbackSettings.MainMusicSource,
+                "MyWave",
+                StringComparison.OrdinalIgnoreCase))
         {
+            if (!_yandexAuthService.IsAuthenticated)
+            {
+                FileLogger.Info("Автозапуск «Моей волны» пропущен: Yandex Music не подключён.");
+                return;
+            }
+
+            try
+            {
+                var waveAlbum = await _myWaveSource.CreateAlbumAsync();
+                await _playbackController.SetMainMusicAsync(waveAlbum);
+                var started = await _playbackController.StartMainMusicAsync();
+                if (!started)
+                    FileLogger.Info("«Моя волна» загружена, но первый трек не удалось запустить.");
+                UpdateMainMusicUi();
+                UpdatePlaybackUi();
+                UpdatePlaybackModeUi();
+            }
+            catch (Exception ex)
+            {
+                FileLogger.Error("Не удалось автоматически запустить «Мою волну».", ex);
+            }
+
             return;
         }
 
+        if (!_playbackSettings.LoadDefaultPlaylistOnStartup ||
+            string.IsNullOrWhiteSpace(_playbackSettings.DefaultPlaylistUrl))
+            return;
+
         if (!_yandexAuthService.IsAuthenticated)
         {
-            FileLogger.Info(
-                "Автозагрузка плейлиста пропущена: Yandex Music не подключён.");
+            FileLogger.Info("Автозагрузка плейлиста пропущена: Yandex Music не подключён.");
             return;
         }
 
         try
         {
-            FileLogger.Info(
-                "Загрузка плейлиста по умолчанию при запуске.");
+            FileLogger.Info("Загрузка плейлиста по умолчанию при запуске.");
+            var url = _playbackSettings.DefaultPlaylistUrl;
+            var album = _yandexMusicSource.CanHandlePlaylistUrl(url)
+                ? await _yandexMusicSource.ResolvePlaylistAsync(url)
+                : await _yandexMusicSource.ResolveAlbumAsync(url);
 
-            var album =
-                await _yandexMusicSource.ResolvePlaylistAsync(
-                    _playbackSettings.DefaultPlaylistUrl);
-
-            if (album == null ||
-                album.Tracks.Count == 0)
+            if (album == null || album.Tracks.Count == 0)
             {
-                FileLogger.Info(
-                    "Плейлист по умолчанию не удалось загрузить или он пуст.");
+                FileLogger.Info("Основной плейлист/альбом не удалось загрузить или он пуст.");
                 return;
             }
 
-            _mainMusicService.SetAlbum(album);
-
-            var started =
-                await _mainMusicService.PlayAsync();
-
+            await _playbackController.SetMainMusicAsync(album);
+            var started = await _playbackController.StartMainMusicAsync();
             if (!started)
             {
-                FileLogger.Info(
-                    "Плейлист по умолчанию загружен, но первый трек не удалось запустить.");
+                FileLogger.Info("Основной плейлист загружен, но первый трек не удалось запустить.");
                 return;
             }
 
             UpdatePlaybackUi();
             UpdatePlaybackModeUi();
-
-            FileLogger.Info(
-                $"Плейлист по умолчанию запущен: {album.Title}. Треков: {album.Tracks.Count}");
+            FileLogger.Info($"Основная музыка запущена: {album.Title}. Треков: {album.Tracks.Count}");
         }
         catch (Exception ex)
         {
-            FileLogger.Error(
-                "Не удалось автоматически загрузить плейлист по умолчанию.",
-                ex);
+            FileLogger.Error("Не удалось автоматически загрузить основной источник.", ex);
+        }
+    }
+
+    private async Task ApplyPlaybackSettingsAsync(PlaybackSettings settings)
+    {
+        await _playbackSettingsApplyGate.WaitAsync();
+
+        try
+        {
+            var requestedSourceIsMyWave =
+                string.Equals(
+                    settings.MainMusicSource,
+                    "MyWave",
+                    StringComparison.OrdinalIgnoreCase);
+
+            var currentAlbum = _playbackController.CurrentMainMusic;
+            var currentSourceIsMyWave =
+                currentAlbum?.Source is YandexMyWaveMusicSource;
+
+            var requestedPlaylistUrl = settings.DefaultPlaylistUrl?.Trim();
+            var currentPlaylistUrl = currentAlbum?.SourceUrl?.Trim();
+
+            // Повторное сохранение тех же настроек не должно создавать новую
+            // Rotor-сессию или перезапускать уже работающий источник.
+            var sameSourceAlreadyLoaded =
+                _playbackController.HasMainMusic &&
+                requestedSourceIsMyWave == currentSourceIsMyWave &&
+                (requestedSourceIsMyWave ||
+                 (!string.IsNullOrWhiteSpace(requestedPlaylistUrl) &&
+                  string.Equals(
+                      requestedPlaylistUrl,
+                      currentPlaylistUrl,
+                      StringComparison.OrdinalIgnoreCase)));
+
+            // Применение режима воспроизведения не должно менять громкость:
+            // её текущим значением управляет главный ползунок, а настройка
+            // громкости по умолчанию сохраняется отдельной кнопкой.
+
+            if (sameSourceAlreadyLoaded)
+            {
+                _playbackSettings = settings;
+                UpdateMainMusicUi();
+                UpdatePlaybackUi();
+                UpdatePlaybackModeUi();
+                FileLogger.Info("Настройки воспроизведения обновлены без пересоздания текущего источника.");
+                return;
+            }
+
+            if (!_yandexAuthService.IsAuthenticated)
+                throw new InvalidOperationException("Сначала подключите Yandex Music.");
+
+            FileLogger.Info(
+                $"Начато переключение основного источника на {(requestedSourceIsMyWave ? "Мою волну" : "плейлист")}.");
+
+            // Сначала подготавливаем новый альбом. Если сетевой запрос завершится
+            // ошибкой, текущий источник останется установленным.
+            Stream.MusicRequest.Core.Models.MusicAlbum album;
+
+            if (requestedSourceIsMyWave)
+            {
+                album = await _myWaveSource.CreateAlbumAsync();
+            }
+            else
+            {
+                var url = requestedPlaylistUrl;
+                if (string.IsNullOrWhiteSpace(url))
+                {
+                    // Не сбрасываем текущую музыку, если URL не задан.
+                    _playbackSettings = settings;
+                    UpdateMainMusicUi();
+                    UpdatePlaybackUi();
+                    UpdatePlaybackModeUi();
+                    return;
+                }
+
+                var resolvedAlbum = _yandexMusicSource.CanHandlePlaylistUrl(url)
+                    ? await _yandexMusicSource.ResolvePlaylistAsync(url)
+                    : await _yandexMusicSource.ResolveAlbumAsync(url);
+
+                if (resolvedAlbum == null || resolvedAlbum.Tracks.Count == 0)
+                    throw new InvalidOperationException("Не удалось загрузить указанный плейлист или альбом.");
+
+                album = resolvedAlbum;
+            }
+
+            // Коммитим новые настройки только после успешной подготовки альбома.
+            _playbackSettings = settings;
+            await _playbackController.SetMainMusicAsync(album);
+
+            if (!_playbackController.IsViewerModeActive)
+            {
+                var started = await _playbackController.StartMainMusicAsync();
+                if (!started)
+                    throw new InvalidOperationException("Источник загружен, но первый трек не удалось запустить.");
+            }
+
+            UpdateMainMusicUi();
+            UpdatePlaybackUi();
+            UpdatePlaybackModeUi();
+
+            FileLogger.Info($"Переключение основного источника завершено: {album.Title}.");
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Error("Не удалось применить настройки основного источника.", ex);
+            throw;
+        }
+        finally
+        {
+            _playbackSettingsApplyGate.Release();
         }
     }
 
@@ -2074,7 +2238,9 @@ public partial class MainWindow : Window
     private void UpdateQueueStatus()
     {
         QueueStatusText.Text =
-            $"В очереди: {_queue.Count}";
+            _playbackController.PriorityResumeViewerItem != null
+                ? $"В очереди: {_queue.Count} • приостановлен: 1"
+                : $"В очереди: {_queue.Count}";
     }
 
     private void RefreshQueueUi()
@@ -2089,7 +2255,23 @@ public partial class MainWindow : Window
         }
 
         var items =
-            _queue.GetSnapshot();
+            _queue.GetSnapshot().ToList();
+
+        var suspendedItem =
+            _playbackController.PriorityResumeViewerItem;
+
+        if (suspendedItem?.Track != null &&
+            !items.Any(item => item.Id == suspendedItem.Id))
+        {
+            // Показываем приостановленный трек после всех ожидающих SUPER-PRIORITY,
+            // но перед обычными заказами. В рабочую очередь его не добавляем.
+            var lastPriorityIndex =
+                items.FindLastIndex(item => item.QueuePriority >= 100);
+
+            items.Insert(
+                lastPriorityIndex + 1,
+                suspendedItem);
+        }
 
         QueueItemsPanel.Children.Clear();
 
@@ -2103,6 +2285,13 @@ public partial class MainWindow : Window
 
         foreach (var item in items)
         {
+            var isSuspendedItem =
+                suspendedItem != null &&
+                string.Equals(
+                    item.Id,
+                    suspendedItem.Id,
+                    StringComparison.Ordinal);
+
             if (item.Track == null)
             {
                 continue;
@@ -2113,11 +2302,15 @@ public partial class MainWindow : Window
                 {
                     Background =
                         (Brush)FindResource(
-                            "CardBackground"),
+                            isSuspendedItem
+                                ? "PanelBackground"
+                                : "CardBackground"),
 
                     BorderBrush =
                         (Brush)FindResource(
-                            "BorderBrushDark"),
+                            isSuspendedItem
+                                ? "WarningBrush"
+                                : "BorderBrushDark"),
 
                     BorderThickness =
                         new Thickness(1),
@@ -2187,6 +2380,19 @@ public partial class MainWindow : Window
 
             var infoPanel =
                 new StackPanel();
+
+            if (isSuspendedItem)
+            {
+                infoPanel.Children.Add(
+                    new TextBlock
+                    {
+                        Text = "⏸ ПРИОСТАНОВЛЕН",
+                        FontSize = 10,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = (Brush)FindResource("WarningBrush"),
+                        Margin = new Thickness(0, 0, 0, 4)
+                    });
+            }
 
             var trackText =
                 new TextBlock
@@ -2265,6 +2471,30 @@ public partial class MainWindow : Window
             infoPanel.Children.Add(
                 sourceText);
 
+            if (isSuspendedItem)
+            {
+                var duration =
+                    item.Track.Duration;
+
+                var positionText =
+                    duration > TimeSpan.Zero
+                        ? $"Позиция: {FormatTime(item.ResumePosition)} / {FormatTime(duration)}"
+                        : $"Позиция: {FormatTime(item.ResumePosition)}";
+
+                infoPanel.Children.Add(
+                    new TextBlock
+                    {
+                        Text =
+                            positionText +
+                            " • продолжится после приоритетных заказов",
+
+                        FontSize = 11,
+                        Foreground = (Brush)FindResource("WarningBrush"),
+                        TextWrapping = TextWrapping.Wrap,
+                        Margin = new Thickness(0, 4, 0, 0)
+                    });
+            }
+
             Grid.SetColumn(
                 infoPanel,
                 1);
@@ -2272,32 +2502,49 @@ public partial class MainWindow : Window
             grid.Children.Add(
                 infoPanel);
 
-            var removeButton =
-                new Button
-                {
-                    Content =
-                        "×",
+            if (isSuspendedItem)
+            {
+                var suspendedLabel =
+                    new TextBlock
+                    {
+                        Text = "⏸",
+                        FontSize = 16,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = (Brush)FindResource("WarningBrush"),
+                        VerticalAlignment = VerticalAlignment.Center,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        Margin = new Thickness(8, 0, 0, 0),
+                        ToolTip = "Трек приостановлен до завершения приоритетных заказов"
+                    };
 
-                    Style =
-                        (Style)FindResource(
-                            "QueueActionButton"),
+                Grid.SetColumn(
+                    suspendedLabel,
+                    2);
 
-                    ToolTip =
-                        "Удалить",
+                grid.Children.Add(
+                    suspendedLabel);
+            }
+            else
+            {
+                var removeButton =
+                    new Button
+                    {
+                        Content = "×",
+                        Style = (Style)FindResource("QueueActionButton"),
+                        ToolTip = "Удалить",
+                        Tag = item.Id
+                    };
 
-                    Tag =
-                        item.Id
-                };
+                removeButton.Click +=
+                    DequeueButton_Click;
 
-            removeButton.Click +=
-                DequeueButton_Click;
+                Grid.SetColumn(
+                    removeButton,
+                    2);
 
-            Grid.SetColumn(
-                removeButton,
-                2);
-
-            grid.Children.Add(
-                removeButton);
+                grid.Children.Add(
+                    removeButton);
+            }
 
             border.Child =
                 grid;
@@ -2308,8 +2555,7 @@ public partial class MainWindow : Window
             queuePosition++;
         }
 
-        QueueStatusText.Text =
-            $"В очереди: {items.Count}";
+        UpdateQueueStatus();
     }
 
     private async void MainWindow_Closed(
@@ -2384,6 +2630,15 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             FileLogger.Info($"Ошибка освобождения аудиоплеера: {ex.Message}");
+        }
+
+        try
+        {
+            _myWaveSource.Dispose();
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Info($"Ошибка освобождения источника «Моя волна»: {ex.Message}");
         }
 
         try

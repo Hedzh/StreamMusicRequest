@@ -190,4 +190,8 @@ public class PlaybackSettings
 
     public bool LoadDefaultPlaylistOnStartup { get; set; } =
         false;
+
+    // "Playlist" is the backward-compatible default for existing playback.json files.
+    public string MainMusicSource { get; set; } =
+        "Playlist";
 }

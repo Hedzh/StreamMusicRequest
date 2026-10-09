@@ -18,6 +18,7 @@ public partial class SettingsWindow : Window
     private readonly YandexMusicSource _yandexMusicSource;
     private readonly Action<float>? _setPlaybackVolume;
     private readonly Action<string>? _applyObsDisplayMode;
+    private readonly Func<PlaybackSettings, Task>? _applyPlaybackSettings;
 
     private readonly StackPanel[] _pages;
 
@@ -40,7 +41,8 @@ public partial class SettingsWindow : Window
         AppServices appServices,
         YandexMusicSource yandexMusicSource,
         Action<float>? setPlaybackVolume = null,
-        Action<string>? applyObsDisplayMode = null)
+        Action<string>? applyObsDisplayMode = null,
+        Func<PlaybackSettings, Task>? applyPlaybackSettings = null)
     {
         InitializeComponent();
 
@@ -59,6 +61,9 @@ public partial class SettingsWindow : Window
 
         _applyObsDisplayMode =
             applyObsDisplayMode;
+
+        _applyPlaybackSettings =
+            applyPlaybackSettings;
 
         var settingsDirectory =
             Path.Combine(
@@ -728,6 +733,20 @@ public partial class SettingsWindow : Window
             PlaybackSettingsVolumeText.Text =
                 $"{PlaybackSettingsVolumeSlider.Value:0}%";
 
+            MainMusicSourcePlaylistRadioButton.IsChecked =
+                !string.Equals(
+                    _playbackSettings.MainMusicSource,
+                    "MyWave",
+                    StringComparison.OrdinalIgnoreCase);
+
+            MainMusicSourceMyWaveRadioButton.IsChecked =
+                string.Equals(
+                    _playbackSettings.MainMusicSource,
+                    "MyWave",
+                    StringComparison.OrdinalIgnoreCase);
+
+            UpdateMainMusicSourceUi();
+
             DefaultPlaylistUrlTextBox.Text =
                 _playbackSettings.DefaultPlaylistUrl;
 
@@ -744,6 +763,38 @@ public partial class SettingsWindow : Window
         {
             _isLoadingPlaybackSettings = false;
         }
+    }
+
+    private void MainMusicSourceRadioButton_Checked(
+        object sender,
+        RoutedEventArgs e)
+    {
+        UpdateMainMusicSourceUi();
+
+        // При выборе режима «Плейлист» автоматически включаем
+        // автозагрузку. Пользователь по-прежнему может снять галочку вручную.
+        if (!_isLoadingPlaybackSettings &&
+            sender == MainMusicSourcePlaylistRadioButton &&
+            MainMusicSourcePlaylistRadioButton.IsChecked == true)
+        {
+            LoadDefaultPlaylistOnStartupCheckBox.IsChecked = true;
+        }
+    }
+
+    private void UpdateMainMusicSourceUi()
+    {
+        var isPlaylistSelected =
+            MainMusicSourcePlaylistRadioButton.IsChecked == true;
+
+        DefaultPlaylistSettingsPanel.Visibility =
+            isPlaylistSelected
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        MyWaveInfoText.Visibility =
+            isPlaylistSelected
+                ? Visibility.Collapsed
+                : Visibility.Visible;
     }
 
     private void PlaybackSettingsVolumeSlider_ValueChanged(
@@ -821,14 +872,33 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private async void PlaybackSettingsSaveButton_Click(
+    private async void PlaybackModeApplyButton_Click(
         object sender,
         RoutedEventArgs e)
     {
-        var url =
-            DefaultPlaylistUrlTextBox.Text.Trim();
+        var isMyWaveSelected =
+            MainMusicSourceMyWaveRadioButton.IsChecked == true;
 
-        if (!string.IsNullOrWhiteSpace(url) &&
+        var url = DefaultPlaylistUrlTextBox.Text.Trim();
+
+        if (!isMyWaveSelected &&
+            string.IsNullOrWhiteSpace(url) &&
+            string.Equals(
+                _playbackSettings.MainMusicSource,
+                "MyWave",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            AppMessageBox.Show(
+                this,
+                "Перед переключением на плейлист укажите ссылку на альбом или плейлист Yandex Music.",
+                "Воспроизведение",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!isMyWaveSelected &&
+            !string.IsNullOrWhiteSpace(url) &&
             !_appServices.YandexAuthService.IsAuthenticated)
         {
             AppMessageBox.Show(
@@ -840,48 +910,108 @@ public partial class SettingsWindow : Window
             return;
         }
 
-        if (!string.IsNullOrWhiteSpace(url))
+        if (!isMyWaveSelected &&
+            !string.IsNullOrWhiteSpace(url) &&
+            !_yandexMusicSource.CanHandlePlaylistUrl(url))
         {
-            if (!_yandexMusicSource.CanHandlePlaylistUrl(url))
-            {
-                AppMessageBox.Show(
-                    this,
-                    "Указана некорректная ссылка на плейлист Yandex Music.",
-                    "Воспроизведение",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return;
-            }
+            AppMessageBox.Show(
+                this,
+                "Указана некорректная ссылка на плейлист Yandex Music.",
+                "Воспроизведение",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
         }
 
-        _playbackSettings =
-            new PlaybackSettings
+        // Кнопка режима не должна передавать временное значение ползунка
+        // в основное окно: используем сохранённую громкость по умолчанию.
+        var settingsForApply = new PlaybackSettings
+        {
+            Volume = _playbackSettings.Volume,
+            DefaultPlaylistUrl = url,
+            LoadDefaultPlaylistOnStartup =
+                !isMyWaveSelected &&
+                LoadDefaultPlaylistOnStartupCheckBox.IsChecked == true &&
+                !string.IsNullOrWhiteSpace(url),
+            MainMusicSource = isMyWaveSelected ? "MyWave" : "Playlist"
+        };
+
+        var settingsToSave = new PlaybackSettings
+        {
+            Volume = _playbackSettings.Volume,
+            DefaultPlaylistUrl = url,
+            LoadDefaultPlaylistOnStartup = settingsForApply.LoadDefaultPlaylistOnStartup,
+            MainMusicSource = settingsForApply.MainMusicSource
+        };
+
+        try
+        {
+            if (_applyPlaybackSettings != null)
+                await _applyPlaybackSettings(settingsForApply);
+
+            await _playbackSettingsStorage.SaveAsync(settingsToSave);
+            _playbackSettings = settingsToSave;
+
+            DefaultPlaylistStatusText.Text =
+                isMyWaveSelected
+                    ? "Режим «Моя волна» применён и сохранён."
+                    : "Режим «Плейлист» применён и сохранён.";
+
+            AppMessageBox.Show(
+                this,
+                "Режим воспроизведения применён и сохранён.",
+                "Воспроизведение",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            AppMessageBox.Show(
+                this,
+                $"Не удалось применить режим воспроизведения.\n\n{ex.Message}",
+                "Воспроизведение",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    private async void PlaybackSettingsSaveButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        try
+        {
+            // Эта кнопка отвечает только за громкость по умолчанию.
+            var settings = new PlaybackSettings
             {
-                Volume =
-                    (float)Math.Clamp(
-                        PlaybackSettingsVolumeSlider.Value / 100.0,
-                        0.0,
-                        1.0),
-
-                DefaultPlaylistUrl = url,
-
-                LoadDefaultPlaylistOnStartup =
-                    LoadDefaultPlaylistOnStartupCheckBox.IsChecked == true
-                    && !string.IsNullOrWhiteSpace(url)
+                Volume = (float)Math.Clamp(
+                    PlaybackSettingsVolumeSlider.Value / 100.0,
+                    0.0,
+                    1.0),
+                DefaultPlaylistUrl = _playbackSettings.DefaultPlaylistUrl,
+                LoadDefaultPlaylistOnStartup = _playbackSettings.LoadDefaultPlaylistOnStartup,
+                MainMusicSource = _playbackSettings.MainMusicSource
             };
 
-        await _playbackSettingsStorage
-            .SaveAsync(_playbackSettings);
+            await _playbackSettingsStorage.SaveAsync(settings);
+            _playbackSettings = settings;
 
-        DefaultPlaylistStatusText.Text =
-            "Настройки сохранены.";
-
-        AppMessageBox.Show(
-            this,
-            "Настройки воспроизведения сохранены.",
-            "Воспроизведение",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
+            AppMessageBox.Show(
+                this,
+                $"Громкость по умолчанию сохранена: {settings.Volume:P0}.",
+                "Воспроизведение",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            AppMessageBox.Show(
+                this,
+                $"Не удалось сохранить громкость по умолчанию.\n\n{ex.Message}",
+                "Воспроизведение",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
     }
 
     private void OpenLogsButton_Click(
@@ -1849,14 +1979,59 @@ public partial class SettingsWindow : Window
         catch (Exception ex)
         {
             UpdateDonationAlertsConnectionUi();
+            DonationAlertsConnectButton.IsEnabled = true;
+
+            var message = ex.Message;
+            if (HasSocketAddressInUseError(ex))
+            {
+                message =
+                    "Не удалось открыть локальный порт авторизации Donation Alerts (127.0.0.1:17865), " +
+                    "потому что он уже занят.\n\n" +
+                    "Проверьте, не запущен ли второй экземпляр StreamMusicRequest, " +
+                    "или закройте программу, которая использует этот порт. " +
+                    "После этого нажмите «Подключить» ещё раз.\n\n" +
+                    ex.Message;
+                DonationAlertsStatusText.Text = "Ошибка авторизации — можно повторить";
+                DonationAlertsStatusText.Foreground = Brushes.OrangeRed;
+                DonationAlertsUserText.Text = "Авторизация не завершена. Освободите локальный порт и повторите попытку.";
+            }
+            else
+            {
+                DonationAlertsStatusText.Text = "Ошибка авторизации — можно повторить";
+                DonationAlertsStatusText.Foreground = Brushes.OrangeRed;
+                DonationAlertsUserText.Text = "Авторизация не завершена. Нажмите «Подключить», чтобы повторить попытку.";
+                message =
+                    "Не удалось авторизоваться или подключиться к Donation Alerts. " +
+                    "Проверьте соединение и повторите попытку.\n\n" + ex.Message;
+            }
 
             AppMessageBox.Show(
                 this,
-                $"Не удалось подключить Donation Alerts.\n\n{ex.Message}",
+                message,
                 "Donation Alerts",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
+    }
+
+    private static bool HasSocketAddressInUseError(Exception exception)
+    {
+        for (Exception? current = exception; current != null; current = current.InnerException)
+        {
+            if (current is System.Net.Sockets.SocketException socketException &&
+                socketException.SocketErrorCode == System.Net.Sockets.SocketError.AddressAlreadyInUse)
+            {
+                return true;
+            }
+
+            if (current.Message.Contains("Обычно разрешается только одно использование адреса сокета", StringComparison.OrdinalIgnoreCase) ||
+                current.Message.Contains("Only one usage of each socket address", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private async void DonationAlertsLogoutButton_Click(
