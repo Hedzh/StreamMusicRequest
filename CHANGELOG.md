@@ -1,182 +1,174 @@
-# Changelog
+# История изменений
 
-All notable changes to Stream Music Request are documented here.
+Здесь перечислены основные изменения Stream Music Request (SMR).
 
-## [1.4.0] - 2026-10-07
+## В разработке
 
-### Added
-- Added Twitch chat responses for successful and rejected music requests.
-- Added separate settings to enable or disable success and error chat messages.
-- Added an "About" section with application information, version and author attribution.
-- Added "by Hedzh" attribution to the main window.
-- Added current-track cover display in the main window.
-- Added cover display to the OBS widget.
-- Added three OBS widget display modes: text only, cover left with text right, and cover as a full-size background with text overlaid at the bottom.
-- Added graphical preview selection for OBS widget display modes in Settings.
-- Added a single "Применить" button for selecting and saving the OBS display mode.
-- Added large 64 px text with a black outline and shadow for the OBS background-cover mode.
+### Добавлено
+- Добавлен режим основной музыки «Моя волна» — персональная радиостанция Яндекс Музыки.
+- В настройках воспроизведения можно выбирать между обычным плейлистом и «Моей волной».
+- При выборе режима «Плейлист» автоматически включается загрузка основного плейлиста при запуске приложения. При необходимости эту настройку можно отключить вручную.
+- Приостановленный зрительский трек отображается в очереди, пока воспроизводятся заказы SUPER-PRIORITY.
 
-### Improved
-- Twitch request feedback is now configurable without changing the request processing logic.
-- OBS widget now shows the requester only for viewer-requested tracks; main music is displayed as artist and title only.
-- OBS widget cover loading now goes through a local proxy and avoids stale browser caching when the current track changes.
-- OBS background-cover mode uses an 800×800 Browser Source as the intended display area and scales the cover to the available widget area.
-- Changing the OBS display mode is saved and applied from a single "Применить" button.
+### Улучшено
+- Переключение основного источника защищено от конфликтов при быстрых изменениях настроек.
+- Повторное применение тех же настроек не перезапускает текущий источник без необходимости.
+- Изменение режима воспроизведения больше не сбрасывает текущую громкость и не сохраняет её случайно как громкость по умолчанию.
+- Приоритетные донаты обрабатываются последовательно. Обычный переход к следующему треку не должен прерывать активный SUPER-PRIORITY заказ.
+- При воспроизведении «Моей волны» скрывается перемешивание плейлиста, поскольку для радиостанции оно неприменимо.
 
-### Notes
-- After changing the OBS display mode or other widget presentation settings, an already loaded OBS Browser Source may need to be refreshed so the page reloads the current settings and visual state.
-- Version 1.4.0 remains the current application version.
+### Важно
+- Эти изменения ещё не оформлены как отдельный выпуск. Текущая версия приложения остаётся 1.4.0.
 
-## [1.3.3] - 2026-10-04
+## [1.4.0] — 2026-10-07
 
-### Fixed
-- Yandex Music playback startup now retries up to three times when Media Foundation fails to open the direct audio stream with network timeout 0x80072EE2.
-- Each retry requests a fresh Yandex Music direct playback URL before reopening the audio stream.
-- A track is skipped only after all playback startup attempts are exhausted or when a non-retryable playback error occurs.
+### Добавлено
+- Добавлены сообщения в Twitch-чат об успешном и отклонённом заказе музыки.
+- Добавлены отдельные настройки для включения и отключения сообщений об успехе и ошибке.
+- Добавлен раздел «О программе» с версией и информацией об авторе.
+- Добавлена подпись «by Hedzh» в главном окне.
+- Добавлено отображение обложки текущего трека в главном окне и OBS-виджете.
+- Добавлены три режима OBS-виджета: только текст; обложка слева и текст справа; обложка на весь фон с текстом поверх.
+- Добавлен выбор режима OBS по наглядным превью.
+- Настройка внешнего вида OBS теперь применяется и сохраняется одной кнопкой «Применить».
+- Для режима с обложкой на фоне добавлен крупный текст с чёрной обводкой и тенью.
 
-## [1.3.2] - 2026-10-04
+### Улучшено
+- В OBS-виджете имя заказчика показывается только для зрительских заказов. Для основной музыки отображаются исполнитель и название.
+- Обложка обновляется при смене трека без использования устаревшего изображения из кэша браузера.
 
-### Added
-- Donation Alerts now uses three independent exact amounts per currency: normal music order, priority music order, and track skip.
-- A Donation Alerts skip donation is processed by amount only and does not require a music link.
-- Donation Alerts skip can skip any currently playing track, including tracks ordered through Donation Alerts.
-- Twitch "Пропустить трек" is blocked while a Donation Alerts track is playing.
-- Manual streamer next-track control remains unrestricted.
+### Важно
+- Если OBS продолжает показывать старый виджет после смены оформления, обновите Browser Source в OBS.
+- Версия приложения — 1.4.0.
 
-### Changed
-- Donation Alerts no longer uses amount ranges for normal and SUPER-PRIORITY orders.
-- A donation is accepted only when its amount exactly matches one configured action amount.
-- The three configured amounts for each currency must be unique.
-- Legacy Donation Alerts settings are migrated with a default skip amount when necessary.
+## [1.3.3] — 2026-10-04
 
-## [1.3.1] - 2026-10-04
+### Исправлено
+- Добавлены повторные попытки запуска трека, если Яндекс Музыка временно не открывает аудиопоток.
+- Перед повторной попыткой приложение получает новую ссылку на воспроизведение.
+- Трек пропускается только после неудачных повторных попыток или при ошибке, которую нельзя исправить повтором.
 
-### Added
-- Convenient selection of existing Twitch rewards from a dropdown.
-- Reward metadata display for title, cost, user input requirement and enabled state.
-- Twitch reward revalidation before saving.
-- Protection against binding the same Twitch reward to two functions.
-- Detailed warnings for incompatible or disabled Twitch rewards.
+## [1.3.2] — 2026-10-04
 
-### Improved
-- Increased Twitch reward selector text size and field height.
-- Twitch ban controls are unavailable while main music is playing.
+### Добавлено
+- Для Donation Alerts настраиваются три отдельные суммы в каждой валюте: обычный заказ, SUPER-PRIORITY и пропуск трека.
+- Для доната на пропуск трека не нужна ссылка на музыку.
+- Donation Alerts может пропустить любой текущий трек, в том числе заказанный через Donation Alerts.
+- Ручной пропуск трека стримером не ограничивается.
 
-## [1.3.0] - 2026-10-04
+### Изменено
+- Вместо диапазонов сумм Donation Alerts используются точные суммы.
+- Музыкальное действие выполняется, только если сумма доната точно совпадает с одной из настроенных сумм.
+- Три суммы для одной валюты должны различаться.
+- Старые настройки Donation Alerts переносятся с учётом новых параметров.
 
-### Added
-- Added persistent user and track bans.
-- Added ban management in Settings.
-- Added controls for blocking the current track and current requester.
-- Blocked users cannot create new music requests and blocked tracks cannot be added to the queue.
-- Blocking the current track or requester removes related queued requests and correctly continues playback.
+### Ограничения
+- Награда Twitch «Пропустить трек» не может пропускать трек, заказанный через Donation Alerts.
 
-### Fixed
-- Ban storage operations no longer block the UI while saving or changing bans.
-- Confirmation dialog button results are handled correctly.
-- Main music is restored after a playback startup error.
-- Temporary Yandex Music stream-opening errors can trigger fresh direct URL resolution before a track is skipped.
-- Playback volume is preserved correctly after seeking.
-- Local playback volume uses a softer curve and does not affect the OBS audio stream.
-- Opening Settings no longer resets the current main-window volume to the saved default.
+## [1.3.1] — 2026-10-04
 
-## [1.2.3] - 2026-10-03
+### Добавлено
+- Добавлен выбор существующих Twitch-наград из списка.
+- При проверке награды показываются её название, стоимость, требование ввода текста и состояние.
+- Добавлена повторная проверка награды перед сохранением.
+- Добавлена защита от привязки одной награды сразу к двум действиям.
+- Добавлены понятные предупреждения о неподходящих или отключённых наградах.
 
-### Fixed
-- Reduced the effective loudness of local application playback by applying a softer volume curve to the main-window volume control.
-- Local playback volume changes are applied only to WaveOut output; the OBS audio stream remains unaffected.
-- Opening Settings no longer overwrites the current playback volume with the saved default volume.
-- The saved playback volume in Settings remains the default volume used when the application starts.
+### Улучшено
+- Увеличен размер текста и высота поля выбора награды.
+- Кнопки блокировки Twitch недоступны во время воспроизведения основной музыки.
 
-## [1.2.2] - 2026-10-03
+## [1.3.0] — 2026-10-04
 
-### Added
-- Added the SMR application icon to the main window and all custom dialog windows.
-- Added the SMR icon as the application executable icon.
-- Unified message boxes and dialog presentation with the application's dark visual style.
+### Добавлено
+- Добавлена постоянная блокировка пользователей и треков.
+- Добавлено управление блокировками в настройках.
+- Добавлены кнопки блокировки текущего трека и его заказчика.
+- Заблокированные пользователи не могут отправлять новые заказы, а заблокированные треки не добавляются в очередь.
+- При блокировке связанные заказы удаляются из очереди.
 
-### Fixed
-- Fixed AppMessageBox resource resolution so error notifications no longer crash the application when the dialog is displayed.
-- Fixed custom dialog positioning so notifications open relative to the active application window and remain on the same monitor as the application.
-- Fixed the nullable owner warning in AppMessageBox.
-- Settings window no longer creates a separate taskbar button while remaining a separate modal window.
+### Исправлено
+- Работа с блокировками больше не должна надолго останавливать интерфейс.
+- Исправлена обработка ответов в окнах подтверждения.
+- Основная музыка восстанавливается после ошибки запуска заказанного трека.
+- Улучшена обработка временных ошибок Яндекс Музыки.
+- Громкость сохраняется корректно после перемотки.
+- Локальная громкость регулируется плавнее и не влияет на отдельный аудиопоток OBS.
+- Открытие настроек не сбрасывает текущую громкость.
 
-## [1.2.1] - 2026-10-03
+## [1.2.3] — 2026-10-03
 
-### Fixed
-- Donation Alerts logout now immediately updates the connection status in Settings and the main window.
-- Donation Alerts authorization state changes are propagated immediately when the saved authorization is cleared.
-- Donation Alerts connection status is now kept synchronized after authorization and logout operations.
+### Исправлено
+- Сделана более плавная регулировка громкости локального воспроизведения.
+- Изменение громкости приложения не влияет на аудиопоток OBS.
+- Открытие настроек не меняет текущую громкость на сохранённое значение.
+- Сохранённая громкость используется как значение по умолчанию при запуске.
 
-## [1.2.0] - 2026-10-02
+## [1.2.2] — 2026-10-03
 
-### Added
-- Автоматическое восстановление соединения Donation Alerts после разрыва WebSocket.
-- Экспоненциальная задержка повторных попыток подключения Donation Alerts от 5 до 60 секунд.
-- Donation Alerts production integration for music orders.
-- Donation Alerts authorization restoration on application startup.
-- Donation Alerts normal-priority and SUPER-PRIORITY playback modes.
-- Donation Alerts thresholds for RUB, EUR and USD.
-- Synchronized Donation Alerts connection state between Settings and the main window.
-- Persistent Twitch connection state with the current Twitch display name shown in the main window.
+### Добавлено
+- Добавлена иконка SMR в главное окно, диалоги и исполняемый файл.
+- Оформление системных сообщений приведено к тёмному стилю приложения.
 
-### Improved
-- Multiple SUPER-PRIORITY donations are now processed sequentially instead of being rejected while another SUPER-PRIORITY order is playing.
-- A failed playback startup no longer stops the viewer queue; the failed track is skipped and the next queued item is attempted.
-- Main window status text is kept synchronized with the actual Twitch and Donation Alerts services.
-- Removed obsolete main-window "Повторить трек" and redundant Twitch reward labels.
+### Исправлено
+- Исправлены ошибки при показе уведомлений об ошибках.
+- Диалоговые окна корректно позиционируются относительно главного окна.
+- Окно настроек больше не создаёт отдельную кнопку на панели задач.
 
-### Fixed
-- Twitch username disappearing from the main-window connection status after closing Settings.
-- Donation Alerts connection changes were previously logged but not reflected in the main-window UI.
-- Queue processing after transient Media Foundation playback startup failures.
+## [1.2.1] — 2026-10-03
 
-## [1.1.0] - 2026-09-26
+### Исправлено
+- Статус подключения Donation Alerts сразу обновляется после авторизации и выхода.
+- Состояние Donation Alerts синхронизировано между настройками и главным окном.
 
-### Added
-- OBS integration with a local HTTP widget and local HTTP audio stream.
-- Persistent playback settings.
-- Persistent music volume between application sessions.
-- Default Yandex Music playlist setting with optional automatic loading on application startup.
-- Playback settings validation and explicit save action.
-- "Open logs folder" button in Settings.
-- Twitch connection state synchronization between the main window and Settings.
-- Automatic Twitch connection recovery after temporary disconnects.
-- User notification when the saved Twitch OAuth session can no longer be restored.
+## [1.2.0] — 2026-10-02
 
-### Improved
-- Viewer music playback operations are serialized to prevent race conditions during rapid track transitions.
-- Main music automatically skips tracks that cannot be started because playback startup fails.
-- Yandex Music direct playback URL resolution retries transient failures.
-- Playback settings are exposed in a dedicated Settings section.
-- Current Twitch Channel Point reward bindings remain manual and are not auto-created.
+### Добавлено
+- Добавлено автоматическое восстановление соединения Donation Alerts с увеличивающейся задержкой повторных попыток.
+- Добавлено подключение Donation Alerts при запуске, если авторизация сохранена.
+- Добавлены обычные и SUPER-PRIORITY заказы через Donation Alerts.
+- Добавлены настройки сумм донатов для RUB, EUR и USD.
+- Состояние Twitch и имя подключённого аккаунта отображаются в главном окне.
 
-### Fixed
-- Twitch EventSub recovery after long periods of inactivity.
-- The first Twitch music order after application startup.
-- Stale audio playback completion events during rapid playback transitions.
-- Media Foundation playback startup failures no longer stop the main music sequence.
-- Removed unused track cover loading and cover UI.
+### Улучшено
+- Несколько SUPER-PRIORITY донатов обрабатываются последовательно.
+- Если трек не запускается, очередь продолжает обработку следующих заказов.
+- Статусы подключения в главном окне синхронизированы с состоянием сервисов.
 
-### Notes
-- Donation Alerts integration was completed after the 1.1.0 release and is documented in 1.2.0.
-- Temporary test projects remain in the repository until the final cleanup before release.
+### Исправлено
+- Исправлено отображение имени Twitch после закрытия настроек.
+- Исправлено обновление состояния Donation Alerts в главном окне.
+- Улучшена обработка временных ошибок запуска музыки.
 
-## [1.0.0] - Initial working version
+## [1.1.0] — 2026-09-26
 
-### Implemented
-- Initial WPF application architecture with separate Core, Twitch, Yandex, Audio, Infrastructure and App layers.
-- Twitch OAuth/device authorization and restoration of the saved authorization session.
-- Twitch current-user detection and Channel Points integration.
-- Manual binding of existing Twitch Channel Point rewards to application actions.
-- "Заказ музыки" reward with viewer text input.
-- "Пропустить трек" reward for skipping the current track.
-- Yandex Music authorization and music data retrieval.
-- Loading Yandex Music albums and playlists as main music.
-- Validation of Yandex Music links for viewer requests.
-- FIFO queue for viewer music requests.
-- Switching between main music and viewer-requested music.
-- Audio playback through NAudio and Media Foundation.
-- Basic playback controls and volume control.
-- Local application logging to app.log.
-- Initial settings infrastructure for Twitch and Yandex Music.
+### Добавлено
+- Добавлены OBS-виджет и отдельный локальный аудиопоток.
+- Добавлено сохранение настроек воспроизведения и громкости между запусками.
+- Добавлена настройка основного плейлиста и его автоматической загрузки при запуске.
+- Добавлена проверка настроек воспроизведения.
+- Добавлена кнопка открытия папки с журналами.
+- Улучшено отображение состояния Twitch и восстановление подключения.
+
+### Исправлено
+- Исправлено восстановление Twitch EventSub после длительного простоя.
+- Исправлена обработка первого музыкального заказа после запуска.
+- Исправлены ошибки, возникавшие при быстром переключении треков.
+- Временные ошибки запуска больше не должны останавливать основную очередь.
+
+### Примечания
+- Интеграция Donation Alerts была завершена после версии 1.1.0 и описана в версии 1.2.0.
+- В репозитории пока остаются тестовые проекты.
+
+## [1.0.0] — Первая рабочая версия
+
+### Реализовано
+- Создано приложение Windows с отдельными компонентами для Twitch, Яндекс Музыки, звука и настроек.
+- Добавлена авторизация Twitch и восстановление сохранённого сеанса.
+- Добавлена авторизация Яндекс Музыки и получение музыкальных данных.
+- Добавлена загрузка альбомов и плейлистов в качестве основной музыки.
+- Добавлена ручная привязка существующих Twitch-наград.
+- Добавлены награды «Заказ музыки» и «Пропустить трек».
+- Добавлена проверка ссылок на треки Яндекс Музыки.
+- Добавлена очередь зрительских заказов и переключение между основной музыкой и заказами.
+- Добавлены управление воспроизведением, громкостью и локальные журналы приложения.
