@@ -234,6 +234,8 @@ public class MainMusicService
             return;
         }
 
+        await EnsureContinuousTracksAsync();
+
         var previousTrackIndex = _currentTrackIndex;
 
         if (_shuffleEnabled &&
@@ -381,6 +383,46 @@ public class MainMusicService
             $"{clampedPosition} из {duration}");
 
         await _player.SeekAsync(clampedPosition);
+    }
+
+    public async Task SendSkipFeedbackAsync()
+    {
+        if (_currentAlbum?.Source is not IContinuousMusicSource continuousSource)
+            return;
+
+        var track = CurrentTrack;
+        if (track == null)
+            return;
+
+        try
+        {
+            await continuousSource.TrackSkippedAsync(
+                track,
+                _player.GetPosition());
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Info($"Не удалось отправить feedback skip: {ex.Message}");
+        }
+    }
+
+    private async Task EnsureContinuousTracksAsync()
+    {
+        if (_currentAlbum?.Source is not IContinuousMusicSource continuousSource)
+            return;
+
+        // Загружаем следующую sequence заранее, чтобы не ждать сеть на границе пачки.
+        if (_currentAlbum.Tracks.Count - _currentTrackIndex > 2)
+            return;
+
+        try
+        {
+            await continuousSource.AppendNextBatchAsync(_currentAlbum);
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Error("Не удалось загрузить следующую sequence «Моей волны».", ex);
+        }
     }
 
     public MainMusicPlaybackState CaptureState()
@@ -633,6 +675,21 @@ public class MainMusicService
                 "Запуск следующего трека.");
 
             _isMainMusicActive = false;
+
+            if (_currentAlbum?.Source is IContinuousMusicSource continuousSource &&
+                CurrentTrack is { } finishedTrack)
+            {
+                try
+                {
+                    await continuousSource.TrackFinishedAsync(
+                        finishedTrack,
+                        _player.GetDuration());
+                }
+                catch (Exception feedbackException)
+                {
+                    FileLogger.Info($"Не удалось отправить feedback trackFinished: {feedbackException.Message}");
+                }
+            }
 
             await RaisePlaybackFinishedAsync();
 
