@@ -14,6 +14,7 @@ public class MainMusicService
     private bool _isMainMusicActive;
     private bool _handlingPlaybackFinished;
     private bool _shuffleEnabled;
+    private long _playbackGeneration;
 
     public bool AutoAdvanceEnabled { get; set; } = true;
 
@@ -87,9 +88,11 @@ public class MainMusicService
                 "Нельзя установить пустой альбом.");
         }
 
+        // Инвалидируем асинхронные операции старого источника.
+        _playbackGeneration++;
+        _isMainMusicActive = false;
         _currentAlbum = album;
         _currentTrackIndex = 0;
-        _isMainMusicActive = false;
 
         _shuffleOrder.Clear();
         _shuffleHistory.Clear();
@@ -108,7 +111,10 @@ public class MainMusicService
 
     public async Task<bool> PlayAsync()
     {
-        if (_currentAlbum == null)
+        var generation = _playbackGeneration;
+        var album = _currentAlbum;
+
+        if (album == null)
         {
             FileLogger.Info(
                 "PlayAsync основной музыки: " +
@@ -117,7 +123,7 @@ public class MainMusicService
             return false;
         }
 
-        if (_currentAlbum.Tracks.Count == 0)
+        if (album.Tracks.Count == 0)
         {
             FileLogger.Info(
                 "PlayAsync основной музыки: " +
@@ -127,12 +133,12 @@ public class MainMusicService
         }
 
         if (_currentTrackIndex < 0 ||
-            _currentTrackIndex >= _currentAlbum.Tracks.Count)
+            _currentTrackIndex >= album.Tracks.Count)
         {
             _currentTrackIndex = 0;
         }
 
-        var track = _currentAlbum.Tracks[_currentTrackIndex];
+        var track = album.Tracks[_currentTrackIndex];
 
         FileLogger.Info(
             $"Подготовка основной музыки: " +
@@ -144,7 +150,13 @@ public class MainMusicService
              attempt <= maxPlaybackAttempts;
              attempt++)
         {
-            var playbackUrl = await GetPlaybackUrlAsync(track);
+            var playbackUrl = await GetPlaybackUrlAsync(track, album);
+
+            if (generation != _playbackGeneration)
+            {
+                FileLogger.Info("Запуск основного трека отменён: источник изменился во время получения ссылки.");
+                return false;
+            }
 
             if (string.IsNullOrWhiteSpace(playbackUrl))
             {
@@ -165,6 +177,12 @@ public class MainMusicService
             {
                 await _player.PlayAsync(track);
 
+                if (generation != _playbackGeneration)
+                {
+                    FileLogger.Info("Запуск основного трека устарел: источник изменился во время запуска.");
+                    return false;
+                }
+
                 _isMainMusicActive = true;
 
                 FileLogger.Info(
@@ -173,6 +191,12 @@ public class MainMusicService
 
                 // Пока текущий трек играет, заранее загружаем следующую sequence.
                 await EnsureContinuousTracksAsync();
+
+                if (generation != _playbackGeneration)
+                {
+                    FileLogger.Info("Подготовка следующей sequence отменена: основной источник изменился.");
+                    return false;
+                }
 
                 return true;
             }
@@ -221,16 +245,20 @@ public class MainMusicService
 
     public async Task StopAsync()
     {
+        // Сбрасываем состояние до await, чтобы завершение старого потока
+        // не могло запустить следующий трек во время остановки.
+        _playbackGeneration++;
+        _isMainMusicActive = false;
+
         FileLogger.Info(
             "Основная музыка остановлена.");
 
         await _player.StopAsync();
-
-        _isMainMusicActive = false;
     }
 
     public async Task NextAsync()
     {
+        var generation = _playbackGeneration;
         if (_currentAlbum == null ||
             _currentAlbum.Tracks.Count == 0)
         {
@@ -238,6 +266,12 @@ public class MainMusicService
         }
 
         await EnsureContinuousTracksAsync();
+
+        if (generation != _playbackGeneration)
+        {
+            FileLogger.Info("Переход к следующему треку отменён: основной источник изменился.");
+            return;
+        }
 
         var previousTrackIndex = _currentTrackIndex;
 
@@ -267,6 +301,12 @@ public class MainMusicService
 
         for (var attempt = 0; attempt < trackCount; attempt++)
         {
+            if (generation != _playbackGeneration)
+            {
+                FileLogger.Info("Переход к следующему треку остановлен: основной источник изменился.");
+                return;
+            }
+
             FileLogger.Info(
                 $"Переход на следующий трек " +
                 $"основной музыки. Индекс: {_currentTrackIndex}");
@@ -617,10 +657,10 @@ public class MainMusicService
         return false;
     }
 
-    private async Task<string?> GetPlaybackUrlAsync(Track track)
+    private async Task<string?> GetPlaybackUrlAsync(Track track, MusicAlbum? album = null)
     {
-        if (_currentAlbum?.Source
-            is not IPlayableMusicSource playableSource)
+        var source = (album ?? _currentAlbum)?.Source;
+        if (source is not IPlayableMusicSource playableSource)
         {
             FileLogger.Info(
                 "Основной источник не поддерживает " +
@@ -659,6 +699,10 @@ public class MainMusicService
         object? sender,
         EventArgs e)
     {
+        var generation = _playbackGeneration;
+        var finishedAlbum = _currentAlbum;
+        var finishedTrack = CurrentTrack;
+
         if (!_isMainMusicActive)
         {
             return;
@@ -679,14 +723,20 @@ public class MainMusicService
 
             _isMainMusicActive = false;
 
-            if (_currentAlbum?.Source is IContinuousMusicSource continuousSource &&
-                CurrentTrack is { } finishedTrack)
+            if (finishedAlbum?.Source is IContinuousMusicSource continuousSource &&
+                finishedTrack is not null)
             {
                 try
                 {
                     await continuousSource.TrackFinishedAsync(
                         finishedTrack,
                         _player.GetDuration());
+
+                    if (generation != _playbackGeneration)
+                    {
+                        FileLogger.Info("Обработка окончания трека отменена: основной источник изменился.");
+                        return;
+                    }
                 }
                 catch (Exception feedbackException)
                 {
@@ -695,6 +745,12 @@ public class MainMusicService
             }
 
             await RaisePlaybackFinishedAsync();
+
+            if (generation != _playbackGeneration)
+            {
+                FileLogger.Info("Автопереход отменён: основной источник изменился во время обработки окончания трека.");
+                return;
+            }
 
             if (!AutoAdvanceEnabled)
             {
