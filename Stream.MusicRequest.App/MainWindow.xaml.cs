@@ -1425,7 +1425,14 @@ public partial class MainWindow : Window
         {
             var url = settings.DefaultPlaylistUrl?.Trim();
             if (string.IsNullOrWhiteSpace(url))
-                throw new InvalidOperationException("Укажите ссылку на плейлист или альбом Yandex Music.");
+            {
+                // Сохранение громкости и других настроек без заданного URL
+                // не должно сбрасывать уже играющую музыку.
+                UpdateMainMusicUi();
+                UpdatePlaybackUi();
+                UpdatePlaybackModeUi();
+                return;
+            }
 
             var album = _yandexMusicSource.CanHandlePlaylistUrl(url)
                 ? await _yandexMusicSource.ResolvePlaylistAsync(url)
