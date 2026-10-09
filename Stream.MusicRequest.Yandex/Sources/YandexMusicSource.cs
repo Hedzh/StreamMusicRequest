@@ -159,25 +159,63 @@ public class YandexMusicSource :
             return null;
         }
 
-        var trackId =
-            ExtractTrackId(url);
-
+        var trackId = ExtractTrackId(url);
         if (trackId == null)
         {
             return null;
         }
 
-        var yandexTrack =
-            await _client.Tracks.GetAsync(
-                trackId);
+        // Yandex Music может временно ограничивать частоту запросов (HTTP 429).
+        // Повторяем только rate-limit ошибки с увеличивающейся задержкой.
+        const int maxAttempts = 4;
+        YandexTrack? yandexTrack = null;
+
+        for (var attempt = 1; attempt <= maxAttempts; attempt++)
+        {
+            try
+            {
+                yandexTrack = await _client.Tracks.GetAsync(trackId);
+                break;
+            }
+            catch (Exception ex) when (IsRateLimitException(ex))
+            {
+                if (attempt == maxAttempts)
+                {
+                    FileLogger.Error(
+                        $"Yandex Music: исчерпаны попытки загрузки данных трека {trackId} после HTTP 429.",
+                        ex);
+                    throw;
+                }
+
+                var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                FileLogger.Info(
+                    $"Yandex Music: получен HTTP 429 при загрузке трека {trackId}. " +
+                    $"Повтор {attempt + 1}/{maxAttempts} через {delay.TotalSeconds:0} сек.");
+
+                await Task.Delay(delay);
+            }
+        }
 
         if (yandexTrack == null)
         {
             return null;
         }
 
-        return ConvertTrack(
-            yandexTrack);
+        return ConvertTrack(yandexTrack);
+    }
+
+    private static bool IsRateLimitException(Exception exception)
+    {
+        for (Exception? current = exception; current != null; current = current.InnerException)
+        {
+            if (current.Message.Contains("429", StringComparison.OrdinalIgnoreCase) ||
+                current.Message.Contains("TooManyRequests", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public async Task<MusicAlbum?> ResolveAlbumAsync(
