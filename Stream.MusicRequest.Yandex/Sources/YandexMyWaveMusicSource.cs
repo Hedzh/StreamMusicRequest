@@ -13,7 +13,7 @@ namespace Stream.MusicRequest.Yandex.Sources;
 /// Треки хранятся в одном MusicAlbum, а новые последовательности
 /// Rotor загружаются по мере приближения к концу текущей.
 /// </summary>
-public sealed class YandexMyWaveMusicSource : IPlayableMusicSource, IDisposable
+public sealed class YandexMyWaveMusicSource : IPlayableMusicSource, IContinuousMusicSource, IDisposable
 {
     private const string StationSeed = "user:onyourwave";
     private const string ApiBaseUrl = "https://api.music.yandex.net";
@@ -140,10 +140,10 @@ public sealed class YandexMyWaveMusicSource : IPlayableMusicSource, IDisposable
         }
     }
 
-    public Task SendTrackFinishedAsync(Track track, TimeSpan played) =>
+    public Task TrackFinishedAsync(Track track, TimeSpan played) =>
         SendTrackFeedbackForTrackAsync(track, "trackFinished", played);
 
-    public Task SendTrackSkippedAsync(Track track, TimeSpan played) =>
+    public Task TrackSkippedAsync(Track track, TimeSpan played) =>
         SendTrackFeedbackForTrackAsync(track, "skip", played);
 
     private async Task SendTrackFeedbackForTrackAsync(Track track, string type, TimeSpan played)
