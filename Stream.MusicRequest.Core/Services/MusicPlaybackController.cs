@@ -195,10 +195,15 @@ public class MusicPlaybackController
 
             if (_viewerModeActive)
             {
-                _viewerMusic.AutoAdvanceEnabled = true;
+                // Пока играет SUPER-PRIORITY, обычные донаты должны оставаться
+                // в очереди и не включать автопереход в обход контроллера.
+                if (!_superPriorityActive)
+                {
+                    _viewerMusic.AutoAdvanceEnabled = true;
 
-                if (!_viewerMusic.IsPlaying)
-                    await _viewerMusic.StartNextAsync();
+                    if (!_viewerMusic.IsPlaying)
+                        await _viewerMusic.StartNextAsync();
+                }
 
                 FileLogger.Info(
                     $"Donation NORMAL: элемент #{item.Id} поставлен следующим в очереди зрителей.");
