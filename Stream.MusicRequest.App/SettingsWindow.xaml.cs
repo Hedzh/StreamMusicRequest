@@ -914,14 +914,11 @@ public partial class SettingsWindow : Window
             return;
         }
 
-        // Для применения режима передаём текущую громкость ползунка,
-        // но сохраняем громкость по умолчанию отдельно и не перезаписываем её.
+        // Кнопка режима не должна передавать временное значение ползунка
+        // в основное окно: используем сохранённую громкость по умолчанию.
         var settingsForApply = new PlaybackSettings
         {
-            Volume = (float)Math.Clamp(
-                PlaybackSettingsVolumeSlider.Value / 100.0,
-                0.0,
-                1.0),
+            Volume = _playbackSettings.Volume,
             DefaultPlaylistUrl = url,
             LoadDefaultPlaylistOnStartup =
                 !isMyWaveSelected &&
