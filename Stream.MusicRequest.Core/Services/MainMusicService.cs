@@ -109,9 +109,14 @@ public class MainMusicService
             $"{album.Title}. Треков: {album.Tracks.Count}");
     }
 
-    public async Task<bool> PlayAsync()
+    public async Task<bool> PlayAsync(long? expectedGeneration = null)
     {
-        var generation = _playbackGeneration;
+        var generation = expectedGeneration ?? _playbackGeneration;
+        if (generation != _playbackGeneration)
+        {
+            FileLogger.Info("Запуск основного трека отменён: запрос относится к предыдущему источнику.");
+            return false;
+        }
         var album = _currentAlbum;
 
         if (album == null)
@@ -313,7 +318,7 @@ public class MainMusicService
 
             try
             {
-                if (await PlayAsync())
+                if (await PlayAsync(generation))
                 {
                     return;
                 }
