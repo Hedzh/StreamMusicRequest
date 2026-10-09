@@ -262,9 +262,12 @@ public class MusicPlaybackController
         {
             ValidateQueueItem(item);
 
+            // Помечаем каждый SUPER-PRIORITY до выбора сценария запуска.
+            // Это важно и для первого приоритетного заказа поверх очереди.
+            item.QueuePriority = 100;
+
             if (_superPriorityActive)
             {
-                item.QueuePriority = 100;
                 _queue.PromoteByPriority(item.Id);
 
                 FileLogger.Info(
