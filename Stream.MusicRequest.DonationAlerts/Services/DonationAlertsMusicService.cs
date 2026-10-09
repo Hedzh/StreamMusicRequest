@@ -18,6 +18,7 @@ public sealed class DonationAlertsMusicService
     private readonly MusicRequestService _requestService;
     private readonly MusicPlaybackController _playbackController;
     private readonly YandexMusicSource _yandexSource;
+    private readonly SemaphoreSlim _donationProcessingGate = new(1, 1);
 
     public DonationAlertsMusicService(
         DonationAlertsClient client,
@@ -124,6 +125,8 @@ public sealed class DonationAlertsMusicService
         object? sender,
         DonationEvent donation)
     {
+        // Обрабатываем донаты последовательно, чтобы не создавать всплеск запросов к Yandex Music.
+        await _donationProcessingGate.WaitAsync().ConfigureAwait(false);
         try
         {
             if (!Settings.MusicOrdersEnabled)
@@ -218,8 +221,12 @@ public sealed class DonationAlertsMusicService
         catch (Exception ex)
         {
             FileLogger.Error(
-                "Donation Alerts: ошибка обработки доната.",
+                $"Donation Alerts: ошибка обработки доната #{donation.Id}.",
                 ex);
+        }
+        finally
+        {
+            _donationProcessingGate.Release();
         }
     }
 
