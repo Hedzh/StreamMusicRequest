@@ -1303,7 +1303,6 @@
                                                  Content="Плейлист"
                                                  GroupName="MainMusicSource"
                                                  Style="{StaticResource SettingsRadioButton}"
-                                                 IsChecked="True"
                                                  Checked="MainMusicSourceRadioButton_Checked"
                                                  Margin="0,0,24,0"/>
 
