@@ -1125,6 +1125,7 @@ public partial class MainWindow : Window
 
         if (album == null)
         {
+            MainAlbumSectionTitleText.Text = "ОСНОВНОЙ АЛЬБОМ";
             MainAlbumTitleText.Text =
                 "Не выбран";
 
@@ -1136,11 +1137,13 @@ public partial class MainWindow : Window
 
         if (IsMyWaveSelected())
         {
+            MainAlbumSectionTitleText.Text = "ОСНОВНОЙ ИСТОЧНИК";
             MainAlbumTitleText.Text = "Моя волна";
             MainAlbumInfoText.Text = "Персональная радиостанция Yandex Music";
             return;
         }
 
+        MainAlbumSectionTitleText.Text = "ОСНОВНОЙ АЛЬБОМ";
         MainAlbumTitleText.Text =
             album.Title;
 
