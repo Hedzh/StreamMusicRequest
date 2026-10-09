@@ -18,6 +18,7 @@ public partial class SettingsWindow : Window
     private readonly YandexMusicSource _yandexMusicSource;
     private readonly Action<float>? _setPlaybackVolume;
     private readonly Action<string>? _applyObsDisplayMode;
+    private readonly Func<PlaybackSettings, Task>? _applyPlaybackSettings;
 
     private readonly StackPanel[] _pages;
 
@@ -40,7 +41,8 @@ public partial class SettingsWindow : Window
         AppServices appServices,
         YandexMusicSource yandexMusicSource,
         Action<float>? setPlaybackVolume = null,
-        Action<string>? applyObsDisplayMode = null)
+        Action<string>? applyObsDisplayMode = null,
+        Func<PlaybackSettings, Task>? applyPlaybackSettings = null)
     {
         InitializeComponent();
 
@@ -59,6 +61,9 @@ public partial class SettingsWindow : Window
 
         _applyObsDisplayMode =
             applyObsDisplayMode;
+
+        _applyPlaybackSettings =
+            applyPlaybackSettings;
 
         var settingsDirectory =
             Path.Combine(
@@ -728,6 +733,20 @@ public partial class SettingsWindow : Window
             PlaybackSettingsVolumeText.Text =
                 $"{PlaybackSettingsVolumeSlider.Value:0}%";
 
+            MainMusicSourcePlaylistRadioButton.IsChecked =
+                !string.Equals(
+                    _playbackSettings.MainMusicSource,
+                    "MyWave",
+                    StringComparison.OrdinalIgnoreCase);
+
+            MainMusicSourceMyWaveRadioButton.IsChecked =
+                string.Equals(
+                    _playbackSettings.MainMusicSource,
+                    "MyWave",
+                    StringComparison.OrdinalIgnoreCase);
+
+            UpdateMainMusicSourceUi();
+
             DefaultPlaylistUrlTextBox.Text =
                 _playbackSettings.DefaultPlaylistUrl;
 
@@ -744,6 +763,29 @@ public partial class SettingsWindow : Window
         {
             _isLoadingPlaybackSettings = false;
         }
+    }
+
+    private void MainMusicSourceRadioButton_Checked(
+        object sender,
+        RoutedEventArgs e)
+    {
+        UpdateMainMusicSourceUi();
+    }
+
+    private void UpdateMainMusicSourceUi()
+    {
+        var isPlaylistSelected =
+            MainMusicSourcePlaylistRadioButton.IsChecked == true;
+
+        DefaultPlaylistSettingsPanel.Visibility =
+            isPlaylistSelected
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        MyWaveInfoText.Visibility =
+            isPlaylistSelected
+                ? Visibility.Collapsed
+                : Visibility.Visible;
     }
 
     private void PlaybackSettingsVolumeSlider_ValueChanged(
@@ -825,10 +867,14 @@ public partial class SettingsWindow : Window
         object sender,
         RoutedEventArgs e)
     {
+        var isMyWaveSelected =
+            MainMusicSourceMyWaveRadioButton.IsChecked == true;
+
         var url =
             DefaultPlaylistUrlTextBox.Text.Trim();
 
-        if (!string.IsNullOrWhiteSpace(url) &&
+        if (!isMyWaveSelected &&
+            !string.IsNullOrWhiteSpace(url) &&
             !_appServices.YandexAuthService.IsAuthenticated)
         {
             AppMessageBox.Show(
@@ -840,7 +886,8 @@ public partial class SettingsWindow : Window
             return;
         }
 
-        if (!string.IsNullOrWhiteSpace(url))
+        if (!isMyWaveSelected &&
+            !string.IsNullOrWhiteSpace(url))
         {
             if (!_yandexMusicSource.CanHandlePlaylistUrl(url))
             {
@@ -866,22 +913,45 @@ public partial class SettingsWindow : Window
                 DefaultPlaylistUrl = url,
 
                 LoadDefaultPlaylistOnStartup =
+                    !isMyWaveSelected &&
                     LoadDefaultPlaylistOnStartupCheckBox.IsChecked == true
-                    && !string.IsNullOrWhiteSpace(url)
+                    && !string.IsNullOrWhiteSpace(url),
+
+                MainMusicSource =
+                    isMyWaveSelected ? "MyWave" : "Playlist"
             };
 
-        await _playbackSettingsStorage
-            .SaveAsync(_playbackSettings);
+        try
+        {
+            await _playbackSettingsStorage
+                .SaveAsync(_playbackSettings);
 
-        DefaultPlaylistStatusText.Text =
-            "Настройки сохранены.";
+            if (_applyPlaybackSettings != null)
+            {
+                await _applyPlaybackSettings(_playbackSettings);
+            }
 
-        AppMessageBox.Show(
-            this,
-            "Настройки воспроизведения сохранены.",
-            "Воспроизведение",
-            MessageBoxButton.OK,
-            MessageBoxImage.Information);
+            DefaultPlaylistStatusText.Text =
+                isMyWaveSelected
+                    ? "Настройки сохранены. Запрос на запуск «Моей волны» отправлен."
+                    : "Настройки сохранены.";
+
+            AppMessageBox.Show(
+                this,
+                "Настройки воспроизведения сохранены.",
+                "Воспроизведение",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            AppMessageBox.Show(
+                this,
+                $"Настройки сохранены не полностью или источник не удалось запустить.\\n\\n{ex.Message}",
+                "Воспроизведение",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
     }
 
     private void OpenLogsButton_Click(
