@@ -914,10 +914,14 @@ public partial class SettingsWindow : Window
             return;
         }
 
-        var settings = new PlaybackSettings
+        // Для применения режима передаём текущую громкость ползунка,
+        // но сохраняем громкость по умолчанию отдельно и не перезаписываем её.
+        var settingsForApply = new PlaybackSettings
         {
-            // Режим можно применить независимо от сохранённой громкости.
-            Volume = _playbackSettings.Volume,
+            Volume = (float)Math.Clamp(
+                PlaybackSettingsVolumeSlider.Value / 100.0,
+                0.0,
+                1.0),
             DefaultPlaylistUrl = url,
             LoadDefaultPlaylistOnStartup =
                 !isMyWaveSelected &&
@@ -926,13 +930,21 @@ public partial class SettingsWindow : Window
             MainMusicSource = isMyWaveSelected ? "MyWave" : "Playlist"
         };
 
+        var settingsToSave = new PlaybackSettings
+        {
+            Volume = _playbackSettings.Volume,
+            DefaultPlaylistUrl = url,
+            LoadDefaultPlaylistOnStartup = settingsForApply.LoadDefaultPlaylistOnStartup,
+            MainMusicSource = settingsForApply.MainMusicSource
+        };
+
         try
         {
             if (_applyPlaybackSettings != null)
-                await _applyPlaybackSettings(settings);
+                await _applyPlaybackSettings(settingsForApply);
 
-            await _playbackSettingsStorage.SaveAsync(settings);
-            _playbackSettings = settings;
+            await _playbackSettingsStorage.SaveAsync(settingsToSave);
+            _playbackSettings = settingsToSave;
 
             DefaultPlaylistStatusText.Text =
                 isMyWaveSelected
