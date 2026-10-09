@@ -415,6 +415,7 @@ public class MusicPlaybackController
             if (!HasMainMusic)
                 return;
 
+            await _mainMusic.SendSkipFeedbackAsync();
             await _mainMusic.NextAsync();
 
             FileLogger.Info(
