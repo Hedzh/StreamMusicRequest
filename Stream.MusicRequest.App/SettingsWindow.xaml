@@ -1349,10 +1349,17 @@
                                 </StackPanel>
 
                                 <TextBlock x:Name="MyWaveInfoText"
-                                           Text="При сохранении настроек приложение будет запускать персональную радиостанцию «Моя волна»."
+                                           Text="При применении настроек приложение будет запускать персональную радиостанцию «Моя волна»."
                                            Style="{StaticResource FieldDescription}"
                                            Visibility="Collapsed"
                                            Margin="0,4,0,0"/>
+
+                                <Button Content="Применить"
+                                        Click="PlaybackModeApplyButton_Click"
+                                        Style="{StaticResource AccentButton}"
+                                        Width="140"
+                                        HorizontalAlignment="Left"
+                                        Margin="0,16,0,0"/>
 
                             </StackPanel>
 
@@ -1390,11 +1397,18 @@
 
                                 </Grid>
 
-                                <TextBlock Text="Изменение ползунка применяется к текущему воспроизведению сразу. Сохранение требуется только для запоминания значения между запусками."
+                                <TextBlock Text="Изменение ползунка применяется к текущему воспроизведению сразу. Нажмите «Сохранить», чтобы запомнить громкость по умолчанию между запусками."
                                            Style="{StaticResource FieldDescription}"
-                                           Margin="0,8,0,0"/>
+                                           Margin="0,8,0,14"/>
+
+                                <Button Content="Сохранить"
+                                        Click="PlaybackSettingsSaveButton_Click"
+                                        Style="{StaticResource AccentButton}"
+                                        Width="140"
+                                        HorizontalAlignment="Left"/>
 
                             </StackPanel>
+
 
                         </Border>
 
