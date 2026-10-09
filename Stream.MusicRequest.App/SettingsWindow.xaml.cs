@@ -1935,14 +1935,59 @@ public partial class SettingsWindow : Window
         catch (Exception ex)
         {
             UpdateDonationAlertsConnectionUi();
+            DonationAlertsConnectButton.IsEnabled = true;
+
+            var message = ex.Message;
+            if (HasSocketAddressInUseError(ex))
+            {
+                message =
+                    "Не удалось открыть локальный порт авторизации Donation Alerts (127.0.0.1:17865), " +
+                    "потому что он уже занят.\n\n" +
+                    "Проверьте, не запущен ли второй экземпляр StreamMusicRequest, " +
+                    "или закройте программу, которая использует этот порт. " +
+                    "После этого нажмите «Подключить» ещё раз.\n\n" +
+                    ex.Message;
+                DonationAlertsStatusText.Text = "Ошибка авторизации — можно повторить";
+                DonationAlertsStatusText.Foreground = Brushes.OrangeRed;
+                DonationAlertsUserText.Text = "Авторизация не завершена. Освободите локальный порт и повторите попытку.";
+            }
+            else
+            {
+                DonationAlertsStatusText.Text = "Ошибка авторизации — можно повторить";
+                DonationAlertsStatusText.Foreground = Brushes.OrangeRed;
+                DonationAlertsUserText.Text = "Авторизация не завершена. Нажмите «Подключить», чтобы повторить попытку.";
+                message =
+                    "Не удалось авторизоваться или подключиться к Donation Alerts. " +
+                    "Проверьте соединение и повторите попытку.\n\n" + ex.Message;
+            }
 
             AppMessageBox.Show(
                 this,
-                $"Не удалось подключить Donation Alerts.\n\n{ex.Message}",
+                message,
                 "Donation Alerts",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
+    }
+
+    private static bool HasSocketAddressInUseError(Exception exception)
+    {
+        for (Exception? current = exception; current != null; current = current.InnerException)
+        {
+            if (current is System.Net.Sockets.SocketException socketException &&
+                socketException.SocketErrorCode == System.Net.Sockets.SocketError.AddressAlreadyInUse)
+            {
+                return true;
+            }
+
+            if (current.Message.Contains("Обычно разрешается только одно использование адреса сокета", StringComparison.OrdinalIgnoreCase) ||
+                current.Message.Contains("Only one usage of each socket address", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private async void DonationAlertsLogoutButton_Click(
