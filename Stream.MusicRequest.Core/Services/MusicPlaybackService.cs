@@ -338,8 +338,23 @@ public async Task PauseAsync()
         _currentItem = null;
 
         FileLogger.Info(
-            "Текущий трек пропущен. " +
-            "Попытка запуска следующего.");
+            "Текущий трек пропущен.");
+
+        if (!AutoAdvanceEnabled)
+        {
+            // Во время SUPER-PRIORITY контроллер сам решает, что запускать дальше:
+            // следующий SUPER-PRIORITY, сохранённый Twitch-трек или основную музыку.
+            // Нельзя безусловно брать следующий элемент обычной очереди здесь.
+            FileLogger.Info(
+                "Автопереход отключён контроллером. " +
+                "Передаём ему управление очередью после пропуска.");
+
+            RaiseQueuePlaybackFinished();
+            return;
+        }
+
+        FileLogger.Info(
+            "Попытка запуска следующего элемента очереди.");
 
         await StartNextCoreAsync();
     
@@ -467,7 +482,7 @@ public async Task PauseAsync()
     private void RaiseQueuePlaybackFinished()
     {
         FileLogger.Info(
-            "Очередь зрительских заявок полностью закончилась.");
+            "Событие завершения трека/передачи управления очередью зрителей.");
 
         QueuePlaybackFinished?.Invoke(
             this,
