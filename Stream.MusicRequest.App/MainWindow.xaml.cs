@@ -2176,7 +2176,9 @@ public partial class MainWindow : Window
     private void UpdateQueueStatus()
     {
         QueueStatusText.Text =
-            $"В очереди: {_queue.Count}";
+            _playbackController.PriorityResumeViewerItem != null
+                ? $"В очереди: {_queue.Count} • приостановлен: 1"
+                : $"В очереди: {_queue.Count}";
     }
 
     private void RefreshQueueUi()
@@ -2191,7 +2193,23 @@ public partial class MainWindow : Window
         }
 
         var items =
-            _queue.GetSnapshot();
+            _queue.GetSnapshot().ToList();
+
+        var suspendedItem =
+            _playbackController.PriorityResumeViewerItem;
+
+        if (suspendedItem?.Track != null &&
+            !items.Any(item => item.Id == suspendedItem.Id))
+        {
+            // Показываем приостановленный трек после всех ожидающих SUPER-PRIORITY,
+            // но перед обычными заказами. В рабочую очередь его не добавляем.
+            var lastPriorityIndex =
+                items.FindLastIndex(item => item.QueuePriority >= 100);
+
+            items.Insert(
+                lastPriorityIndex + 1,
+                suspendedItem);
+        }
 
         QueueItemsPanel.Children.Clear();
 
@@ -2205,6 +2223,13 @@ public partial class MainWindow : Window
 
         foreach (var item in items)
         {
+            var isSuspendedItem =
+                suspendedItem != null &&
+                string.Equals(
+                    item.Id,
+                    suspendedItem.Id,
+                    StringComparison.Ordinal);
+
             if (item.Track == null)
             {
                 continue;
@@ -2215,11 +2240,15 @@ public partial class MainWindow : Window
                 {
                     Background =
                         (Brush)FindResource(
-                            "CardBackground"),
+                            isSuspendedItem
+                                ? "PanelBackground"
+                                : "CardBackground"),
 
                     BorderBrush =
                         (Brush)FindResource(
-                            "BorderBrushDark"),
+                            isSuspendedItem
+                                ? "WarningBrush"
+                                : "BorderBrushDark"),
 
                     BorderThickness =
                         new Thickness(1),
@@ -2289,6 +2318,19 @@ public partial class MainWindow : Window
 
             var infoPanel =
                 new StackPanel();
+
+            if (isSuspendedItem)
+            {
+                infoPanel.Children.Add(
+                    new TextBlock
+                    {
+                        Text = "⏸ ПРИОСТАНОВЛЕН",
+                        FontSize = 10,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = (Brush)FindResource("WarningBrush"),
+                        Margin = new Thickness(0, 0, 0, 4)
+                    });
+            }
 
             var trackText =
                 new TextBlock
@@ -2367,6 +2409,30 @@ public partial class MainWindow : Window
             infoPanel.Children.Add(
                 sourceText);
 
+            if (isSuspendedItem)
+            {
+                var duration =
+                    item.Track.Duration;
+
+                var positionText =
+                    duration > TimeSpan.Zero
+                        ? $"Позиция: {FormatTime(item.ResumePosition)} / {FormatTime(duration)}"
+                        : $"Позиция: {FormatTime(item.ResumePosition)}";
+
+                infoPanel.Children.Add(
+                    new TextBlock
+                    {
+                        Text =
+                            positionText +
+                            " • продолжится после приоритетных заказов",
+
+                        FontSize = 11,
+                        Foreground = (Brush)FindResource("WarningBrush"),
+                        TextWrapping = TextWrapping.Wrap,
+                        Margin = new Thickness(0, 4, 0, 0)
+                    });
+            }
+
             Grid.SetColumn(
                 infoPanel,
                 1);
@@ -2374,32 +2440,49 @@ public partial class MainWindow : Window
             grid.Children.Add(
                 infoPanel);
 
-            var removeButton =
-                new Button
-                {
-                    Content =
-                        "×",
+            if (isSuspendedItem)
+            {
+                var suspendedLabel =
+                    new TextBlock
+                    {
+                        Text = "⏸",
+                        FontSize = 16,
+                        FontWeight = FontWeights.Bold,
+                        Foreground = (Brush)FindResource("WarningBrush"),
+                        VerticalAlignment = VerticalAlignment.Center,
+                        HorizontalAlignment = HorizontalAlignment.Center,
+                        Margin = new Thickness(8, 0, 0, 0),
+                        ToolTip = "Трек приостановлен до завершения приоритетных заказов"
+                    };
 
-                    Style =
-                        (Style)FindResource(
-                            "QueueActionButton"),
+                Grid.SetColumn(
+                    suspendedLabel,
+                    2);
 
-                    ToolTip =
-                        "Удалить",
+                grid.Children.Add(
+                    suspendedLabel);
+            }
+            else
+            {
+                var removeButton =
+                    new Button
+                    {
+                        Content = "×",
+                        Style = (Style)FindResource("QueueActionButton"),
+                        ToolTip = "Удалить",
+                        Tag = item.Id
+                    };
 
-                    Tag =
-                        item.Id
-                };
+                removeButton.Click +=
+                    DequeueButton_Click;
 
-            removeButton.Click +=
-                DequeueButton_Click;
+                Grid.SetColumn(
+                    removeButton,
+                    2);
 
-            Grid.SetColumn(
-                removeButton,
-                2);
-
-            grid.Children.Add(
-                removeButton);
+                grid.Children.Add(
+                    removeButton);
+            }
 
             border.Child =
                 grid;
@@ -2410,8 +2493,7 @@ public partial class MainWindow : Window
             queuePosition++;
         }
 
-        QueueStatusText.Text =
-            $"В очереди: {items.Count}";
+        UpdateQueueStatus();
     }
 
     private async void MainWindow_Closed(
