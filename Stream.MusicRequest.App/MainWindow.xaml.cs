@@ -2483,6 +2483,15 @@ public partial class MainWindow : Window
 
         try
         {
+            _myWaveSource.Dispose();
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Info($"Ошибка освобождения источника «Моя волна»: {ex.Message}");
+        }
+
+        try
+        {
             await _yandexClient
                 .DisposeAsync()
                 .AsTask()
