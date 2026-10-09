@@ -199,9 +199,18 @@ public class MusicPlaybackController
 
             if (_viewerModeActive)
             {
-                // Пока играет SUPER-PRIORITY, обычные донаты должны оставаться
-                // в очереди и не включать автопереход в обход контроллера.
-                if (!_superPriorityActive)
+                // Ориентируемся не только на флаг контроллера, но и на сам
+                // текущий элемент: обычный донат не должен включить автопереход
+                // посреди SUPER-PRIORITY даже при рассинхронизации флага.
+                var priorityTrackIsPlaying =
+                    _superPriorityActive ||
+                    _viewerMusic.CurrentItem?.QueuePriority >= 100;
+
+                if (priorityTrackIsPlaying)
+                {
+                    _viewerMusic.AutoAdvanceEnabled = false;
+                }
+                else
                 {
                     _viewerMusic.AutoAdvanceEnabled = true;
 
@@ -300,12 +309,11 @@ public class MusicPlaybackController
                 // до завершения суперприоритета, иначе он может проиграться дважды.
                 _queue.PromoteToFront(item.Id);
 
+                _superPriorityActive = true;
                 _viewerMusic.AutoAdvanceEnabled = false;
 
                 if (!_viewerMusic.IsPlaying)
                     await _viewerMusic.StartNextAsync();
-
-                _superPriorityActive = true;
 
                 FileLogger.Info(
                     $"Donation SUPER-PRIORITY: #{item.Id} запущен поверх очереди зрителей.");
