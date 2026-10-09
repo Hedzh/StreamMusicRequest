@@ -171,6 +171,9 @@ public class MainMusicService
                     $"Основная музыка запущена: " +
                     $"{track.Artist} — {track.Title}");
 
+                // Пока текущий трек играет, заранее загружаем следующую sequence.
+                await EnsureContinuousTracksAsync();
+
                 return true;
             }
             catch (Exception ex) when (
