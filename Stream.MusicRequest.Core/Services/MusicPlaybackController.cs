@@ -17,6 +17,7 @@ public class MusicPlaybackController
 
     private bool _viewerModeActive;
     private bool _pendingNormalDonation;
+    private bool _superPriorityActive;
 
     private readonly SemaphoreSlim _operationGate =
         new(1, 1);
@@ -252,8 +253,7 @@ public class MusicPlaybackController
         {
             ValidateQueueItem(item);
 
-            if (_priorityResumeMainState != null ||
-                _priorityResumeViewerItem != null)
+            if (_superPriorityActive)
             {
                 item.QueuePriority = 100;
                 _queue.PromoteByPriority(item.Id);
@@ -284,18 +284,16 @@ public class MusicPlaybackController
 
                 await _viewerMusic.StopAsync();
 
-                if (_priorityResumeViewerItem != null)
-                {
-                    _queue.EnqueueFront(
-                        _priorityResumeViewerItem);
-                }
-
+                // Сохраняем прерванный трек отдельно. Не добавляем его в очередь
+                // до завершения суперприоритета, иначе он может проиграться дважды.
                 _queue.PromoteToFront(item.Id);
 
                 _viewerMusic.AutoAdvanceEnabled = false;
 
                 if (!_viewerMusic.IsPlaying)
                     await _viewerMusic.StartNextAsync();
+
+                _superPriorityActive = true;
 
                 FileLogger.Info(
                     $"Donation SUPER-PRIORITY: #{item.Id} запущен поверх очереди зрителей.");
@@ -314,6 +312,7 @@ public class MusicPlaybackController
             }
 
             _viewerModeActive = true;
+            _superPriorityActive = true;
 
             item.QueuePriority = 100;
             _queue.PromoteByPriority(item.Id);
@@ -624,6 +623,7 @@ public class MusicPlaybackController
             _savedMainState = null;
             _priorityResumeMainState = null;
             _priorityResumeViewerItem = null;
+            _superPriorityActive = false;
 
             _viewerMusic.AutoAdvanceEnabled = true;
             _mainMusic.AutoAdvanceEnabled = true;
@@ -682,6 +682,7 @@ public class MusicPlaybackController
             {
                 if (_queue.Peek()?.QueuePriority >= 100)
                 {
+                    _superPriorityActive = true;
                     _viewerModeActive = true;
                     _viewerMusic.AutoAdvanceEnabled = false;
 
@@ -697,6 +698,7 @@ public class MusicPlaybackController
 
                 if (_priorityResumeMainState != null)
                 {
+                    _superPriorityActive = false;
                     var state = _priorityResumeMainState;
                     _priorityResumeMainState = null;
 
@@ -713,6 +715,7 @@ public class MusicPlaybackController
 
                 if (_priorityResumeViewerItem != null)
                 {
+                    _superPriorityActive = false;
                     var item = _priorityResumeViewerItem;
                     _priorityResumeViewerItem = null;
 
