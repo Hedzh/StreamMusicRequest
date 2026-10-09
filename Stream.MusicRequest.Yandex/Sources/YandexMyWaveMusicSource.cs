@@ -107,11 +107,33 @@ public sealed class YandexMyWaveMusicSource : IPlayableMusicSource, IContinuousM
                 _radioSessionId = session.RadioSessionId;
             }
 
-            _currentBatchId = session.BatchId;
             var before = album.Tracks.Count;
             AddTracks(album, session);
             var added = album.Tracks.Count - before;
 
+            // Rotor может повторить уже выданные треки. В таком случае
+            // пробуем запросить ещё несколько sequence, чтобы не зациклиться
+            // на конце локальной очереди.
+            for (var attempt = 0; added == 0 && attempt < 2; attempt++)
+            {
+                var lastId = album.Tracks.LastOrDefault()?.Id;
+                session = await RequestNextSequenceAsync(
+                    _radioSessionId!,
+                    string.IsNullOrWhiteSpace(lastId) ? Array.Empty<string>() : new[] { lastId })
+                    .ConfigureAwait(false);
+
+                if (session.UnknownSession || session.Terminated)
+                {
+                    session = await CreateSessionAsync().ConfigureAwait(false);
+                    _radioSessionId = session.RadioSessionId;
+                }
+
+                before = album.Tracks.Count;
+                AddTracks(album, session);
+                added = album.Tracks.Count - before;
+            }
+
+            _currentBatchId = session.BatchId;
             FileLogger.Info($"Моя волна: загружена следующая sequence, добавлено треков: {added}.");
             return added;
         }
