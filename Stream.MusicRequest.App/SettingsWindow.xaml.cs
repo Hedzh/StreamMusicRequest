@@ -863,15 +863,14 @@ public partial class SettingsWindow : Window
         }
     }
 
-    private async void PlaybackSettingsSaveButton_Click(
+    private async void PlaybackModeApplyButton_Click(
         object sender,
         RoutedEventArgs e)
     {
         var isMyWaveSelected =
             MainMusicSourceMyWaveRadioButton.IsChecked == true;
 
-        var url =
-            DefaultPlaylistUrlTextBox.Text.Trim();
+        var url = DefaultPlaylistUrlTextBox.Text.Trim();
 
         if (!isMyWaveSelected &&
             string.IsNullOrWhiteSpace(url) &&
@@ -903,58 +902,46 @@ public partial class SettingsWindow : Window
         }
 
         if (!isMyWaveSelected &&
-            !string.IsNullOrWhiteSpace(url))
+            !string.IsNullOrWhiteSpace(url) &&
+            !_yandexMusicSource.CanHandlePlaylistUrl(url))
         {
-            if (!_yandexMusicSource.CanHandlePlaylistUrl(url))
-            {
-                AppMessageBox.Show(
-                    this,
-                    "Указана некорректная ссылка на плейлист Yandex Music.",
-                    "Воспроизведение",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Warning);
-                return;
-            }
+            AppMessageBox.Show(
+                this,
+                "Указана некорректная ссылка на плейлист Yandex Music.",
+                "Воспроизведение",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
         }
 
-        _playbackSettings =
-            new PlaybackSettings
-            {
-                Volume =
-                    (float)Math.Clamp(
-                        PlaybackSettingsVolumeSlider.Value / 100.0,
-                        0.0,
-                        1.0),
-
-                DefaultPlaylistUrl = url,
-
-                LoadDefaultPlaylistOnStartup =
-                    !isMyWaveSelected &&
-                    LoadDefaultPlaylistOnStartupCheckBox.IsChecked == true
-                    && !string.IsNullOrWhiteSpace(url),
-
-                MainMusicSource =
-                    isMyWaveSelected ? "MyWave" : "Playlist"
-            };
+        var settings = new PlaybackSettings
+        {
+            // Режим можно применить независимо от сохранённой громкости.
+            Volume = _playbackSettings.Volume,
+            DefaultPlaylistUrl = url,
+            LoadDefaultPlaylistOnStartup =
+                !isMyWaveSelected &&
+                LoadDefaultPlaylistOnStartupCheckBox.IsChecked == true &&
+                !string.IsNullOrWhiteSpace(url),
+            MainMusicSource = isMyWaveSelected ? "MyWave" : "Playlist"
+        };
 
         try
         {
-            await _playbackSettingsStorage
-                .SaveAsync(_playbackSettings);
-
             if (_applyPlaybackSettings != null)
-            {
-                await _applyPlaybackSettings(_playbackSettings);
-            }
+                await _applyPlaybackSettings(settings);
+
+            await _playbackSettingsStorage.SaveAsync(settings);
+            _playbackSettings = settings;
 
             DefaultPlaylistStatusText.Text =
                 isMyWaveSelected
-                    ? "Настройки сохранены. Запрос на запуск «Моей волны» отправлен."
-                    : "Настройки сохранены.";
+                    ? "Режим «Моя волна» применён и сохранён."
+                    : "Режим «Плейлист» применён и сохранён.";
 
             AppMessageBox.Show(
                 this,
-                "Настройки воспроизведения сохранены.",
+                "Режим воспроизведения применён и сохранён.",
                 "Воспроизведение",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
@@ -963,7 +950,46 @@ public partial class SettingsWindow : Window
         {
             AppMessageBox.Show(
                 this,
-                $"Настройки сохранены не полностью или источник не удалось запустить.\\n\\n{ex.Message}",
+                $"Не удалось применить режим воспроизведения.\n\n{ex.Message}",
+                "Воспроизведение",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    private async void PlaybackSettingsSaveButton_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        try
+        {
+            // Эта кнопка отвечает только за громкость по умолчанию.
+            var settings = new PlaybackSettings
+            {
+                Volume = (float)Math.Clamp(
+                    PlaybackSettingsVolumeSlider.Value / 100.0,
+                    0.0,
+                    1.0),
+                DefaultPlaylistUrl = _playbackSettings.DefaultPlaylistUrl,
+                LoadDefaultPlaylistOnStartup = _playbackSettings.LoadDefaultPlaylistOnStartup,
+                MainMusicSource = _playbackSettings.MainMusicSource
+            };
+
+            await _playbackSettingsStorage.SaveAsync(settings);
+            _playbackSettings = settings;
+
+            AppMessageBox.Show(
+                this,
+                $"Громкость по умолчанию сохранена: {settings.Volume:P0}.",
+                "Воспроизведение",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            AppMessageBox.Show(
+                this,
+                $"Не удалось сохранить громкость по умолчанию.\n\n{ex.Message}",
                 "Воспроизведение",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
