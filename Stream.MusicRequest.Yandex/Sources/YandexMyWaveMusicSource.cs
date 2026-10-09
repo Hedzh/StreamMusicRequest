@@ -150,12 +150,27 @@ public sealed class YandexMyWaveMusicSource : IPlayableMusicSource, IContinuousM
         if (string.IsNullOrWhiteSpace(track.Id))
             return null;
 
+        if (_batchByTrackId.TryGetValue(track.Id, out var batchId) &&
+            _sessionByTrackId.TryGetValue(track.Id, out var sessionId))
+        {
+            try
+            {
+                await SendFeedbackAsync(
+                    sessionId,
+                    track.Id,
+                    "trackStarted",
+                    null,
+                    batchId).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                // Feedback не должен мешать воспроизведению самой музыки.
+                FileLogger.Info($"Моя волна: feedback trackStarted не отправлен: {ex.Message}");
+            }
+        }
+
         try
         {
-            if (_batchByTrackId.TryGetValue(track.Id, out var batchId) &&
-                _sessionByTrackId.TryGetValue(track.Id, out var sessionId))
-                await SendFeedbackAsync(sessionId, track.Id, "trackStarted", null, batchId).ConfigureAwait(false);
-
             return await _client.Tracks.GetDirectLinkAsync(track.Id).ConfigureAwait(false);
         }
         catch (Exception ex)
