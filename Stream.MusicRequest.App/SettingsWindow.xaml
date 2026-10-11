@@ -1822,7 +1822,7 @@
                                            FontWeight="SemiBold"
                                            Foreground="{StaticResource AccentBrush}"/>
 
-                                <TextBlock Text="Ответы Twitch в чат, OBS-виджет и улучшения интерфейса"
+                                <TextBlock Text="Моя волна, улучшения очереди, OBS и стабилизация воспроизведения"
                                            FontSize="13"
                                            Foreground="{StaticResource TextSecondary}"
                                            TextWrapping="Wrap"
@@ -1831,40 +1831,60 @@
                                 <TextBlock Text="Добавлено"
                                            Style="{StaticResource SectionTitle}"
                                            Margin="0,18,0,10"/>
+                                <TextBlock Text="• Добавлена поддержка «Моей волны» Яндекс Музыки как альтернативного источника основной музыки наряду с плейлистом."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Добавлена непрерывная подгрузка рекомендаций и предварительная загрузка следующей последовательности треков."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Добавлена отправка событий начала, завершения и пропуска трека в сервис «Моей волны»."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• При выборе режима «Плейлист» автоматически включается автозагрузка сохранённого плейлиста при запуске; галочку можно отключить вручную."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Добавлено отображение приостановленного зрительского трека в очереди во время SUPER-PRIORITY без дублирования заказа."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Добавлены отдельные настройки ответов в Twitch-чат об успешных и отклонённых музыкальных заказах."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Добавлено отображение текущей обложки в главном окне и OBS-виджете, а также три варианта оформления OBS с графическими превью."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Добавлен раздел «О программе» с номером версии и информацией об авторе."
+                                           Style="{StaticResource FieldDescription}"/>
 
-                                <TextBlock Text="• Добавлены автоматические ответы в Twitch-чат при успешном или отклонённом заказе музыки."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• В настройках добавлено отдельное включение и отключение сообщений об успешных и отклонённых заказах."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Добавлен раздел «О программе» с информацией о приложении, версии и авторе."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Добавлено отображение текущей обложки в главном окне и OBS-виджете."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Добавлены три режима OBS-виджета: «Просто текст», «Картинка слева, текст справа» и «Картинка на фоне»."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Добавлены графические превью режимов OBS в настройках с выбором через RadioButton."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Кнопка «Применить» для OBS теперь одновременно применяет и сохраняет выбранный режим."
-                                           Style="{StaticResource FieldDescription}"/>
-
-                                <TextBlock Text="Изменено"
+                                <TextBlock Text="Изменено и улучшено"
                                            Style="{StaticResource SectionTitle}"
                                            Margin="0,20,0,12"/>
-                                <TextBlock Text="• В режиме «Картинка на фоне» обложка занимает весь квадрат 800×800, а текст располагается поверх нижней части изображения."
+                                <TextBlock Text="• В режиме «Моя волна» не показывается управление перемешиванием плейлиста; рекомендации подбирает сама радиостанция."
                                            Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Для фонового режима используется увеличенный текст 64 px с чёрной обводкой и небольшой тенью."
+                                <TextBlock Text="• Применение режима воспроизведения больше не сбрасывает текущую громкость и не перезаписывает громкость по умолчанию."
                                            Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• OBS-виджет показывает имя заказавшего только для заявок зрителей, а основную музыку — как «Исполнитель — Название трека»."
+                                <TextBlock Text="• Переключение между источниками защищено от устаревших фоновых операций; повторное применение тех же настроек не пересоздаёт источник без необходимости."
                                            Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Загрузка обложки OBS выполняется через локальный прокси и защищена от устаревшего браузерного кэша."
+                                <TextBlock Text="• Приоритетные донаты обрабатываются последовательно, а обычный автопереход не должен прерывать активный SUPER-PRIORITY."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Для фонового оформления OBS обложка заполняет область 800×800, а текст 64 px отображается поверх изображения с чёрной обводкой и тенью."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Во всех вариантах OBS сохраняется бегущая строка; имя заказчика показывается только для зрительских заказов."
+                                           Style="{StaticResource FieldDescription}"/>
+
+                                <TextBlock Text="Исправлено"
+                                           Style="{StaticResource SectionTitle}"
+                                           Margin="0,20,0,12"/>
+                                <TextBlock Text="• Исправлена обработка ответов продолжения «Моей волны», в том числе ситуация, когда в ответе не приходит новый идентификатор сессии."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Исправлены гонки при быстром переключении источника и устаревший автопереход от предыдущего источника."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Исправлена обработка нескольких SUPER-PRIORITY донатов подряд, сохранение приостановленного трека и переход после пропуска."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Добавлены повторные попытки загрузки треков при HTTP 429; улучшена обработка OAuth-ошибок Donation Alerts и последовательная обработка донатов."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Исправлено обновление обложки и информации о текущем треке в OBS при смене музыкального источника; при завершении приложения освобождаются ресурсы «Моей волны»."
                                            Style="{StaticResource FieldDescription}"/>
 
                                 <TextBlock Text="Примечания"
                                            Style="{StaticResource SectionTitle}"
                                            Margin="0,20,0,12"/>
-                                <TextBlock Text="• После изменения режима отображения уже открытый Browser Source в OBS может потребовать обновления страницы, чтобы получить актуальное состояние виджета."
+                                <TextBlock Text="• Для «Моей волны» требуется авторизация Яндекс Музыки. Для режима «Плейлист» укажите ссылку на альбом или плейлист, а не на отдельный трек."
                                            Style="{StaticResource FieldDescription}"/>
-
+                                <TextBlock Text="• После смены оформления OBS уже открытый Browser Source может потребовать обновления страницы."
+                                           Style="{StaticResource FieldDescription}"/>
                             </StackPanel>
                         </Border>
 
@@ -1985,6 +2005,29 @@
                                 <TextBlock Text="• Локальная громкость воспроизведения использует более мягкую кривую и не влияет на аудиопоток OBS."
                                            Style="{StaticResource FieldDescription}"/>
                                 <TextBlock Text="• Открытие настроек больше не сбрасывает текущую громкость главного окна к сохранённому значению."
+                                           Style="{StaticResource FieldDescription}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource SettingsCard}">
+                            <StackPanel>
+                                <TextBlock Text="1.2.3 — 03.10.2026"
+                                           FontSize="20"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource AccentBrush}"/>
+                                <TextBlock Text="Улучшения управления громкостью"
+                                           FontSize="12"
+                                           Foreground="{StaticResource TextMuted}"
+                                           Margin="0,4,0,16"/>
+                                <TextBlock Text="Исправлено"
+                                           Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="• Сделана более плавная регулировка громкости локального воспроизведения."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Изменение громкости приложения больше не влияет на отдельный аудиопоток OBS."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Открытие настроек не меняет текущую громкость на сохранённое значение."
+                                           Style="{StaticResource FieldDescription}"/>
+                                <TextBlock Text="• Сохранённая громкость используется как значение по умолчанию при запуске."
                                            Style="{StaticResource FieldDescription}"/>
                             </StackPanel>
                         </Border>
