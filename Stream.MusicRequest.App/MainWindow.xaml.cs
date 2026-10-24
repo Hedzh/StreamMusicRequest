@@ -325,13 +325,10 @@ public partial class MainWindow : Window
         PlaybackSlider.PreviewMouseLeftButtonDown +=
             PlaybackSlider_PreviewMouseLeftButtonDown;
 
-        // Slider/Thumb may mark MouseLeftButtonUp as handled.
-        // Listen even when handled so a seek is not silently skipped.
-        PlaybackSlider.AddHandler(
-            System.Windows.UIElement.MouseLeftButtonUpEvent,
-            new System.Windows.Input.MouseButtonEventHandler(
-                PlaybackSlider_MouseLeftButtonUp),
-            true);
+        // Capture the final slider value during the tunneling phase,
+        // before Slider/Thumb bubbling handlers can change its state.
+        PlaybackSlider.PreviewMouseLeftButtonUp +=
+            PlaybackSlider_MouseLeftButtonUp;
 
         PlaybackSlider.ValueChanged +=
             PlaybackSlider_ValueChanged;
