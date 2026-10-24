@@ -325,10 +325,13 @@ public partial class MainWindow : Window
         PlaybackSlider.PreviewMouseLeftButtonDown +=
             PlaybackSlider_PreviewMouseLeftButtonDown;
 
-        // Capture the final slider value during the tunneling phase,
-        // before Slider/Thumb bubbling handlers can change its state.
-        PlaybackSlider.PreviewMouseLeftButtonUp +=
-            PlaybackSlider_MouseLeftButtonUp;
+        // Run the seek after WPF finishes processing mouse-up and updates
+        // the Slider/Thumb value. The event may be handled by the Slider itself.
+        PlaybackSlider.AddHandler(
+            System.Windows.UIElement.MouseLeftButtonUpEvent,
+            new System.Windows.Input.MouseButtonEventHandler(
+                PlaybackSlider_MouseLeftButtonUp),
+            true);
 
         PlaybackSlider.ValueChanged +=
             PlaybackSlider_ValueChanged;
@@ -1216,20 +1219,38 @@ public partial class MainWindow : Window
             $"кнопка={e.ChangedButton}; состояние _isSeeking={_isSeeking}.");
     }
 
-    private async void PlaybackSlider_MouseLeftButtonUp(
+    private void PlaybackSlider_MouseLeftButtonUp(
         object sender,
         System.Windows.Input.MouseButtonEventArgs e)
     {
-        // Keep the slider protected from periodic UI refreshes until the seek completes.
-        // Otherwise the timer can write the old player position back while seeking is in progress.
+        if (e.ChangedButton != System.Windows.Input.MouseButton.Left)
+        {
+            return;
+        }
+
+        // Do not read Slider.Value inside the routed event: this handler may run
+        // before WPF finishes its own Thumb/Track mouse-up processing.
+        // Defer until the current input event has completely finished.
+        Dispatcher.BeginInvoke(
+            System.Windows.Threading.DispatcherPriority.Background,
+            new Action(async () => await CompletePlaybackSeekAsync()));
+    }
+
+    private async Task CompletePlaybackSeekAsync()
+    {
+        // Read the target only after WPF has finalized the Slider value.
+        var targetSeconds =
+            Math.Clamp(
+                PlaybackSlider.Value,
+                PlaybackSlider.Minimum,
+                PlaybackSlider.Maximum);
+
         var position =
             TimeSpan.FromSeconds(
-                Math.Max(
-                    0,
-                    PlaybackSlider.Value));
+                Math.Max(0, targetSeconds));
 
         FileLogger.Info(
-            $"Перемотка UI: отпускание мыши. Цель={position}; " +
+            $"Перемотка UI: обработка после MouseUp. Цель={position}; " +
             $"позиция плеера до запроса={_musicPlayer.GetPosition()}; " +
             $"режим зрителей={_playbackController.IsViewerModeActive}; " +
             $"Slider={PlaybackSlider.Value:0.###} сек.");
@@ -1240,14 +1261,11 @@ public partial class MainWindow : Window
         {
             if (_playbackController.IsViewerModeActive)
             {
-                await _playbackService.SeekAsync(
-                    position);
+                await _playbackService.SeekAsync(position);
             }
             else
             {
-                await _mainMusicService
-                    .SeekCurrentAsync(
-                        position);
+                await _mainMusicService.SeekCurrentAsync(position);
             }
 
             FileLogger.Info(
