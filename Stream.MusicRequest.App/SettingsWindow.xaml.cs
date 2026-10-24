@@ -727,13 +727,7 @@ public partial class SettingsWindow : Window
             _playbackSettings =
                 _playbackSettingsStorage.Load();
 
-            PlaybackSettingsVolumeSlider.Value =
-                _playbackSettings.Volume * 100.0;
-
-            PlaybackSettingsVolumeText.Text =
-                $"{PlaybackSettingsVolumeSlider.Value:0}%";
-
-            MainMusicSourcePlaylistRadioButton.IsChecked =
+MainMusicSourcePlaylistRadioButton.IsChecked =
                 !string.Equals(
                     _playbackSettings.MainMusicSource,
                     "MyWave",
@@ -795,29 +789,6 @@ public partial class SettingsWindow : Window
             isPlaylistSelected
                 ? Visibility.Collapsed
                 : Visibility.Visible;
-    }
-
-    private void PlaybackSettingsVolumeSlider_ValueChanged(
-        object sender,
-        RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (!_isInitialized ||
-            _isLoadingPlaybackSettings)
-        {
-            return;
-        }
-
-        var volume =
-            Math.Clamp(
-                PlaybackSettingsVolumeSlider.Value / 100.0,
-                0.0,
-                1.0);
-
-        PlaybackSettingsVolumeText.Text =
-            $"{PlaybackSettingsVolumeSlider.Value:0}%";
-
-        _setPlaybackVolume?.Invoke(
-            (float)volume);
     }
 
     private void DefaultPlaylistClearButton_Click(
@@ -969,45 +940,6 @@ public partial class SettingsWindow : Window
             AppMessageBox.Show(
                 this,
                 $"Не удалось применить режим воспроизведения.\n\n{ex.Message}",
-                "Воспроизведение",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
-        }
-    }
-
-    private async void PlaybackSettingsSaveButton_Click(
-        object sender,
-        RoutedEventArgs e)
-    {
-        try
-        {
-            // Эта кнопка отвечает только за громкость по умолчанию.
-            var settings = new PlaybackSettings
-            {
-                Volume = (float)Math.Clamp(
-                    PlaybackSettingsVolumeSlider.Value / 100.0,
-                    0.0,
-                    1.0),
-                DefaultPlaylistUrl = _playbackSettings.DefaultPlaylistUrl,
-                LoadDefaultPlaylistOnStartup = _playbackSettings.LoadDefaultPlaylistOnStartup,
-                MainMusicSource = _playbackSettings.MainMusicSource
-            };
-
-            await _playbackSettingsStorage.SaveAsync(settings);
-            _playbackSettings = settings;
-
-            AppMessageBox.Show(
-                this,
-                $"Громкость по умолчанию сохранена: {settings.Volume:P0}.",
-                "Воспроизведение",
-                MessageBoxButton.OK,
-                MessageBoxImage.Information);
-        }
-        catch (Exception ex)
-        {
-            AppMessageBox.Show(
-                this,
-                $"Не удалось сохранить громкость по умолчанию.\n\n{ex.Message}",
                 "Воспроизведение",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
