@@ -16,7 +16,6 @@ public partial class SettingsWindow : Window
 {
     private readonly AppServices _appServices;
     private readonly YandexMusicSource _yandexMusicSource;
-    private readonly Action<float>? _setPlaybackVolume;
     private readonly Action<string>? _applyObsDisplayMode;
     private readonly Func<PlaybackSettings, Task>? _applyPlaybackSettings;
 
@@ -40,7 +39,6 @@ public partial class SettingsWindow : Window
     public SettingsWindow(
         AppServices appServices,
         YandexMusicSource yandexMusicSource,
-        Action<float>? setPlaybackVolume = null,
         Action<string>? applyObsDisplayMode = null,
         Func<PlaybackSettings, Task>? applyPlaybackSettings = null)
     {
@@ -55,9 +53,6 @@ public partial class SettingsWindow : Window
             yandexMusicSource
             ?? throw new ArgumentNullException(
                 nameof(yandexMusicSource));
-
-        _setPlaybackVolume =
-            setPlaybackVolume;
 
         _applyObsDisplayMode =
             applyObsDisplayMode;
