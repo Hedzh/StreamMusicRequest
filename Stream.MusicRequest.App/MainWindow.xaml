@@ -586,7 +586,7 @@
                                                                 <!-- SEEK BAR -->
 
                                                                 <Slider x:Name="PlaybackSlider"
-                                                                        IsMoveToPointEnabled="False"
+                                                                        IsMoveToPointEnabled="True"
                                                                         Grid.Column="1"
                                                                         Minimum="0"
                                                                         Maximum="100"

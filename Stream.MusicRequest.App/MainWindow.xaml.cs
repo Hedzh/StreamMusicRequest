@@ -2,7 +2,6 @@
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -1209,28 +1208,15 @@ public partial class MainWindow : Window
         object sender,
         System.Windows.Input.MouseButtonEventArgs e)
     {
-        // Convert track clicks directly through WPF Track so thumb-aware geometry is respected.
-        // This avoids relying on Slider's built-in click-to-point event handling.
-        if (PlaybackSlider.Template.FindName(
-                "PART_Track",
-                PlaybackSlider) is Track track &&
-            track.Thumb?.IsMouseOver != true)
-        {
-            PlaybackSlider.Value =
-                track.ValueFromPoint(
-                    e.GetPosition(track));
-
-            // Prevent the built-in Slider handler from competing with this explicit value.
-            e.Handled = true;
-        }
+        // Enable seek-preview mode before WPF's Slider handles the click.
+        // This prevents the periodic UI refresh from overwriting the user's target.
+        _isSeeking = true;
 
         FileLogger.Info(
             $"Перемотка UI: нажатие мыши. Slider={PlaybackSlider.Value:0.###} сек.; " +
             $"позиция плеера={_musicPlayer.GetPosition()}; " +
             $"режим зрителей={_playbackController.IsViewerModeActive}; " +
             $"кнопка={e.ChangedButton}; состояние _isSeeking={_isSeeking}.");
-
-        _isSeeking = true;
     }
 
     private async void PlaybackSlider_MouseLeftButtonUp(
