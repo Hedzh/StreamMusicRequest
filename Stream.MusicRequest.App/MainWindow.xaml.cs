@@ -1208,6 +1208,12 @@ public partial class MainWindow : Window
         object sender,
         System.Windows.Input.MouseButtonEventArgs e)
     {
+        FileLogger.Info(
+            $"Перемотка UI: нажатие мыши. Slider={PlaybackSlider.Value:0.###} сек.; " +
+            $"позиция плеера={_musicPlayer.GetPosition()}; " +
+            $"режим зрителей={_playbackController.IsViewerModeActive}; " +
+            $"кнопка={e.ChangedButton}; состояние _isSeeking={_isSeeking}.");
+
         _isSeeking = true;
     }
 
@@ -1222,6 +1228,12 @@ public partial class MainWindow : Window
                 Math.Max(
                     0,
                     PlaybackSlider.Value));
+
+        FileLogger.Info(
+            $"Перемотка UI: отпускание мыши. Цель={position}; " +
+            $"позиция плеера до запроса={_musicPlayer.GetPosition()}; " +
+            $"режим зрителей={_playbackController.IsViewerModeActive}; " +
+            $"Slider={PlaybackSlider.Value:0.###} сек.");
 
         _isSeeking = true;
 
@@ -1238,6 +1250,11 @@ public partial class MainWindow : Window
                     .SeekCurrentAsync(
                         position);
             }
+
+            FileLogger.Info(
+                $"Перемотка UI: сервис завершил запрос. Цель={position}; " +
+                $"позиция плеера после запроса={_musicPlayer.GetPosition()}; " +
+                $"Slider={PlaybackSlider.Value:0.###} сек.");
         }
         catch (Exception ex)
         {
@@ -1251,6 +1268,12 @@ public partial class MainWindow : Window
         {
             _isSeeking = false;
             UpdatePlaybackUi();
+
+            FileLogger.Info(
+                $"Перемотка UI: обновление после завершения. " +
+                $"позиция плеера={_musicPlayer.GetPosition()}; " +
+                $"Slider={PlaybackSlider.Value:0.###} сек.; " +
+                $"текущий трек={_musicPlayer.GetCurrentTrack()?.Title ?? "(нет)"}.");
         }
     }
 
