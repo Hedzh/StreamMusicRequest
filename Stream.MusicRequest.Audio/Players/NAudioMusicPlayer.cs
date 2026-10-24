@@ -323,6 +323,10 @@ public class NAudioMusicPlayer :
 
                 reader.CurrentTime = clampedPosition;
 
+                FileLogger.Info(
+                    $"SeekAsync диагностика: позиция reader после установки: {reader.CurrentTime}; " +
+                    $"целевая позиция: {clampedPosition}; было воспроизведение: {wasPlaying}.");
+
                 var resampler =
                     new MediaFoundationResampler(
                         reader,
@@ -344,6 +348,10 @@ public class NAudioMusicPlayer :
                 output.Init(streamingProvider);
                 output.Volume = ToOutputVolume(_volume);
 
+                FileLogger.Info(
+                    $"SeekAsync диагностика: после output.Init позиция reader: {reader.CurrentTime}; " +
+                    $"состояние нового WaveOut: {output.PlaybackState}.");
+
                 _resampler = resampler;
                 _streamingProvider = streamingProvider;
                 _outputDevice = output;
@@ -353,7 +361,20 @@ public class NAudioMusicPlayer :
                 if (wasPlaying)
                 {
                     output.Play();
+
+                    FileLogger.Info(
+                        $"SeekAsync диагностика: сразу после output.Play позиция reader: {reader.CurrentTime}; " +
+                        $"состояние WaveOut: {output.PlaybackState}.");
                 }
+                else
+                {
+                    FileLogger.Info(
+                        $"SeekAsync диагностика: трек до перемотки был на паузе; позиция reader: {reader.CurrentTime}.");
+                }
+
+                // Снимок через 300 мс помогает выявить позицию, которую reader
+                // сообщает уже после начала чтения аудиобуферов.
+                _ = LogSeekPositionAfterDelayAsync(reader, output, clampedPosition);
 
                 StartPlaybackMonitor();
             }
@@ -371,6 +392,32 @@ public class NAudioMusicPlayer :
         finally
         {
             _operationGate.Release();
+        }
+    }
+
+    private static async Task LogSeekPositionAfterDelayAsync(
+        MediaFoundationReader reader,
+        WaveOut output,
+        TimeSpan targetPosition)
+    {
+        try
+        {
+            await Task.Delay(300).ConfigureAwait(false);
+
+            FileLogger.Info(
+                $"SeekAsync диагностика: через 300 мс позиция reader: {reader.CurrentTime}; " +
+                $"целевая позиция: {targetPosition}; состояние WaveOut: {output.PlaybackState}.");
+        }
+        catch (ObjectDisposedException)
+        {
+            FileLogger.Info(
+                "SeekAsync диагностика: reader или WaveOut уже освобождён до контрольного замера.");
+        }
+        catch (Exception ex)
+        {
+            FileLogger.Error(
+                "SeekAsync диагностика: не удалось получить контрольную позицию через 300 мс.",
+                ex);
         }
     }
 
