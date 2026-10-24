@@ -325,8 +325,10 @@ public partial class MainWindow : Window
         PlaybackSlider.PreviewMouseLeftButtonDown +=
             PlaybackSlider_PreviewMouseLeftButtonDown;
 
-        PlaybackSlider.PreviewMouseLeftButtonUp +=
-            PlaybackSlider_PreviewMouseLeftButtonUp;
+        // Use the bubbling event so the Slider's own mouse-up processing
+        // completes before we read Value and seek the audio player.
+        PlaybackSlider.MouseLeftButtonUp +=
+            PlaybackSlider_MouseLeftButtonUp;
 
         PlaybackSlider.ValueChanged +=
             PlaybackSlider_ValueChanged;
@@ -1206,7 +1208,7 @@ public partial class MainWindow : Window
         _isSeeking = true;
     }
 
-    private async void PlaybackSlider_PreviewMouseLeftButtonUp(
+    private async void PlaybackSlider_MouseLeftButtonUp(
         object sender,
         System.Windows.Input.MouseButtonEventArgs e)
     {
