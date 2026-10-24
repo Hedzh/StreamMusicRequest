@@ -1344,12 +1344,6 @@ public partial class MainWindow : Window
             new SettingsWindow(
                 _appServices,
                 _yandexMusicSource,
-                volume =>
-                {
-                    _musicPlayer.SetVolume(volume);
-                    VolumeSlider.Value =
-                        volume * 100.0;
-                },
                 displayMode =>
                 {
                     _obsWidgetServer.SetDisplayMode(
