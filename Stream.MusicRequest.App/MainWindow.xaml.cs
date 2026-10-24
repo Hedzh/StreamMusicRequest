@@ -2,6 +2,7 @@
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -325,8 +326,8 @@ public partial class MainWindow : Window
         PlaybackSlider.PreviewMouseLeftButtonDown +=
             PlaybackSlider_PreviewMouseLeftButtonDown;
 
-        // Run the seek after WPF finishes processing mouse-up and updates
-        // the Slider/Thumb value. The event may be handled by the Slider itself.
+        // Slider/Thumb may mark MouseLeftButtonUp as handled.
+        // Listen even when handled so a seek is not silently skipped.
         PlaybackSlider.AddHandler(
             System.Windows.UIElement.MouseLeftButtonUpEvent,
             new System.Windows.Input.MouseButtonEventHandler(
@@ -1208,49 +1209,44 @@ public partial class MainWindow : Window
         object sender,
         System.Windows.Input.MouseButtonEventArgs e)
     {
-        // Enable seek-preview mode before WPF's Slider handles the click.
-        // This prevents the periodic UI refresh from overwriting the user's target.
-        _isSeeking = true;
+        // Convert track clicks directly through WPF Track so thumb-aware geometry is respected.
+        // This avoids relying on Slider's built-in click-to-point event handling.
+        if (PlaybackSlider.Template.FindName(
+                "PART_Track",
+                PlaybackSlider) is Track track &&
+            track.Thumb?.IsMouseOver != true)
+        {
+            PlaybackSlider.Value =
+                track.ValueFromPoint(
+                    e.GetPosition(track));
+
+            // Prevent the built-in Slider handler from competing with this explicit value.
+            e.Handled = true;
+        }
 
         FileLogger.Info(
             $"Перемотка UI: нажатие мыши. Slider={PlaybackSlider.Value:0.###} сек.; " +
             $"позиция плеера={_musicPlayer.GetPosition()}; " +
             $"режим зрителей={_playbackController.IsViewerModeActive}; " +
             $"кнопка={e.ChangedButton}; состояние _isSeeking={_isSeeking}.");
+
+        _isSeeking = true;
     }
 
-    private void PlaybackSlider_MouseLeftButtonUp(
+    private async void PlaybackSlider_MouseLeftButtonUp(
         object sender,
         System.Windows.Input.MouseButtonEventArgs e)
     {
-        if (e.ChangedButton != System.Windows.Input.MouseButton.Left)
-        {
-            return;
-        }
-
-        // Do not read Slider.Value inside the routed event: this handler may run
-        // before WPF finishes its own Thumb/Track mouse-up processing.
-        // Defer until the current input event has completely finished.
-        Dispatcher.BeginInvoke(
-            System.Windows.Threading.DispatcherPriority.Background,
-            new Action(async () => await CompletePlaybackSeekAsync()));
-    }
-
-    private async Task CompletePlaybackSeekAsync()
-    {
-        // Read the target only after WPF has finalized the Slider value.
-        var targetSeconds =
-            Math.Clamp(
-                PlaybackSlider.Value,
-                PlaybackSlider.Minimum,
-                PlaybackSlider.Maximum);
-
+        // Keep the slider protected from periodic UI refreshes until the seek completes.
+        // Otherwise the timer can write the old player position back while seeking is in progress.
         var position =
             TimeSpan.FromSeconds(
-                Math.Max(0, targetSeconds));
+                Math.Max(
+                    0,
+                    PlaybackSlider.Value));
 
         FileLogger.Info(
-            $"Перемотка UI: обработка после MouseUp. Цель={position}; " +
+            $"Перемотка UI: отпускание мыши. Цель={position}; " +
             $"позиция плеера до запроса={_musicPlayer.GetPosition()}; " +
             $"режим зрителей={_playbackController.IsViewerModeActive}; " +
             $"Slider={PlaybackSlider.Value:0.###} сек.");
@@ -1261,11 +1257,14 @@ public partial class MainWindow : Window
         {
             if (_playbackController.IsViewerModeActive)
             {
-                await _playbackService.SeekAsync(position);
+                await _playbackService.SeekAsync(
+                    position);
             }
             else
             {
-                await _mainMusicService.SeekCurrentAsync(position);
+                await _mainMusicService
+                    .SeekCurrentAsync(
+                        position);
             }
 
             FileLogger.Info(
