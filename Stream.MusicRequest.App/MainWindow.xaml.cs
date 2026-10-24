@@ -1210,14 +1210,18 @@ public partial class MainWindow : Window
         object sender,
         System.Windows.Input.MouseButtonEventArgs e)
     {
-        _isSeeking = false;
+        // Keep the slider protected from periodic UI refreshes until the seek completes.
+        // Otherwise the timer can write the old player position back while seeking is in progress.
+        var position =
+            TimeSpan.FromSeconds(
+                Math.Max(
+                    0,
+                    PlaybackSlider.Value));
+
+        _isSeeking = true;
 
         try
         {
-            var position =
-                TimeSpan.FromSeconds(
-                    PlaybackSlider.Value);
-
             if (_playbackController.IsViewerModeActive)
             {
                 await _playbackService.SeekAsync(
@@ -1237,6 +1241,11 @@ public partial class MainWindow : Window
                 "Ошибка перемотки",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
+        }
+        finally
+        {
+            _isSeeking = false;
+            UpdatePlaybackUi();
         }
     }
 
