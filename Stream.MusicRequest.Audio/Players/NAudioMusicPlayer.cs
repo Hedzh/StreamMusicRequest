@@ -264,6 +264,11 @@ public class NAudioMusicPlayer :
 
     public async Task SeekAsync(TimeSpan position)
     {
+        FileLogger.Info(
+            $"SeekAsync диагностика: запрос получен. Цель={position}; " +
+            $"позиция до ожидания блокировки={GetPosition()}; " +
+            $"IsPlaying={IsPlaying}; трек={_currentTrack?.Title ?? "(нет)"}.");
+
         await _operationGate.WaitAsync().ConfigureAwait(false);
 
         try
@@ -294,6 +299,13 @@ public class NAudioMusicPlayer :
                         : position;
 
             var wasPlaying = IsPlaying;
+
+            FileLogger.Info(
+                $"SeekAsync диагностика: блокировка получена. " +
+                $"Цель={clampedPosition}; текущая позиция={reader.CurrentTime}; " +
+                $"длительность={duration}; было воспроизведение={wasPlaying}; " +
+                $"состояние WaveOut={_outputDevice?.PlaybackState.ToString() ?? "(нет)"}; " +
+                $"трек={_currentTrack?.Title ?? "(нет)"}.");
 
             FileLogger.Info(
                 $"SeekAsync: перемещение на " +
@@ -377,6 +389,12 @@ public class NAudioMusicPlayer :
                 _ = LogSeekPositionAfterDelayAsync(reader, output, clampedPosition);
 
                 StartPlaybackMonitor();
+
+                FileLogger.Info(
+                    $"SeekAsync диагностика: операция завершена. " +
+                    $"позиция reader={reader.CurrentTime}; " +
+                    $"состояние WaveOut={output.PlaybackState}; " +
+                    $"трек={_currentTrack?.Title ?? "(нет)"}.");
             }
             catch (Exception ex)
             {
