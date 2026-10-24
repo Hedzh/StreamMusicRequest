@@ -334,6 +334,12 @@ public partial class MainWindow : Window
         VolumeSlider.ValueChanged +=
             VolumeSlider_ValueChanged;
 
+        VolumeSlider.PreviewMouseLeftButtonUp +=
+            VolumeSlider_PreviewMouseLeftButtonUp;
+
+        VolumeSlider.PreviewKeyUp +=
+            VolumeSlider_PreviewKeyUp;
+
         VolumeSlider.Value =
             _playbackSettings.Volume * 100.0;
 
@@ -1265,6 +1271,51 @@ public partial class MainWindow : Window
 
         _musicPlayer.SetVolume(
             (float)volume);
+    }
+
+    private async void VolumeSlider_PreviewMouseLeftButtonUp(
+        object sender,
+        System.Windows.Input.MouseButtonEventArgs e)
+    {
+        await SaveVolumeSettingAsync();
+    }
+
+    private async void VolumeSlider_PreviewKeyUp(
+        object sender,
+        System.Windows.Input.KeyEventArgs e)
+    {
+        await SaveVolumeSettingAsync();
+    }
+
+    private async Task SaveVolumeSettingAsync()
+    {
+        var volume =
+            (float)Math.Clamp(
+                VolumeSlider.Value / 100.0,
+                0.0,
+                1.0);
+
+        var settings = new PlaybackSettings
+        {
+            Volume = volume,
+            DefaultPlaylistUrl = _playbackSettings.DefaultPlaylistUrl,
+            LoadDefaultPlaylistOnStartup = _playbackSettings.LoadDefaultPlaylistOnStartup,
+            MainMusicSource = _playbackSettings.MainMusicSource
+        };
+
+        try
+        {
+            await _playbackSettingsStorage.SaveAsync(settings);
+            _playbackSettings = settings;
+        }
+        catch (Exception ex)
+        {
+            AppMessageBox.Show(
+                $"Не удалось автоматически сохранить громкость. Новое значение применяется до закрытия приложения.\\n\\n{ex.Message}",
+                "Громкость",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
     }
 
     private static string FormatTime(
