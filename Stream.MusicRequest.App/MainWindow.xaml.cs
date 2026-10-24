@@ -1295,23 +1295,28 @@ public partial class MainWindow : Window
                 0.0,
                 1.0);
 
-        var settings = new PlaybackSettings
-        {
-            Volume = volume,
-            DefaultPlaylistUrl = _playbackSettings.DefaultPlaylistUrl,
-            LoadDefaultPlaylistOnStartup = _playbackSettings.LoadDefaultPlaylistOnStartup,
-            MainMusicSource = _playbackSettings.MainMusicSource
-        };
-
         try
         {
+            // Settings may have changed in the modal settings window.
+            // Reload them before changing Volume so unrelated values are preserved.
+            var currentSettings =
+                _playbackSettingsStorage.Load();
+
+            var settings = new PlaybackSettings
+            {
+                Volume = volume,
+                DefaultPlaylistUrl = currentSettings.DefaultPlaylistUrl,
+                LoadDefaultPlaylistOnStartup = currentSettings.LoadDefaultPlaylistOnStartup,
+                MainMusicSource = currentSettings.MainMusicSource
+            };
+
             await _playbackSettingsStorage.SaveAsync(settings);
             _playbackSettings = settings;
         }
         catch (Exception ex)
         {
             AppMessageBox.Show(
-                $"Не удалось автоматически сохранить громкость. Новое значение применяется до закрытия приложения.\\n\\n{ex.Message}",
+                $"Не удалось автоматически сохранить громкость. Новое значение применяется до закрытия приложения.\n\n{ex.Message}",
                 "Громкость",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
