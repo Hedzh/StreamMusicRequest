@@ -23,6 +23,7 @@ public partial class SettingsWindow : Window
     private readonly Action<bool>? _setHotkeysSuspended;
     private readonly PlaybackHotkeySettingsStorage _playbackHotkeySettingsStorage;
     private PlaybackHotkeySettings _hotkeySettings = new();
+    private bool _isCapturingHotkey;
 
     private readonly StackPanel[] _pages;
 
@@ -168,6 +169,31 @@ public partial class SettingsWindow : Window
         SetHotkeyText(NextTrackHotkeyTextBox, PlaybackHotkeyAction.NextTrack);
         SetHotkeyText(PreviousTrackHotkeyTextBox, PlaybackHotkeyAction.PreviousTrack);
         SetHotkeyText(PlayPauseHotkeyTextBox, PlaybackHotkeyAction.PlayPause);
+        _isCapturingHotkey = false;
+    }
+
+    private void EditHotkeyButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button ||
+            button.Tag is not string actionName ||
+            !Enum.TryParse<PlaybackHotkeyAction>(actionName, out var action))
+            return;
+
+        var textBox = action switch
+        {
+            PlaybackHotkeyAction.NextTrack => NextTrackHotkeyTextBox,
+            PlaybackHotkeyAction.PreviousTrack => PreviousTrackHotkeyTextBox,
+            PlaybackHotkeyAction.PlayPause => PlayPauseHotkeyTextBox,
+            _ => null
+        };
+
+        if (textBox == null)
+            return;
+
+        _isCapturingHotkey = true;
+        textBox.Text = "Нажмите клавишу или комбинацию…";
+        textBox.Focus();
+        Keyboard.Focus(textBox);
     }
 
     private void SetHotkeyText(TextBox textBox, PlaybackHotkeyAction action)
@@ -185,6 +211,9 @@ public partial class SettingsWindow : Window
             !Enum.TryParse<PlaybackHotkeyAction>(actionName, out var action))
             return;
 
+        if (!_isCapturingHotkey)
+            return;
+
         e.Handled = true;
         var key = e.Key == Key.System ? e.SystemKey : e.Key;
         if (key == Key.Escape)
@@ -196,7 +225,7 @@ public partial class SettingsWindow : Window
         if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt
             or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin)
         {
-            textBox.Text = "Теперь нажмите сочетание…";
+            textBox.Text = "Модификатор выбран; нажмите следующую клавишу…";
             return;
         }
 
@@ -207,15 +236,29 @@ public partial class SettingsWindow : Window
         if ((modifiers & ModifierKeys.Shift) != 0) nativeModifiers |= 0x0004;
         if ((modifiers & ModifierKeys.Windows) != 0) nativeModifiers |= 0x0008;
 
-        if (nativeModifiers == 0)
+        var virtualKey = (uint)KeyInterop.VirtualKeyFromKey(key);
+        if (virtualKey == 0)
         {
-            textBox.Text = "Нужен Ctrl, Alt, Shift или Win";
+            textBox.Text = "Эта клавиша не поддерживается";
             return;
         }
 
-        var virtualKey = (uint)KeyInterop.VirtualKeyFromKey(key);
-        if (virtualKey == 0)
-            return;
+        // Bare letters and digits can steal ordinary typing from every app.
+        if (nativeModifiers == 0 && IsTypingKey(key))
+        {
+            var confirmation = AppMessageBox.Show(
+                this,
+                $"Клавиша «{key}» будет перехватываться во всех приложениях, пока работает SMR. Это может мешать набору текста. Назначить её?",
+                "Одиночная горячая клавиша",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (confirmation != MessageBoxResult.Yes)
+            {
+                textBox.Text = "Нажмите клавишу или комбинацию…";
+                return;
+            }
+        }
 
         var proposed = new PlaybackHotkeySettings
         {
@@ -248,7 +291,11 @@ public partial class SettingsWindow : Window
         }
 
         _setHotkeysSuspended?.Invoke(true);
+        _isCapturingHotkey = false;
     }
+
+    private static bool IsTypingKey(Key key) =>
+        key is >= Key.A and <= Key.Z or >= Key.D0 and <= Key.D9 or >= Key.NumPad0 and <= Key.NumPad9;
 
     private void ClearHotkeyButton_Click(object sender, RoutedEventArgs e)
     {
@@ -280,6 +327,7 @@ public partial class SettingsWindow : Window
         }
 
         _setHotkeysSuspended?.Invoke(true);
+        _isCapturingHotkey = false;
     }
 
     private async Task SaveHotkeysAsync()
