@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Interop;
-using System.Windows.Input;
 
 namespace Stream.MusicRequest.App;
 
@@ -85,6 +84,7 @@ public sealed class GlobalPlaybackHotkeyService : IDisposable
     private readonly Dictionary<int, PlaybackHotkeyBinding> _registered = [];
     private HwndSource? _source;
     private bool _disposed;
+    private bool _suspended;
 
     public GlobalPlaybackHotkeyService(
         Window window,
@@ -123,6 +123,12 @@ public sealed class GlobalPlaybackHotkeyService : IDisposable
         if (duplicate != null)
         {
             error = "Одна и та же комбинация назначена нескольким действиям.";
+            return false;
+        }
+
+        if (_suspended)
+        {
+            error = "Горячие клавиши временно отключены для захвата сочетания.";
             return false;
         }
 
@@ -170,6 +176,41 @@ public sealed class GlobalPlaybackHotkeyService : IDisposable
         foreach (var pair in proposed)
             _registered[pair.Key] = pair.Value;
         return true;
+    }
+
+    public void Suspend()
+    {
+        if (_source == null || _suspended || _disposed)
+            return;
+
+        foreach (var id in _registered.Keys)
+            UnregisterHotKey(_source.Handle, id);
+
+        _suspended = true;
+    }
+
+    public void Resume()
+    {
+        if (_source == null || !_suspended || _disposed)
+            return;
+
+        var failedIds = new List<int>();
+        foreach (var pair in _registered)
+        {
+            var binding = pair.Value;
+            if (!RegisterHotKey(_source.Handle, pair.Key,
+                    binding.Modifiers | ModNoRepeat, binding.VirtualKey))
+            {
+                failedIds.Add(pair.Key);
+                Stream.MusicRequest.Core.Diagnostics.FileLogger.Error(
+                    $"Не удалось восстановить глобальную горячую клавишу «{binding.DisplayName}».");
+            }
+        }
+
+        foreach (var id in failedIds)
+            _registered.Remove(id);
+
+        _suspended = false;
     }
 
     private void Window_SourceInitialized(object? sender, EventArgs e)
