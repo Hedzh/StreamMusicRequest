@@ -31,6 +31,8 @@ public partial class MainWindow : Window
     private readonly MusicPlaybackService _playbackService;
     private readonly MainMusicService _mainMusicService;
     private readonly MusicPlaybackController _playbackController;
+    private readonly GlobalPlaybackHotkeyService _globalPlaybackHotkeyService;
+    private readonly PlaybackHotkeySettingsStorage _playbackHotkeySettingsStorage;
 
     private readonly YandexMusicClient _yandexClient;
     private readonly YandexAuthService _yandexAuthService;
@@ -182,6 +184,18 @@ public partial class MainWindow : Window
                 _queue,
                 banService);
 
+        _playbackHotkeySettingsStorage =
+            new PlaybackHotkeySettingsStorage(
+                settingsDirectory);
+
+        _globalPlaybackHotkeyService =
+            new GlobalPlaybackHotkeyService(
+                this,
+                HandleGlobalPlaybackHotkey);
+
+        SourceInitialized +=
+            MainWindow_SourceInitialized;
+
         var twitchSettings =
             new TwitchSettings();
 
@@ -269,6 +283,33 @@ public partial class MainWindow : Window
 
         Loaded +=
             MainWindow_ControlsLoaded;
+    }
+
+    private void MainWindow_SourceInitialized(object? sender, EventArgs e)
+    {
+        SourceInitialized -= MainWindow_SourceInitialized;
+
+        var settings = _playbackHotkeySettingsStorage.Load();
+        if (!_globalPlaybackHotkeyService.TryApply(settings.Bindings, out var error))
+        {
+            FileLogger.Info($"Не удалось включить глобальные горячие клавиши: {error}");
+        }
+    }
+
+    private void HandleGlobalPlaybackHotkey(PlaybackHotkeyAction action)
+    {
+        switch (action)
+        {
+            case PlaybackHotkeyAction.NextTrack:
+                NextTrackButton_Click(this, new RoutedEventArgs());
+                break;
+            case PlaybackHotkeyAction.PreviousTrack:
+                PreviousTrackButton_Click(this, new RoutedEventArgs());
+                break;
+            case PlaybackHotkeyAction.PlayPause:
+                PlaybackToggleButton_Click(this, new RoutedEventArgs());
+                break;
+        }
     }
 
     private void MainWindow_ControlsLoaded(
@@ -1402,7 +1443,17 @@ public partial class MainWindow : Window
                     _obsWidgetServer.SetDisplayMode(
                         displayMode);
                 },
-                ApplyPlaybackSettingsAsync)
+                ApplyPlaybackSettingsAsync,
+                settings => _globalPlaybackHotkeyService.TryApply(
+                    settings.Bindings,
+                    out var error) ? null : error,
+                suspended =>
+                {
+                    if (suspended)
+                        _globalPlaybackHotkeyService.Suspend();
+                    else
+                        _globalPlaybackHotkeyService.Resume();
+                })
             {
                 Owner = this
             };
@@ -2666,6 +2717,7 @@ public partial class MainWindow : Window
         EventArgs e)
     {
         _playbackUiTimer.Stop();
+        _globalPlaybackHotkeyService.Dispose();
 
         _coverLoadCts?.Cancel();
         _coverLoadCts = null;
