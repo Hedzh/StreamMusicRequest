@@ -82,7 +82,7 @@ public sealed class GlobalPlaybackHotkeyService : IDisposable
 
     private readonly Window _window;
     private readonly Action<PlaybackHotkeyAction> _onHotkey;
-    private readonly Dictionary<int, PlaybackHotkeyAction> _registered = [];
+    private readonly Dictionary<int, PlaybackHotkeyBinding> _registered = [];
     private HwndSource? _source;
     private bool _disposed;
 
@@ -126,14 +126,25 @@ public sealed class GlobalPlaybackHotkeyService : IDisposable
             return false;
         }
 
-        // Register the proposed set before releasing the old set. If a new
-        // combination is already owned by another app, keep the current set.
-        var proposed = new Dictionary<int, PlaybackHotkeyAction>();
+        // Reuse registrations whose physical key combination is unchanged.
+        // New combinations are registered first, so a conflict leaves the old
+        // working configuration intact.
+        var proposed = new Dictionary<int, PlaybackHotkeyBinding>();
         var newlyRegisteredIds = new List<int>();
         var nextId = FirstHotkeyId;
 
         foreach (var binding in normalized)
         {
+            var existing = _registered.FirstOrDefault(pair =>
+                pair.Value.Modifiers == binding.Modifiers &&
+                pair.Value.VirtualKey == binding.VirtualKey);
+
+            if (existing.Value != null)
+            {
+                proposed[existing.Key] = binding;
+                continue;
+            }
+
             while (_registered.ContainsKey(nextId) || proposed.ContainsKey(nextId))
                 nextId++;
 
@@ -148,17 +159,16 @@ public sealed class GlobalPlaybackHotkeyService : IDisposable
             }
 
             newlyRegisteredIds.Add(nextId);
-            proposed[nextId] = binding.Action;
+            proposed[nextId] = binding;
             nextId++;
         }
 
-        foreach (var id in _registered.Keys)
+        foreach (var id in _registered.Keys.Where(id => !proposed.ContainsKey(id)).ToList())
             UnregisterHotKey(_source.Handle, id);
 
         _registered.Clear();
         foreach (var pair in proposed)
             _registered[pair.Key] = pair.Value;
-
         return true;
     }
 
@@ -174,12 +184,12 @@ public sealed class GlobalPlaybackHotkeyService : IDisposable
             return IntPtr.Zero;
 
         var id = wParam.ToInt32();
-        if (_registered.TryGetValue(id, out var action))
+        if (_registered.TryGetValue(id, out var binding))
         {
             handled = true;
             try
             {
-                _onHotkey(action);
+                _onHotkey(binding.Action);
             }
             catch (Exception ex)
             {
