@@ -294,8 +294,13 @@ public partial class SettingsWindow : Window
         _isCapturingHotkey = false;
     }
 
-    private static bool IsTypingKey(Key key) =>
-        key is >= Key.A and <= Key.Z or >= Key.D0 and <= Key.D9 or >= Key.NumPad0 and <= Key.NumPad9;
+    private static bool IsTypingKey(Key key)
+    {
+        var value = (int)key;
+        return (value >= (int)Key.A && value <= (int)Key.Z) ||
+               (value >= (int)Key.D0 && value <= (int)Key.D9) ||
+               (value >= (int)Key.NumPad0 && value <= (int)Key.NumPad9);
+    }
 
     private void ClearHotkeyButton_Click(object sender, RoutedEventArgs e)
     {
