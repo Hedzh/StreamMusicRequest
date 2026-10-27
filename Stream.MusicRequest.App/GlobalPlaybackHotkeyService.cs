@@ -44,8 +44,10 @@ public sealed class PlaybackHotkeySettingsStorage
             if (!File.Exists(_path))
                 return new PlaybackHotkeySettings();
 
-            return JsonSerializer.Deserialize<PlaybackHotkeySettings>(
+            var settings = JsonSerializer.Deserialize<PlaybackHotkeySettings>(
                 File.ReadAllText(_path)) ?? new PlaybackHotkeySettings();
+            settings.Bindings ??= [];
+            return settings;
         }
         catch
         {
@@ -234,7 +236,7 @@ public sealed class GlobalPlaybackHotkeyService : IDisposable
             }
             catch (Exception ex)
             {
-                Core.Diagnostics.FileLogger.Error("Ошибка выполнения глобальной горячей клавиши.", ex);
+                Stream.MusicRequest.Core.Diagnostics.FileLogger.Error("Ошибка выполнения глобальной горячей клавиши.", ex);
             }
         }
 
