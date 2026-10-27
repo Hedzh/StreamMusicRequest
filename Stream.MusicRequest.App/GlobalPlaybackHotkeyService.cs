@@ -204,7 +204,7 @@ public sealed class GlobalPlaybackHotkeyService : IDisposable
                     binding.Modifiers | ModNoRepeat, binding.VirtualKey))
             {
                 failedIds.Add(pair.Key);
-                Stream.MusicRequest.Stream.MusicRequest.Core.Diagnostics.FileLogger.Error(
+                Stream.MusicRequest.Core.Diagnostics.FileLogger.Error(
                     $"Не удалось восстановить глобальную горячую клавишу «{binding.DisplayName}».");
             }
         }
