@@ -170,6 +170,14 @@ public partial class SettingsWindow : Window
         SetHotkeyText(PlayPauseHotkeyTextBox, PlaybackHotkeyAction.PlayPause);
     }
 
+    private void SetHotkeyText(TextBox textBox, PlaybackHotkeyAction action)
+    {
+        var binding = _hotkeySettings.Bindings.FirstOrDefault(item => item.Action == action);
+        textBox.Text = binding == null || binding.VirtualKey == 0
+            ? "Не назначено — нажмите сюда"
+            : binding.DisplayName;
+    }
+
     private void HotkeyTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (sender is not TextBox textBox ||
