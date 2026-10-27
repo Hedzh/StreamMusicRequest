@@ -294,7 +294,6 @@ public partial class SettingsWindow : Window
         }
 
         _setHotkeysSuspended?.Invoke(true);
-        _isCapturingHotkey = false;
     }
 
     private async Task SaveHotkeysAsync()
