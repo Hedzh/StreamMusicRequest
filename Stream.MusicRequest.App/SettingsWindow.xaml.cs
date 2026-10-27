@@ -23,7 +23,6 @@ public partial class SettingsWindow : Window
     private readonly Action<bool>? _setHotkeysSuspended;
     private readonly PlaybackHotkeySettingsStorage _playbackHotkeySettingsStorage;
     private PlaybackHotkeySettings _hotkeySettings = new();
-    private bool _isCapturingHotkey;
 
     private readonly StackPanel[] _pages;
 
@@ -169,39 +168,6 @@ public partial class SettingsWindow : Window
         SetHotkeyText(NextTrackHotkeyTextBox, PlaybackHotkeyAction.NextTrack);
         SetHotkeyText(PreviousTrackHotkeyTextBox, PlaybackHotkeyAction.PreviousTrack);
         SetHotkeyText(PlayPauseHotkeyTextBox, PlaybackHotkeyAction.PlayPause);
-        _isCapturingHotkey = false;
-    }
-
-    private void EditHotkeyButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not Button button ||
-            button.Tag is not string actionName ||
-            !Enum.TryParse<PlaybackHotkeyAction>(actionName, out var action))
-            return;
-
-        var textBox = action switch
-        {
-            PlaybackHotkeyAction.NextTrack => NextTrackHotkeyTextBox,
-            PlaybackHotkeyAction.PreviousTrack => PreviousTrackHotkeyTextBox,
-            PlaybackHotkeyAction.PlayPause => PlayPauseHotkeyTextBox,
-            _ => null
-        };
-
-        if (textBox == null)
-            return;
-
-        _isCapturingHotkey = true;
-        textBox.Text = "Нажмите клавишу или комбинацию…";
-        textBox.Focus();
-        Keyboard.Focus(textBox);
-    }
-
-    private void SetHotkeyText(TextBox textBox, PlaybackHotkeyAction action)
-    {
-        var binding = _hotkeySettings.Bindings.FirstOrDefault(item => item.Action == action);
-        textBox.Text = binding == null || binding.VirtualKey == 0
-            ? "Не назначено — нажмите сюда"
-            : binding.DisplayName;
     }
 
     private void HotkeyTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -209,9 +175,6 @@ public partial class SettingsWindow : Window
         if (sender is not TextBox textBox ||
             textBox.Tag is not string actionName ||
             !Enum.TryParse<PlaybackHotkeyAction>(actionName, out var action))
-            return;
-
-        if (!_isCapturingHotkey)
             return;
 
         e.Handled = true;
@@ -291,7 +254,6 @@ public partial class SettingsWindow : Window
         }
 
         _setHotkeysSuspended?.Invoke(true);
-        _isCapturingHotkey = false;
     }
 
     private static bool IsTypingKey(Key key)
