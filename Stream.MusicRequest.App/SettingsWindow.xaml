@@ -1408,7 +1408,7 @@
                             <StackPanel>
                                 <TextBlock Text="Глобальные сочетания"
                                            Style="{StaticResource SectionTitle}"/>
-                                <TextBlock Text="Нажмите «Изменить», затем нажмите одну клавишу или комбинацию. Подойдут функциональные клавиши (например, F8), стрелки, буквы и цифры. Esc отменяет назначение. Одиночные буквы и цифры могут мешать набору текста в других программах."
+                                <TextBlock Text="Нажмите на поле назначения, затем нажмите одну клавишу или комбинацию. Подойдут функциональные клавиши (например, F8), стрелки, буквы и цифры. Esc отменяет назначение. Одиночные буквы и цифры могут мешать набору текста в других программах."
                                            Style="{StaticResource FieldDescription}"
                                            Margin="0,0,0,16"/>
 
@@ -1416,8 +1416,7 @@
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="190"/>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="90"/>
-                                         <ColumnDefinition Width="90"/>
+                                        <ColumnDefinition Width="100"/>
                                     </Grid.ColumnDefinitions>
                                     <TextBlock Text="Следующий трек"
                                                VerticalAlignment="Center"
@@ -1431,12 +1430,6 @@
                                              Style="{StaticResource InputBox}"
                                              Margin="0,0,10,0"/>
                                     <Button Grid.Column="2"
-                                             Content="Изменить"
-                                             Tag="NextTrack"
-                                             Click="EditHotkeyButton_Click"
-                                             Style="{StaticResource ActionButton}"
-                                             Margin="0,0,8,0"/>
-                                    <Button Grid.Column="3"
                                             Content="Очистить"
                                             Tag="NextTrack"
                                             Click="ClearHotkeyButton_Click"
@@ -1462,12 +1455,6 @@
                                              Style="{StaticResource InputBox}"
                                              Margin="0,0,10,0"/>
                                     <Button Grid.Column="2"
-                                             Content="Изменить"
-                                             Tag="PreviousTrack"
-                                             Click="EditHotkeyButton_Click"
-                                             Style="{StaticResource ActionButton}"
-                                             Margin="0,0,8,0"/>
-                                    <Button Grid.Column="3"
                                             Content="Очистить"
                                             Tag="PreviousTrack"
                                             Click="ClearHotkeyButton_Click"
@@ -1493,12 +1480,6 @@
                                              Style="{StaticResource InputBox}"
                                              Margin="0,0,10,0"/>
                                     <Button Grid.Column="2"
-                                             Content="Изменить"
-                                             Tag="PlayPause"
-                                             Click="EditHotkeyButton_Click"
-                                             Style="{StaticResource ActionButton}"
-                                             Margin="0,0,8,0"/>
-                                    <Button Grid.Column="3"
                                             Content="Очистить"
                                             Tag="PlayPause"
                                             Click="ClearHotkeyButton_Click"
