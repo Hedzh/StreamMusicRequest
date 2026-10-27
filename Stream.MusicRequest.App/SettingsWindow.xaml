@@ -492,6 +492,7 @@
                     <ListBoxItem><TextBlock Text="Twitch-награды"/></ListBoxItem>
                     <ListBoxItem><TextBlock Text="Баны"/></ListBoxItem>
                     <ListBoxItem><TextBlock Text="Воспроизведение и звук"/></ListBoxItem>
+                    <ListBoxItem><TextBlock Text="Горячие клавиши"/></ListBoxItem>
                     <ListBoxItem><TextBlock Text="OBS / Виджет"/></ListBoxItem>
                     <ListBoxItem><TextBlock Text="История изменений"/></ListBoxItem>
                     <ListBoxItem><TextBlock Text="О программе"/></ListBoxItem>
@@ -1387,6 +1388,107 @@
 
                         </Border>
 
+                    </StackPanel>
+
+                    <!-- ================================================== -->
+                    <!-- GLOBAL HOTKEYS -->
+                    <!-- ================================================== -->
+
+                    <StackPanel x:Name="HotkeysPage"
+                                Visibility="Collapsed">
+
+                        <TextBlock Text="Горячие клавиши"
+                                   Style="{StaticResource PageTitle}"/>
+
+                        <TextBlock Text="Управляйте музыкой, даже когда окно SMR свёрнуто или поверх него открыта другая программа."
+                                   Style="{StaticResource PageDescription}"
+                                   Margin="0,0,0,20"/>
+
+                        <Border Style="{StaticResource SettingsCard}">
+                            <StackPanel>
+                                <TextBlock Text="Глобальные сочетания"
+                                           Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="Нажмите на поле нужного действия, затем нажмите сочетание клавиш. Обязательно используйте Ctrl, Alt, Shift или Win. Esc отменяет захват. Сочетания действуют, пока работает SMR."
+                                           Style="{StaticResource FieldDescription}"
+                                           Margin="0,0,0,16"/>
+
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="190"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="100"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Следующий трек"
+                                               VerticalAlignment="Center"
+                                               Style="{StaticResource FieldTitle}"/>
+                                    <TextBox x:Name="NextTrackHotkeyTextBox"
+                                             Grid.Column="1"
+                                             Tag="NextTrack"
+                                             IsReadOnly="True"
+                                             Focusable="True"
+                                             PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"
+                                             Style="{StaticResource InputBox}"
+                                             Margin="0,0,10,0"/>
+                                    <Button Grid.Column="2"
+                                            Content="Очистить"
+                                            Tag="NextTrack"
+                                            Click="ClearHotkeyButton_Click"
+                                            Style="{StaticResource ActionButton}"/>
+                                </Grid>
+
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="190"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="100"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Предыдущий трек"
+                                               VerticalAlignment="Center"
+                                               Style="{StaticResource FieldTitle}"/>
+                                    <TextBox x:Name="PreviousTrackHotkeyTextBox"
+                                             Grid.Column="1"
+                                             Tag="PreviousTrack"
+                                             IsReadOnly="True"
+                                             Focusable="True"
+                                             PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"
+                                             Style="{StaticResource InputBox}"
+                                             Margin="0,0,10,0"/>
+                                    <Button Grid.Column="2"
+                                            Content="Очистить"
+                                            Tag="PreviousTrack"
+                                            Click="ClearHotkeyButton_Click"
+                                            Style="{StaticResource ActionButton}"/>
+                                </Grid>
+
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="190"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="100"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Воспроизведение / пауза"
+                                               VerticalAlignment="Center"
+                                               Style="{StaticResource FieldTitle}"/>
+                                    <TextBox x:Name="PlayPauseHotkeyTextBox"
+                                             Grid.Column="1"
+                                             Tag="PlayPause"
+                                             IsReadOnly="True"
+                                             Focusable="True"
+                                             PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"
+                                             Style="{StaticResource InputBox}"
+                                             Margin="0,0,10,0"/>
+                                    <Button Grid.Column="2"
+                                            Content="Очистить"
+                                            Tag="PlayPause"
+                                            Click="ClearHotkeyButton_Click"
+                                            Style="{StaticResource ActionButton}"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="Если сочетание занято другой программой, SMR сообщит об ошибке и сохранит предыдущие настройки."
+                                   Style="{StaticResource FieldDescription}"
+                                   Margin="0,0,0,12"/>
                     </StackPanel>
 
                     <!-- ================================================== -->
