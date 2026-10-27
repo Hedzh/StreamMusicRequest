@@ -5,6 +5,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Input;
 using Stream.MusicRequest.DonationAlerts.Models;
 using Stream.MusicRequest.Infrastructure.Storage;
 using Stream.MusicRequest.Twitch.Models;
@@ -18,6 +19,10 @@ public partial class SettingsWindow : Window
     private readonly YandexMusicSource _yandexMusicSource;
     private readonly Action<string>? _applyObsDisplayMode;
     private readonly Func<PlaybackSettings, Task>? _applyPlaybackSettings;
+    private readonly Func<PlaybackHotkeySettings, string?>? _applyHotkeys;
+    private readonly Action<bool>? _setHotkeysSuspended;
+    private readonly PlaybackHotkeySettingsStorage _playbackHotkeySettingsStorage;
+    private PlaybackHotkeySettings _hotkeySettings = new();
 
     private readonly StackPanel[] _pages;
 
@@ -40,7 +45,9 @@ public partial class SettingsWindow : Window
         AppServices appServices,
         YandexMusicSource yandexMusicSource,
         Action<string>? applyObsDisplayMode = null,
-        Func<PlaybackSettings, Task>? applyPlaybackSettings = null)
+        Func<PlaybackSettings, Task>? applyPlaybackSettings = null,
+        Func<PlaybackHotkeySettings, string?>? applyHotkeys = null,
+        Action<bool>? setHotkeysSuspended = null)
     {
         InitializeComponent();
 
@@ -60,6 +67,9 @@ public partial class SettingsWindow : Window
         _applyPlaybackSettings =
             applyPlaybackSettings;
 
+        _applyHotkeys = applyHotkeys;
+        _setHotkeysSuspended = setHotkeysSuspended;
+
         var settingsDirectory =
             Path.Combine(
                 Environment.GetFolderPath(
@@ -75,6 +85,13 @@ public partial class SettingsWindow : Window
             new PlaybackSettingsStorage(
                 settingsDirectory);
 
+        _playbackHotkeySettingsStorage =
+            new PlaybackHotkeySettingsStorage(
+                settingsDirectory);
+
+        _hotkeySettings =
+            _playbackHotkeySettingsStorage.Load();
+
         _pages =
         [
             GeneralPage,
@@ -84,6 +101,7 @@ public partial class SettingsWindow : Window
             TwitchRewardsPage,
             BansPage,
             PlaybackPage,
+            HotkeysPage,
             ObsPage,
             ChangelogPage,
             AboutPage
@@ -119,6 +137,7 @@ public partial class SettingsWindow : Window
         UpdateYandexUi();
         LoadObsSettingsUi();
         LoadPlaybackSettingsUi();
+        LoadHotkeysUi();
 
         _ = UpdateTwitchUiAsync();
         _ = LoadTwitchChatSettingsUiAsync();
@@ -132,8 +151,169 @@ public partial class SettingsWindow : Window
 
         RefreshBansUi();
 
+        Loaded += SettingsWindow_Loaded;
+
         Closed +=
             SettingsWindow_Closed;
+    }
+
+    private void SettingsWindow_Loaded(object sender, RoutedEventArgs e)
+    {
+        _setHotkeysSuspended?.Invoke(true);
+        Loaded -= SettingsWindow_Loaded;
+    }
+
+    private void LoadHotkeysUi()
+    {
+        SetHotkeyText(NextTrackHotkeyTextBox, PlaybackHotkeyAction.NextTrack);
+        SetHotkeyText(PreviousTrackHotkeyTextBox, PlaybackHotkeyAction.PreviousTrack);
+        SetHotkeyText(PlayPauseHotkeyTextBox, PlaybackHotkeyAction.PlayPause);
+    }
+
+    private void SetHotkeyText(TextBox textBox, PlaybackHotkeyAction action)
+    {
+        var binding = _hotkeySettings.Bindings.FirstOrDefault(item => item.Action == action);
+        textBox.Text = binding == null || binding.VirtualKey == 0
+            ? "Не назначено — нажмите сюда"
+            : binding.DisplayName;
+    }
+
+    private void HotkeyTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (sender is not TextBox textBox ||
+            textBox.Tag is not string actionName ||
+            !Enum.TryParse<PlaybackHotkeyAction>(actionName, out var action))
+            return;
+
+        e.Handled = true;
+        var key = e.Key == Key.System ? e.SystemKey : e.Key;
+        if (key == Key.Escape)
+        {
+            LoadHotkeysUi();
+            return;
+        }
+
+        if (key is Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt
+            or Key.LeftShift or Key.RightShift or Key.LWin or Key.RWin)
+        {
+            textBox.Text = "Теперь нажмите сочетание…";
+            return;
+        }
+
+        var modifiers = Keyboard.Modifiers;
+        uint nativeModifiers = 0;
+        if ((modifiers & ModifierKeys.Alt) != 0) nativeModifiers |= 0x0001;
+        if ((modifiers & ModifierKeys.Control) != 0) nativeModifiers |= 0x0002;
+        if ((modifiers & ModifierKeys.Shift) != 0) nativeModifiers |= 0x0004;
+        if ((modifiers & ModifierKeys.Windows) != 0) nativeModifiers |= 0x0008;
+
+        if (nativeModifiers == 0)
+        {
+            textBox.Text = "Нужен Ctrl, Alt, Shift или Win";
+            return;
+        }
+
+        var virtualKey = (uint)KeyInterop.VirtualKeyFromKey(key);
+        if (virtualKey == 0)
+            return;
+
+        var proposed = new PlaybackHotkeySettings
+        {
+            Bindings = _hotkeySettings.Bindings
+                .Where(item => item.Action != action)
+                .Select(CloneHotkeyBinding)
+                .ToList()
+        };
+        proposed.Bindings.Add(new PlaybackHotkeyBinding
+        {
+            Action = action,
+            VirtualKey = virtualKey,
+            Modifiers = nativeModifiers,
+            DisplayName = FormatHotkeyName(modifiers, key)
+        });
+
+        _setHotkeysSuspended?.Invoke(false);
+        var error = _applyHotkeys?.Invoke(proposed);
+        if (error == null)
+        {
+            _hotkeySettings = proposed;
+            _ = SaveHotkeysAsync();
+            LoadHotkeysUi();
+        }
+        else
+        {
+            AppMessageBox.Show(this, error, "Горячие клавиши",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            LoadHotkeysUi();
+        }
+
+        _setHotkeysSuspended?.Invoke(true);
+    }
+
+    private void ClearHotkeyButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button ||
+            button.Tag is not string actionName ||
+            !Enum.TryParse<PlaybackHotkeyAction>(actionName, out var action))
+            return;
+
+        var proposed = new PlaybackHotkeySettings
+        {
+            Bindings = _hotkeySettings.Bindings
+                .Where(item => item.Action != action)
+                .Select(CloneHotkeyBinding)
+                .ToList()
+        };
+
+        _setHotkeysSuspended?.Invoke(false);
+        var error = _applyHotkeys?.Invoke(proposed);
+        if (error == null)
+        {
+            _hotkeySettings = proposed;
+            _ = SaveHotkeysAsync();
+            LoadHotkeysUi();
+        }
+        else
+        {
+            AppMessageBox.Show(this, error, "Горячие клавиши",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+
+        _setHotkeysSuspended?.Invoke(true);
+    }
+
+    private async Task SaveHotkeysAsync()
+    {
+        try
+        {
+            await _playbackHotkeySettingsStorage.SaveAsync(_hotkeySettings);
+        }
+        catch (Exception ex)
+        {
+            AppMessageBox.Show(this,
+                $"Не удалось сохранить горячие клавиши. Настройки действуют до закрытия приложения.\n\n{ex.Message}",
+                "Горячие клавиши", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private static PlaybackHotkeyBinding CloneHotkeyBinding(PlaybackHotkeyBinding binding) =>
+        new()
+        {
+            Action = binding.Action,
+            VirtualKey = binding.VirtualKey,
+            Modifiers = binding.Modifiers,
+            DisplayName = binding.DisplayName
+        };
+
+    private static string FormatHotkeyName(ModifierKeys modifiers, Key key)
+    {
+        var parts = new List<string>();
+        if ((modifiers & ModifierKeys.Control) != 0) parts.Add("Ctrl");
+        if ((modifiers & ModifierKeys.Alt) != 0) parts.Add("Alt");
+        if ((modifiers & ModifierKeys.Shift) != 0) parts.Add("Shift");
+        if ((modifiers & ModifierKeys.Windows) != 0) parts.Add("Win");
+        parts.Add(key.ToString());
+        return string.Join(" + ", parts);
     }
 
     private void NavigationList_SelectionChanged(
@@ -2327,6 +2507,9 @@ MainMusicSourcePlaylistRadioButton.IsChecked =
         object? sender,
         EventArgs e)
     {
+        _setHotkeysSuspended?.Invoke(false);
+        Loaded -= SettingsWindow_Loaded;
+
         CloseYandexAuthorizationWindow();
         CloseTwitchAuthorizationWindow();
 
