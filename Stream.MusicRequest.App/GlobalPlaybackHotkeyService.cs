@@ -113,12 +113,6 @@ public sealed class GlobalPlaybackHotkeyService : IDisposable
             .Where(binding => binding.VirtualKey != 0)
             .ToList();
 
-        if (normalized.Any(binding => binding.Modifiers == 0))
-        {
-            error = "Для глобальной горячей клавиши нужен хотя бы один модификатор: Ctrl, Alt, Shift или Win.";
-            return false;
-        }
-
         var duplicate = normalized
             .GroupBy(binding => (binding.Modifiers, binding.VirtualKey))
             .FirstOrDefault(group => group.Count() > 1);
