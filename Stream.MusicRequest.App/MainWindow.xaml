@@ -586,6 +586,7 @@
                                                                 <!-- SEEK BAR -->
 
                                                                 <Slider x:Name="PlaybackSlider"
+                                                                        IsMoveToPointEnabled="False"
                                                                         Grid.Column="1"
                                                                         Minimum="0"
                                                                         Maximum="100"
@@ -671,6 +672,7 @@
                                                                                    Margin="0,0,8,0"/>
 
                                                                         <Slider x:Name="VolumeSlider"
+                                                                                IsMoveToPointEnabled="True"
                                                                                 Width="130"
                                                                                 Minimum="0"
                                                                                 Maximum="100"
@@ -1058,7 +1060,7 @@
                                                    HorizontalAlignment="Right"
                                                    Margin="0,2,0,0"/>
 
-                                        <TextBlock Text="v1.4.0"
+                                        <TextBlock Text="v1.4.1"
                                                    FontSize="11"
                                                    Foreground="{StaticResource TextSecondary}"
                                                    HorizontalAlignment="Right"

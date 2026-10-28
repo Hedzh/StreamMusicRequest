@@ -491,7 +491,8 @@
                     <ListBoxItem><TextBlock Text="Twitch"/></ListBoxItem>
                     <ListBoxItem><TextBlock Text="Twitch-награды"/></ListBoxItem>
                     <ListBoxItem><TextBlock Text="Баны"/></ListBoxItem>
-                    <ListBoxItem><TextBlock Text="Воспроизведение и звук"/></ListBoxItem>
+                    <ListBoxItem><TextBlock Text="Основная музыка"/></ListBoxItem>
+                    <ListBoxItem><TextBlock Text="Горячие клавиши"/></ListBoxItem>
                     <ListBoxItem><TextBlock Text="OBS / Виджет"/></ListBoxItem>
                     <ListBoxItem><TextBlock Text="История изменений"/></ListBoxItem>
                     <ListBoxItem><TextBlock Text="О программе"/></ListBoxItem>
@@ -581,6 +582,26 @@
 
                                     <ComboBoxItem Content="Русский"/>
                                     <ComboBoxItem Content="English"/>
+
+                                </ComboBox>
+
+                            </StackPanel>
+
+                        </Border>
+
+                        <Border Style="{StaticResource SettingsCard}">
+
+                            <StackPanel>
+
+                                <TextBlock Text="Аудиоустройство"
+                                           Style="{StaticResource SectionTitle}"/>
+
+                                <ComboBox Style="{StaticResource ComboBoxStyle}"
+                                          SelectedIndex="0"
+                                          Width="320"
+                                          HorizontalAlignment="Left">
+
+                                    <ComboBoxItem Content="Устройство по умолчанию"/>
 
                                 </ComboBox>
 
@@ -1278,7 +1299,7 @@
                     <StackPanel x:Name="PlaybackPage"
                                 Visibility="Collapsed">
 
-                        <TextBlock Text="Воспроизведение"
+                        <TextBlock Text="Основная музыка"
                                    Style="{StaticResource PageTitle}"/>
 
                         <TextBlock Text="Основная музыка стримера и поведение очереди музыкальных запросов."
@@ -1365,73 +1386,111 @@
 
                         </Border>
 
+                        
+
+                        
+
+                    </StackPanel>
+
+                    <!-- ================================================== -->
+                    <!-- GLOBAL HOTKEYS -->
+                    <!-- ================================================== -->
+
+                    <StackPanel x:Name="HotkeysPage"
+                                Visibility="Collapsed">
+
+                        <TextBlock Text="Горячие клавиши"
+                                   Style="{StaticResource PageTitle}"/>
+
+                        <TextBlock Text="Управляйте музыкой, даже когда окно SMR свёрнуто или поверх него открыта другая программа."
+                                   Style="{StaticResource PageDescription}"
+                                   Margin="0,0,0,20"/>
+
                         <Border Style="{StaticResource SettingsCard}">
-
                             <StackPanel>
-
-                                <TextBlock Text="Громкость"
+                                <TextBlock Text="Глобальные сочетания"
                                            Style="{StaticResource SectionTitle}"/>
+                                <TextBlock Text="Нажмите на поле назначения, затем нажмите одну клавишу или комбинацию. Подойдут функциональные клавиши (например, F8), стрелки, буквы и цифры. Esc отменяет назначение. Одиночные буквы и цифры могут мешать набору текста в других программах."
+                                           Style="{StaticResource FieldDescription}"
+                                           Margin="0,0,0,16"/>
 
-                                <Grid>
-
+                                <Grid Margin="0,0,0,12">
                                     <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="190"/>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="70"/>
+                                        <ColumnDefinition Width="100"/>
                                     </Grid.ColumnDefinitions>
-
-                                    <Slider x:Name="PlaybackSettingsVolumeSlider"
-                                            Minimum="0"
-                                            Maximum="100"
-                                            Value="75"
-                                            VerticalAlignment="Center"
-                                            Margin="0,0,16,0"
-                                            ValueChanged="PlaybackSettingsVolumeSlider_ValueChanged"/>
-
-                                    <TextBlock x:Name="PlaybackSettingsVolumeText"
-                                               Grid.Column="1"
-                                               Text="75%"
-                                               FontSize="13"
-                                               Foreground="{StaticResource TextSecondary}"
+                                    <TextBlock Text="Следующий трек"
                                                VerticalAlignment="Center"
-                                               HorizontalAlignment="Right"/>
-
+                                               Style="{StaticResource FieldTitle}"/>
+                                    <TextBox x:Name="NextTrackHotkeyTextBox"
+                                             Grid.Column="1"
+                                             Tag="NextTrack"
+                                             IsReadOnly="True"
+                                             Focusable="True"
+                                             PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"
+                                             Style="{StaticResource InputBox}"
+                                             Margin="0,0,10,0"/>
+                                    <Button Grid.Column="2"
+                                            Content="Очистить"
+                                            Tag="NextTrack"
+                                            Click="ClearHotkeyButton_Click"
+                                            Style="{StaticResource ActionButton}"/>
                                 </Grid>
 
-                                <TextBlock Text="Изменение ползунка применяется к текущему воспроизведению сразу. Нажмите «Сохранить», чтобы запомнить громкость по умолчанию между запусками."
-                                           Style="{StaticResource FieldDescription}"
-                                           Margin="0,8,0,14"/>
+                                <Grid Margin="0,0,0,12">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="190"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="100"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Предыдущий трек"
+                                               VerticalAlignment="Center"
+                                               Style="{StaticResource FieldTitle}"/>
+                                    <TextBox x:Name="PreviousTrackHotkeyTextBox"
+                                             Grid.Column="1"
+                                             Tag="PreviousTrack"
+                                             IsReadOnly="True"
+                                             Focusable="True"
+                                             PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"
+                                             Style="{StaticResource InputBox}"
+                                             Margin="0,0,10,0"/>
+                                    <Button Grid.Column="2"
+                                            Content="Очистить"
+                                            Tag="PreviousTrack"
+                                            Click="ClearHotkeyButton_Click"
+                                            Style="{StaticResource ActionButton}"/>
+                                </Grid>
 
-                                <Button Content="Сохранить"
-                                        Click="PlaybackSettingsSaveButton_Click"
-                                        Style="{StaticResource AccentButton}"
-                                        Width="140"
-                                        HorizontalAlignment="Left"/>
-
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="190"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="100"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Воспроизведение / пауза"
+                                               VerticalAlignment="Center"
+                                               Style="{StaticResource FieldTitle}"/>
+                                    <TextBox x:Name="PlayPauseHotkeyTextBox"
+                                             Grid.Column="1"
+                                             Tag="PlayPause"
+                                             IsReadOnly="True"
+                                             Focusable="True"
+                                             PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"
+                                             Style="{StaticResource InputBox}"
+                                             Margin="0,0,10,0"/>
+                                    <Button Grid.Column="2"
+                                            Content="Очистить"
+                                            Tag="PlayPause"
+                                            Click="ClearHotkeyButton_Click"
+                                            Style="{StaticResource ActionButton}"/>
+                                </Grid>
                             </StackPanel>
-
-
                         </Border>
 
-                        <Border Style="{StaticResource SettingsCard}">
-
-                            <StackPanel>
-
-                                <TextBlock Text="Аудиоустройство"
-                                           Style="{StaticResource SectionTitle}"/>
-
-                                <ComboBox Style="{StaticResource ComboBoxStyle}"
-                                          SelectedIndex="0"
-                                          Width="320"
-                                          HorizontalAlignment="Left">
-
-                                    <ComboBoxItem Content="Устройство по умолчанию"/>
-
-                                </ComboBox>
-
-                            </StackPanel>
-
-                        </Border>
-
+                        <TextBlock Text="Если сочетание занято другой программой, SMR сообщит об ошибке и сохранит предыдущие настройки."
+                                   Style="{StaticResource FieldDescription}"
+                                   Margin="0,0,0,12"/>
                     </StackPanel>
 
                     <!-- ================================================== -->
@@ -1755,7 +1814,7 @@
                                            FontWeight="SemiBold"
                                            Foreground="#FFFFFF"/>
 
-                                <TextBlock Text="Версия 1.4.0"
+                                <TextBlock Text="Версия 1.4.1"
                                            FontSize="14"
                                            FontWeight="SemiBold"
                                            Foreground="{StaticResource AccentBrush}"
@@ -1805,407 +1864,26 @@
 
                     </StackPanel>
 
-                    <StackPanel x:Name="ChangelogPage"
+                                        <StackPanel x:Name="ChangelogPage"
                                 Visibility="Collapsed">
 
                         <TextBlock Text="История изменений"
                                    Style="{StaticResource PageTitle}"/>
 
-                        <TextBlock Text="История реализованных функций, исправлений и изменений Stream Music Request."
+                        <TextBlock Text="Содержание синхронизируется с CHANGELOG.md в репозитории."
                                    Style="{StaticResource PageDescription}"
                                    Margin="0,0,0,20"/>
 
                         <Border Style="{StaticResource SettingsCard}">
-                            <StackPanel>
-                                <TextBlock Text="1.4.0 — 07.10.2026"
-                                           FontSize="20"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource AccentBrush}"/>
-
-                                <TextBlock Text="Моя волна, улучшения очереди, OBS и стабилизация воспроизведения"
-                                           FontSize="13"
-                                           Foreground="{StaticResource TextSecondary}"
-                                           TextWrapping="Wrap"
-                                           Margin="0,10,0,0"/>
-
-                                <TextBlock Text="Добавлено"
-                                           Style="{StaticResource SectionTitle}"
-                                           Margin="0,18,0,10"/>
-                                <TextBlock Text="• Добавлена поддержка «Моей волны» Яндекс Музыки как альтернативного источника основной музыки наряду с плейлистом."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Добавлена непрерывная подгрузка рекомендаций и предварительная загрузка следующей последовательности треков."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Добавлена отправка событий начала, завершения и пропуска трека в сервис «Моей волны»."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• При выборе режима «Плейлист» автоматически включается автозагрузка сохранённого плейлиста при запуске; галочку можно отключить вручную."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Добавлено отображение приостановленного зрительского трека в очереди во время SUPER-PRIORITY без дублирования заказа."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Добавлены отдельные настройки ответов в Twitch-чат об успешных и отклонённых музыкальных заказах."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Добавлено отображение текущей обложки в главном окне и OBS-виджете, а также три варианта оформления OBS с графическими превью."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Добавлен раздел «О программе» с номером версии и информацией об авторе."
-                                           Style="{StaticResource FieldDescription}"/>
-
-                                <TextBlock Text="Изменено и улучшено"
-                                           Style="{StaticResource SectionTitle}"
-                                           Margin="0,20,0,12"/>
-                                <TextBlock Text="• В режиме «Моя волна» не показывается управление перемешиванием плейлиста; рекомендации подбирает сама радиостанция."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Применение режима воспроизведения больше не сбрасывает текущую громкость и не перезаписывает громкость по умолчанию."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Переключение между источниками защищено от устаревших фоновых операций; повторное применение тех же настроек не пересоздаёт источник без необходимости."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Приоритетные донаты обрабатываются последовательно, а обычный автопереход не должен прерывать активный SUPER-PRIORITY."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Для фонового оформления OBS обложка заполняет область 800×800, а текст 64 px отображается поверх изображения с чёрной обводкой и тенью."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Во всех вариантах OBS сохраняется бегущая строка; имя заказчика показывается только для зрительских заказов."
-                                           Style="{StaticResource FieldDescription}"/>
-
-                                <TextBlock Text="Исправлено"
-                                           Style="{StaticResource SectionTitle}"
-                                           Margin="0,20,0,12"/>
-                                <TextBlock Text="• Исправлена обработка ответов продолжения «Моей волны», в том числе ситуация, когда в ответе не приходит новый идентификатор сессии."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Исправлены гонки при быстром переключении источника и устаревший автопереход от предыдущего источника."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Исправлена обработка нескольких SUPER-PRIORITY донатов подряд, сохранение приостановленного трека и переход после пропуска."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Добавлены повторные попытки загрузки треков при HTTP 429; улучшена обработка OAuth-ошибок Donation Alerts и последовательная обработка донатов."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Исправлено обновление обложки и информации о текущем треке в OBS при смене музыкального источника; при завершении приложения освобождаются ресурсы «Моей волны»."
-                                           Style="{StaticResource FieldDescription}"/>
-
-                                <TextBlock Text="Примечания"
-                                           Style="{StaticResource SectionTitle}"
-                                           Margin="0,20,0,12"/>
-                                <TextBlock Text="• Для «Моей волны» требуется авторизация Яндекс Музыки. Для режима «Плейлист» укажите ссылку на альбом или плейлист, а не на отдельный трек."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• После смены оформления OBS уже открытый Browser Source может потребовать обновления страницы."
-                                           Style="{StaticResource FieldDescription}"/>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource SettingsCard}">
-                            <StackPanel>
-                                <TextBlock Text="1.3.3 — 04.10.2026"
-                                           FontSize="20"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource AccentBrush}"/>
-
-                                <TextBlock Text="Исправлен запуск Yandex Music при ошибке Media Foundation 0x80072EE2: добавлены до трёх попыток запуска с получением новой прямой ссылки перед каждой повторной попыткой."
-                                           FontSize="13"
-                                           Foreground="{StaticResource TextSecondary}"
-                                           TextWrapping="Wrap"
-                                           Margin="0,10,0,0"/>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource SettingsCard}">
-                            <StackPanel>
-                                <TextBlock Text="1.3.2 — 04.10.2026"
-                                           FontSize="20"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource AccentBrush}"/>
-                                <TextBlock Text="Точные суммы Donation Alerts и защита донатных треков"
-                                           FontSize="12"
-                                           Foreground="{StaticResource TextMuted}"
-                                           Margin="0,4,0,16"/>
-                                <TextBlock Text="Добавлено"
-                                           Style="{StaticResource SectionTitle}"/>
-                                <TextBlock Text="• Для каждого действия Donation Alerts теперь задаётся отдельная точная сумма: обычный заказ, приоритетный заказ и пропуск трека."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Донат с суммой пропуска не требует ссылки на музыку и пропускает текущий трек независимо от его источника."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Twitch-награда «Пропустить трек» больше не может пропускать треки, заказанные через Donation Alerts."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Ручная кнопка следующего трека продолжает работать без ограничений."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="Исправлено"
-                                           Style="{StaticResource SectionTitle}"
-                                           Margin="0,20,0,12"/>
-                                <TextBlock Text="• Убраны диапазоны сумм Donation Alerts: совпадение теперь проверяется только по точной сумме."
-                                           Style="{StaticResource FieldDescription}"/>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource SettingsCard}">
-                            <StackPanel>
-                                <TextBlock Text="1.3.1 — 04.10.2026"
-                                           FontSize="20"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource AccentBrush}"/>
-                                <TextBlock Text="Twitch-награды и улучшения интерфейса"
-                                           FontSize="12"
-                                           Foreground="{StaticResource TextMuted}"
-                                           Margin="0,4,0,16"/>
-
-                                <TextBlock Text="Добавлено"
-                                           Style="{StaticResource SectionTitle}"/>
-                                <TextBlock Text="• Добавлен удобный выбор существующих Twitch-наград из выпадающего списка."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Для каждой из двух наград отображаются название, стоимость, требование пользовательского ввода и состояние включения."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Выбор награды автоматически подставляет её Reward ID, при этом сохранение выполняется только отдельной кнопкой."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Добавлена повторная проверка Twitch-награды непосредственно перед сохранением."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Добавлена защита от привязки одной Twitch-награды одновременно к двум функциям."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• При попытке сохранить несовместимую награду показывается подробное предупреждение, а настройка не сохраняется."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Увеличен размер текста в выпадающих списках настроек для более удобного чтения."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Увеличено поле выбора Twitch-награды."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Кнопки блокировки трека и пользователя недоступны во время воспроизведения основной музыки."
-                                           Style="{StaticResource FieldDescription}"/>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource SettingsCard}">
-                            <StackPanel>
-                                <TextBlock Text="1.3.0 — 04.10.2026"
-                                           FontSize="20"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource AccentBrush}"/>
-                                <TextBlock Text="Баны, восстановление воспроизведения и стабилизация"
-                                           FontSize="12"
-                                           Foreground="{StaticResource TextMuted}"
-                                           Margin="0,4,0,16"/>
-                                <TextBlock Text="Добавлено"
-                                           Style="{StaticResource SectionTitle}"/>
-                                <TextBlock Text="• Добавлена система банов пользователей и треков с сохранением данных между запусками."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• В настройках добавлен раздел «Баны» со списками заблокированных пользователей и треков и возможностью разблокировки."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Добавлены кнопки блокировки текущего трека и пользователя текущего трека в главном окне с подтверждением действия."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Заблокированные пользователи не могут отправлять новые музыкальные заявки, а заблокированные треки не добавляются в очередь."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• При блокировке текущего трека или пользователя его заявки удаляются из очереди, текущий трек останавливается, после чего воспроизведение корректно продолжается."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Исправлено зависание интерфейса при сохранении и изменении банов: операции с хранилищем теперь выполняются асинхронно без блокировки UI."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="Исправлено"
-                                           Style="{StaticResource SectionTitle}"
-                                           Margin="0,20,0,12"/>
-                                <TextBlock Text="• Исправлен результат кнопок «Да» и «Нет» в пользовательском окне подтверждения."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Исправлено восстановление основной музыки после ошибки запуска трека."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Добавлено повторное получение прямой ссылки Yandex Music при временной сетевой ошибке Media Foundation при открытии потока."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• При временной ошибке открытия потока приложение до трёх раз получает свежую прямую ссылку, прежде чем пропустить трек."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Исправлено сохранение установленной громкости после перемотки."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Локальная громкость воспроизведения использует более мягкую кривую и не влияет на аудиопоток OBS."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Открытие настроек больше не сбрасывает текущую громкость главного окна к сохранённому значению."
-                                           Style="{StaticResource FieldDescription}"/>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource SettingsCard}">
-                            <StackPanel>
-                                <TextBlock Text="1.2.3 — 03.10.2026"
-                                           FontSize="20"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource AccentBrush}"/>
-                                <TextBlock Text="Улучшения управления громкостью"
-                                           FontSize="12"
-                                           Foreground="{StaticResource TextMuted}"
-                                           Margin="0,4,0,16"/>
-                                <TextBlock Text="Исправлено"
-                                           Style="{StaticResource SectionTitle}"/>
-                                <TextBlock Text="• Сделана более плавная регулировка громкости локального воспроизведения."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Изменение громкости приложения больше не влияет на отдельный аудиопоток OBS."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Открытие настроек не меняет текущую громкость на сохранённое значение."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Сохранённая громкость используется как значение по умолчанию при запуске."
-                                           Style="{StaticResource FieldDescription}"/>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource SettingsCard}">
-                            <StackPanel>
-                                <TextBlock Text="1.2.2 — 03.10.2026"
-                                           FontSize="20"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource AccentBrush}"/>
-                                <TextBlock Text="Иконка, диалоги и исправления"
-                                           FontSize="12"
-                                           Foreground="{StaticResource TextMuted}"
-                                           Margin="0,4,0,16"/>
-                                <TextBlock Text="Добавлено и исправлено"
-                                           Style="{StaticResource SectionTitle}"/>
-                                <TextBlock Text="• Добавлена фирменная иконка SMR для главного окна, настроек и пользовательских диалоговых окон."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Иконка SMR добавлена как иконка исполняемого файла приложения."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Диалоговые окна приведены к единому визуальному стилю приложения."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Исправлена ошибка загрузки AppMessageBox, из-за которой уведомление при ошибке загрузки основной музыки могло завершить приложение."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Исправлено позиционирование пользовательских диалогов: они открываются относительно активного окна приложения и на том же мониторе."
-                                           Style="{StaticResource FieldDescription}"/>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource SettingsCard}">
-                            <StackPanel>
-                                <TextBlock Text="1.2.1 — 03.10.2026"
-                                   FontSize="20"
-                                   FontWeight="SemiBold"
-                                   Foreground="{StaticResource AccentBrush}"/>
-                        <TextBlock Text="Текущая версия — исправления и стабилизация"
-                                   FontSize="12"
-                                   Foreground="{StaticResource TextMuted}"
-                                   Margin="0,4,0,16"/>
-
-                        <TextBlock Text="Исправлено"
-                                   Style="{StaticResource SectionTitle}"/>
-                        <TextBlock Text="• Исправлено мгновенное обновление статуса Donation Alerts после выхода из аккаунта."
-                                   Style="{StaticResource FieldDescription}"/>
-                        <TextBlock Text="• Состояние авторизации Donation Alerts теперь сразу синхронизируется между настройками и главным окном."
-                                   Style="{StaticResource FieldDescription}"/>
-                        <TextBlock Text="• Исправлена обработка потери авторизации Twitch во время работы приложения."
-                                   Style="{StaticResource FieldDescription}"/>
-                        <TextBlock Text="• Добавлена обработка отзыва Twitch EventSub-авторизации."
-                                   Style="{StaticResource FieldDescription}"/>
-                        <TextBlock Text="• Исправлена логика восстановления Twitch-соединения, чтобы временный таймаут подключения не завершал уже установленную сессию."
-                                   Style="{StaticResource FieldDescription}"/>
-                        <TextBlock Text="• Улучшена диагностика ошибок восстановления Twitch-соединения."
-                                   Style="{StaticResource FieldDescription}"/>
-
-                        <TextBlock Text="Примечания"
-                                   Style="{StaticResource SectionTitle}"
-                                   Margin="0,20,0,12"/>
-                        <TextBlock Text="• Это техническое обновление перед дальнейшим тестированием и подготовкой публичного релиза."
-                                   Style="{StaticResource FieldDescription}"/>
-
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource SettingsCard}">
-                            <StackPanel>
-                                <TextBlock Text="1.2.0 — 02.10.2026"
-                                           FontSize="20"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource AccentBrush}"/>
-                                <TextBlock Text="Интеграция Donation Alerts и стабилизация"
-                                           FontSize="12"
-                                           Foreground="{StaticResource TextMuted}"
-                                           Margin="0,4,0,16"/>
-                                <TextBlock Text="Добавлено"
-                                           Style="{StaticResource SectionTitle}"/>
-                                <TextBlock Text="• Интеграция Donation Alerts для музыкальных заказов."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Авторизация и восстановление авторизации Donation Alerts при запуске."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Обычный и SUPER-PRIORITY режимы донатов с настраиваемыми порогами."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Автоматическое восстановление соединения Donation Alerts после разрыва WebSocket."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Синхронизация состояния Twitch и Donation Alerts между настройками и главным окном."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="Исправлено"
-                                           Style="{StaticResource SectionTitle}"
-                                           Margin="0,20,0,12"/>
-                                <TextBlock Text="• Ошибки обработки нескольких SUPER-PRIORITY донатов подряд."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Остановка очереди после ошибки запуска отдельного трека."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Проблемы обновления состояния подключений после закрытия настроек."
-                                           Style="{StaticResource FieldDescription}"/>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource SettingsCard}">
-                            <StackPanel>
-                                <TextBlock Text="1.1.0 — 26.09.2026"
-                                           FontSize="20"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource AccentBrush}"/>
-                                <TextBlock Text="Стабилизация Twitch и OBS"
-                                           FontSize="12"
-                                           Foreground="{StaticResource TextMuted}"
-                                           Margin="0,4,0,16"/>
-                                <TextBlock Text="Добавлено"
-                                           Style="{StaticResource SectionTitle}"/>
-                                <TextBlock Text="• OBS-интеграция с локальным HTTP-виджетом и аудиопотоком."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Сохранение настроек воспроизведения и громкости."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Настройка плейлиста Yandex Music по умолчанию."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Проверка настроек воспроизведения и явное сохранение."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Автоматическое восстановление Twitch-соединения после временных разрывов."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Уведомление о невозможности восстановить сохранённую Twitch OAuth-сессию."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="Исправлено"
-                                           Style="{StaticResource SectionTitle}"
-                                           Margin="0,20,0,12"/>
-                                <TextBlock Text="• Восстановление Twitch EventSub после длительного простоя."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Первый заказ музыки Twitch после запуска приложения."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Устаревшие события завершения воспроизведения при быстрой смене треков."
-                                           Style="{StaticResource FieldDescription}"/>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource SettingsCard}">
-                            <StackPanel>
-                                <TextBlock Text="1.0.0 — базовая версия"
-                                           FontSize="20"
-                                           FontWeight="SemiBold"
-                                           Foreground="{StaticResource AccentBrush}"/>
-                                <TextBlock Text="Первая рабочая версия проекта"
-                                           FontSize="12"
-                                           Foreground="{StaticResource TextMuted}"
-                                           Margin="0,4,0,16"/>
-
-                                <TextBlock Text="Реализовано"
-                                           Style="{StaticResource SectionTitle}"/>
-                                <TextBlock Text="• Базовое WPF-приложение на .NET с разделением на Core, Twitch, Yandex, Audio, Infrastructure и App."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Авторизация Twitch через OAuth/device flow с сохранением авторизации."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Получение текущего Twitch-пользователя и работа с Channel Points."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Ручная привязка существующих Twitch-наград к действиям приложения."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Награда «Заказ музыки» с вводом ссылки на трек."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Награда «Пропустить трек» для переключения текущего трека."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Авторизация Yandex Music и получение музыкальных данных."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Загрузка альбомов и плейлистов Yandex Music как основной музыки."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Проверка ссылок Yandex Music для пользовательских запросов."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Очередь пользовательских запросов с последовательным воспроизведением."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Переключение между основной музыкой и музыкой, заказанной зрителями."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Воспроизведение аудио через NAudio и Media Foundation."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Управление громкостью и базовыми командами воспроизведения."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Логирование работы приложения в локальный app.log."
-                                           Style="{StaticResource FieldDescription}"/>
-                                <TextBlock Text="• Базовая система настроек и отдельные настройки Twitch/Yandex."
-                                           Style="{StaticResource FieldDescription}"/>
-                            </StackPanel>
+                            <FlowDocumentScrollViewer x:Name="ChangelogViewer"
+                                                      IsToolBarVisible="False"
+                                                      VerticalScrollBarVisibility="Disabled"
+                                                      HorizontalScrollBarVisibility="Disabled"
+                                                      Background="Transparent"
+                                                      Foreground="{StaticResource TextPrimary}"
+                                                      FontFamily="Segoe UI"
+                                                      FontSize="13"
+                                                      Padding="0"/>
                         </Border>
 
                     </StackPanel>

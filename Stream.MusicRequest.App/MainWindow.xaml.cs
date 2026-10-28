@@ -2,6 +2,7 @@
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -30,6 +31,8 @@ public partial class MainWindow : Window
     private readonly MusicPlaybackService _playbackService;
     private readonly MainMusicService _mainMusicService;
     private readonly MusicPlaybackController _playbackController;
+    private readonly GlobalPlaybackHotkeyService _globalPlaybackHotkeyService;
+    private readonly PlaybackHotkeySettingsStorage _playbackHotkeySettingsStorage;
 
     private readonly YandexMusicClient _yandexClient;
     private readonly YandexAuthService _yandexAuthService;
@@ -181,6 +184,18 @@ public partial class MainWindow : Window
                 _queue,
                 banService);
 
+        _playbackHotkeySettingsStorage =
+            new PlaybackHotkeySettingsStorage(
+                settingsDirectory);
+
+        _globalPlaybackHotkeyService =
+            new GlobalPlaybackHotkeyService(
+                this,
+                HandleGlobalPlaybackHotkey);
+
+        SourceInitialized +=
+            MainWindow_SourceInitialized;
+
         var twitchSettings =
             new TwitchSettings();
 
@@ -270,6 +285,33 @@ public partial class MainWindow : Window
             MainWindow_ControlsLoaded;
     }
 
+    private void MainWindow_SourceInitialized(object? sender, EventArgs e)
+    {
+        SourceInitialized -= MainWindow_SourceInitialized;
+
+        var settings = _playbackHotkeySettingsStorage.Load();
+        if (!_globalPlaybackHotkeyService.TryApply(settings.Bindings, out var error))
+        {
+            FileLogger.Info($"Не удалось включить глобальные горячие клавиши: {error}");
+        }
+    }
+
+    private void HandleGlobalPlaybackHotkey(PlaybackHotkeyAction action)
+    {
+        switch (action)
+        {
+            case PlaybackHotkeyAction.NextTrack:
+                NextTrackButton_Click(this, new RoutedEventArgs());
+                break;
+            case PlaybackHotkeyAction.PreviousTrack:
+                PreviousTrackButton_Click(this, new RoutedEventArgs());
+                break;
+            case PlaybackHotkeyAction.PlayPause:
+                PlaybackToggleButton_Click(this, new RoutedEventArgs());
+                break;
+        }
+    }
+
     private void MainWindow_ControlsLoaded(
         object sender,
         RoutedEventArgs e)
@@ -325,14 +367,25 @@ public partial class MainWindow : Window
         PlaybackSlider.PreviewMouseLeftButtonDown +=
             PlaybackSlider_PreviewMouseLeftButtonDown;
 
-        PlaybackSlider.PreviewMouseLeftButtonUp +=
-            PlaybackSlider_PreviewMouseLeftButtonUp;
+        // Slider/Thumb may mark MouseLeftButtonUp as handled.
+        // Listen even when handled so a seek is not silently skipped.
+        PlaybackSlider.AddHandler(
+            System.Windows.UIElement.MouseLeftButtonUpEvent,
+            new System.Windows.Input.MouseButtonEventHandler(
+                PlaybackSlider_MouseLeftButtonUp),
+            true);
 
         PlaybackSlider.ValueChanged +=
             PlaybackSlider_ValueChanged;
 
         VolumeSlider.ValueChanged +=
             VolumeSlider_ValueChanged;
+
+        VolumeSlider.PreviewMouseLeftButtonUp +=
+            VolumeSlider_PreviewMouseLeftButtonUp;
+
+        VolumeSlider.PreviewKeyUp +=
+            VolumeSlider_PreviewKeyUp;
 
         VolumeSlider.Value =
             _playbackSettings.Volume * 100.0;
@@ -1197,21 +1250,52 @@ public partial class MainWindow : Window
         object sender,
         System.Windows.Input.MouseButtonEventArgs e)
     {
+        // Convert track clicks directly through WPF Track so thumb-aware geometry is respected.
+        // This avoids relying on Slider's built-in click-to-point event handling.
+        if (PlaybackSlider.Template.FindName(
+                "PART_Track",
+                PlaybackSlider) is Track track &&
+            track.Thumb?.IsMouseOver != true)
+        {
+            PlaybackSlider.Value =
+                track.ValueFromPoint(
+                    e.GetPosition(track));
+
+            // Prevent the built-in Slider handler from competing with this explicit value.
+            e.Handled = true;
+        }
+
+        FileLogger.Info(
+            $"Перемотка UI: нажатие мыши. Slider={PlaybackSlider.Value:0.###} сек.; " +
+            $"позиция плеера={_musicPlayer.GetPosition()}; " +
+            $"режим зрителей={_playbackController.IsViewerModeActive}; " +
+            $"кнопка={e.ChangedButton}; состояние _isSeeking={_isSeeking}.");
+
         _isSeeking = true;
     }
 
-    private async void PlaybackSlider_PreviewMouseLeftButtonUp(
+    private async void PlaybackSlider_MouseLeftButtonUp(
         object sender,
         System.Windows.Input.MouseButtonEventArgs e)
     {
-        _isSeeking = false;
+        // Keep the slider protected from periodic UI refreshes until the seek completes.
+        // Otherwise the timer can write the old player position back while seeking is in progress.
+        var position =
+            TimeSpan.FromSeconds(
+                Math.Max(
+                    0,
+                    PlaybackSlider.Value));
+
+        FileLogger.Info(
+            $"Перемотка UI: отпускание мыши. Цель={position}; " +
+            $"позиция плеера до запроса={_musicPlayer.GetPosition()}; " +
+            $"режим зрителей={_playbackController.IsViewerModeActive}; " +
+            $"Slider={PlaybackSlider.Value:0.###} сек.");
+
+        _isSeeking = true;
 
         try
         {
-            var position =
-                TimeSpan.FromSeconds(
-                    PlaybackSlider.Value);
-
             if (_playbackController.IsViewerModeActive)
             {
                 await _playbackService.SeekAsync(
@@ -1223,6 +1307,11 @@ public partial class MainWindow : Window
                     .SeekCurrentAsync(
                         position);
             }
+
+            FileLogger.Info(
+                $"Перемотка UI: сервис завершил запрос. Цель={position}; " +
+                $"позиция плеера после запроса={_musicPlayer.GetPosition()}; " +
+                $"Slider={PlaybackSlider.Value:0.###} сек.");
         }
         catch (Exception ex)
         {
@@ -1231,6 +1320,17 @@ public partial class MainWindow : Window
                 "Ошибка перемотки",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
+        }
+        finally
+        {
+            _isSeeking = false;
+            UpdatePlaybackUi();
+
+            FileLogger.Info(
+                $"Перемотка UI: обновление после завершения. " +
+                $"позиция плеера={_musicPlayer.GetPosition()}; " +
+                $"Slider={PlaybackSlider.Value:0.###} сек.; " +
+                $"текущий трек={_musicPlayer.GetCurrentTrack()?.Title ?? "(нет)"}.");
         }
     }
 
@@ -1267,6 +1367,56 @@ public partial class MainWindow : Window
             (float)volume);
     }
 
+    private async void VolumeSlider_PreviewMouseLeftButtonUp(
+        object sender,
+        System.Windows.Input.MouseButtonEventArgs e)
+    {
+        await SaveVolumeSettingAsync();
+    }
+
+    private async void VolumeSlider_PreviewKeyUp(
+        object sender,
+        System.Windows.Input.KeyEventArgs e)
+    {
+        await SaveVolumeSettingAsync();
+    }
+
+    private async Task SaveVolumeSettingAsync()
+    {
+        var volume =
+            (float)Math.Clamp(
+                VolumeSlider.Value / 100.0,
+                0.0,
+                1.0);
+
+        try
+        {
+            // Settings may have changed in the modal settings window.
+            // Reload them before changing Volume so unrelated values are preserved.
+            var currentSettings =
+                _playbackSettingsStorage.Load();
+
+            var settings = new PlaybackSettings
+            {
+                Volume = volume,
+                DefaultPlaylistUrl = currentSettings.DefaultPlaylistUrl,
+                LoadDefaultPlaylistOnStartup = currentSettings.LoadDefaultPlaylistOnStartup,
+                MainMusicSource = currentSettings.MainMusicSource
+            };
+
+            await _playbackSettingsStorage.SaveAsync(settings);
+            _playbackSettings = settings;
+        }
+        catch (Exception ex)
+        {
+            AppMessageBox.Show(
+                $"Не удалось автоматически сохранить громкость. Новое значение применяется до закрытия приложения.\n\n{ex.Message}",
+                "Громкость",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+    }
+
     private static string FormatTime(
         TimeSpan time)
     {
@@ -1288,18 +1438,22 @@ public partial class MainWindow : Window
             new SettingsWindow(
                 _appServices,
                 _yandexMusicSource,
-                volume =>
-                {
-                    _musicPlayer.SetVolume(volume);
-                    VolumeSlider.Value =
-                        volume * 100.0;
-                },
                 displayMode =>
                 {
                     _obsWidgetServer.SetDisplayMode(
                         displayMode);
                 },
-                ApplyPlaybackSettingsAsync)
+                ApplyPlaybackSettingsAsync,
+                settings => _globalPlaybackHotkeyService.TryApply(
+                    settings.Bindings,
+                    out var error) ? null : error,
+                suspended =>
+                {
+                    if (suspended)
+                        _globalPlaybackHotkeyService.Suspend();
+                    else
+                        _globalPlaybackHotkeyService.Resume();
+                })
             {
                 Owner = this
             };
@@ -2563,6 +2717,7 @@ public partial class MainWindow : Window
         EventArgs e)
     {
         _playbackUiTimer.Stop();
+        _globalPlaybackHotkeyService.Dispose();
 
         _coverLoadCts?.Cancel();
         _coverLoadCts = null;

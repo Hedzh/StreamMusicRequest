@@ -12,6 +12,8 @@
   <ItemGroup>
     <Resource Include="Assets\SMR.ico" />
 
+    <EmbeddedResource Include="..\CHANGELOG.md" Link="CHANGELOG.md" LogicalName="Stream.MusicRequest.App.CHANGELOG.md" />
+
     <ProjectReference Include="..\Stream.MusicRequest.Core\Stream.MusicRequest.Core.csproj" />
     <ProjectReference Include="..\Stream.MusicRequest.Yandex\Stream.MusicRequest.Yandex.csproj" />
     <ProjectReference Include="..\Stream.MusicRequest.Infrastructure\Stream.MusicRequest.Infrastructure.csproj" />
