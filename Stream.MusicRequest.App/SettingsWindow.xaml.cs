@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Input;
 using Stream.MusicRequest.DonationAlerts.Models;
@@ -138,6 +139,7 @@ public partial class SettingsWindow : Window
         LoadObsSettingsUi();
         LoadPlaybackSettingsUi();
         LoadHotkeysUi();
+        LoadChangelogUi();
 
         _ = UpdateTwitchUiAsync();
         _ = LoadTwitchChatSettingsUiAsync();
@@ -162,6 +164,94 @@ public partial class SettingsWindow : Window
         _setHotkeysSuspended?.Invoke(true);
         Loaded -= SettingsWindow_Loaded;
     }
+
+    private void LoadChangelogUi()
+    {
+        using var stream = GetType().Assembly.GetManifestResourceStream(
+            "Stream.MusicRequest.App.CHANGELOG.md");
+
+        if (stream == null)
+        {
+            ChangelogViewer.Document = new FlowDocument(
+                new Paragraph(new Run("Не удалось загрузить историю изменений.")));
+            return;
+        }
+
+        using var reader = new StreamReader(stream);
+        var markdown = reader.ReadToEnd();
+        var document = new FlowDocument
+        {
+            PagePadding = new Thickness(0),
+            FontFamily = new System.Windows.Media.FontFamily("Segoe UI"),
+            FontSize = 13
+        };
+
+        foreach (var rawLine in markdown.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None))
+        {
+            var line = rawLine.Trim();
+            if (string.IsNullOrWhiteSpace(line) || line == "---")
+                continue;
+
+            if (line.StartsWith("# ", StringComparison.Ordinal))
+                continue;
+
+            if (line.StartsWith("## ", StringComparison.Ordinal))
+            {
+                document.Blocks.Add(new Paragraph(new Run(StripMarkdown(line[3..]))
+                {
+                    Foreground = (Brush)FindResource("AccentBrush"),
+                    FontWeight = FontWeights.SemiBold
+                })
+                {
+                    FontSize = 20,
+                    Margin = new Thickness(0, 18, 0, 10),
+                    KeepWithNext = true
+                });
+                continue;
+            }
+
+            if (line.StartsWith("### ", StringComparison.Ordinal))
+            {
+                document.Blocks.Add(new Paragraph(new Run(StripMarkdown(line[4..]))
+                {
+                    Foreground = (Brush)FindResource("TextPrimary"),
+                    FontWeight = FontWeights.SemiBold
+                })
+                {
+                    FontSize = 15,
+                    Margin = new Thickness(0, 12, 0, 6),
+                    KeepWithNext = true
+                });
+                continue;
+            }
+
+            var isBullet = line.StartsWith("- ", StringComparison.Ordinal);
+            var text = StripMarkdown(isBullet ? line[2..] : line);
+            var paragraph = new Paragraph
+            {
+                Margin = new Thickness(isBullet ? 12 : 0, 0, 0, 7),
+                TextIndent = isBullet ? -12 : 0
+            };
+
+            if (isBullet)
+            {
+                paragraph.Inlines.Add(new Run("• ")
+                {
+                    Foreground = (Brush)FindResource("AccentBrush"),
+                    FontWeight = FontWeights.SemiBold
+                });
+            }
+
+            paragraph.Inlines.Add(new Run(text));
+            document.Blocks.Add(paragraph);
+        }
+
+        ChangelogViewer.Document = document;
+    }
+
+    private static string StripMarkdown(string text) =>
+        text.Replace("**", string.Empty, StringComparison.Ordinal)
+            .Replace("`", string.Empty, StringComparison.Ordinal);
 
     private void LoadHotkeysUi()
     {
